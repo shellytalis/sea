@@ -36,10 +36,10 @@ export default function VesselDrawer({ v, onClose }) {
             ['קליטה אחרונה', <Mono>{v.lastReceived}</Mono>],
           ]} />
         </section>
-        {v.riskNotes.length > 0 && (
+        {v.indicators.length > 0 && (
           <section className="ui-drawer-group">
             <h3>אינדיקטורי פעילות חריגה</h3>
-            <ul className="plain-list bulleted">{v.riskNotes.map((n) => <li key={n}>{n}</li>)}</ul>
+            <ul className="plain-list bulleted">{v.indicators.map((i) => <li key={i.id}>{i.type}</li>)}</ul>
           </section>
         )}
       </Drawer>

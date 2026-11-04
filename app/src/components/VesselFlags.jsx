@@ -2,12 +2,12 @@ import { SeverityBadge } from '../ui/Badges';
 import Chip from '../ui/Chip';
 import { SEVERITY_LABEL } from '../ui/severity';
 
-/** חיווי "אינדיקטור פעילות חריגה" של הכלי + רשימות שבהן הוא נמצא (תמיד טקסט וצורה, לא צבע בלבד) */
+/** חיווי "אינדיקטור פעילות חריגה": החומרה הגבוהה ביותר + מספר האינדיקטורים; ורשימות שהכלי נמצא בהן */
 export function VesselFlags({ v, withLists = true }) {
-  const flagged = v.risk !== 'none';
+  const n = v.indicators.length;
   return (
     <>
-      {flagged && <SeverityBadge severity={v.risk} label={`אינדיקטור פעילות חריגה · ${SEVERITY_LABEL[v.risk]}`} />}
+      {n > 0 && <SeverityBadge severity={v.risk} label={`אינדיקטור פעילות חריגה · ${SEVERITY_LABEL[v.risk]} · ${n}`} />}
       {withLists && v.lists.map((l) => <Chip key={l}>ברשימה: {l}</Chip>)}
     </>
   );

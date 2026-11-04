@@ -486,3 +486,46 @@ export function searchCompanies(q) {
   return COMPANIES.filter((c) => (!n || c.name.toLowerCase().includes(n)) && (!q.country || c.country === q.country) && (!q.city || c.city === q.city) && (!q.types.length || q.types.includes(c.type)) && c.fleetSize >= (q.fleet[0] ?? 0) && c.fleetSize <= (q.fleet[1] ?? Infinity));
 }
 export const getCompany = (id) => COMPANIES.find((c) => c.id === id);
+
+/**
+ * קשרים בין חברות (הצעה: סוגי הקשר ונתוני הדמה. האפיון §4.5 קובע שהקשרים טעונים אפיון).
+ * @typedef {Object} Relation
+ * @property {string} id
+ * @property {string} from  מזהה חברה
+ * @property {string} to    מזהה חברה
+ * @property {'ownership'|'management'|'sharedVessels'|'sharedAddress'} type
+ * @property {boolean} unusual
+ * @property {string} note
+ */
+export const RELATION_TYPES = {
+  ownership: "בעלות",
+  management: "ניהול",
+  sharedVessels: "כלים משותפים",
+  sharedAddress: "כתובת/מנהלים משותפים"
+};
+
+/** @type {Relation[]} */
+export const RELATIONS = [
+  { id: "r1", from: "c1", to: "c8", type: "management", unusual: false, note: "ניהול טכני של הצי כולו" },
+  { id: "r2", from: "c2", to: "c7", type: "management", unusual: false, note: "ניהול טכני" },
+  { id: "r3", from: "c10", to: "c3", type: "ownership", unusual: false, note: "החזקה של 35% במניות" },
+  { id: "r4", from: "c3", to: "c23", type: "management", unusual: false, note: "ניהול טכני לחלק מהצי" },
+  { id: "r5", from: "c4", to: "c13", type: "sharedVessels", unusual: true, note: "שני כלים עברו בין החברות בתוך חצי שנה" },
+  { id: "r6", from: "c13", to: "c22", type: "sharedAddress", unusual: true, note: "כתובת רישום ושני מנהלים משותפים" },
+  { id: "r7", from: "c18", to: "c13", type: "sharedAddress", unusual: true, note: "מנהל משותף שמונה בחודשים האחרונים" },
+  { id: "r8", from: "c5", to: "c9", type: "management", unusual: false, note: "ניהול טכני" },
+  { id: "r9", from: "c15", to: "c21", type: "sharedVessels", unusual: false, note: "השכרה משותפת של כלי אחד" },
+  { id: "r10", from: "c21", to: "c4", type: "sharedVessels", unusual: true, note: "כלי שהועבר בין החברות ללא שינוי בעלות" },
+  { id: "r11", from: "c11", to: "c3", type: "sharedVessels", unusual: false, note: "שיתוף פעולה בקו קבוע" },
+  { id: "r12", from: "c19", to: "c10", type: "ownership", unusual: false, note: "חברה אם" }
+];
+
+/** @param {string} id @returns {Relation[]} */
+export const relationsOf = (id) => RELATIONS.filter((r) => r.from === id || r.to === id);
+
+/** היסטוריית שינויים (דמה, קבועה לפי החברה) */
+export const historyOf = (c) => [
+  { date: c.updated, field: "גודל צי", from: String(Math.max(0, c.fleetSize - 1)), to: String(c.fleetSize), source: "מקור א" },
+  { date: "2026-03-14", field: "כתובת רישום", from: `${c.city} (כתובת קודמת)`, to: c.address, source: "מקור ב" },
+  ...(c.parent ? [{ date: "2025-09-02", field: "חברת אם", from: "—", to: c.parent, source: "מקור ב" }] : [])
+];

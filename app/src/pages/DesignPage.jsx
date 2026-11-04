@@ -13,6 +13,9 @@ import Drawer from '../ui/Drawer';
 import { Facts, StaticTable } from '../ui/Entity';
 import { EmptyState, ErrorState, ForbiddenState, NoResults, TableSkeleton } from '../ui/States';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
+import { SignalDetail } from '../components/Signals';
+import RelationsView from '../components/RelationsView';
+import Tabs from '../ui/Tabs';
 
 const COLORS = ['bg-base', 'surface', 'surface-raised', 'border', 'border-strong', 'text-primary', 'text-secondary', 'text-tertiary', 'accent', 'accent-text', 'focus'];
 const SEV_TOKENS = ['sev-low', 'sev-medium', 'sev-high', 'sev-critical', 'sev-unassessed', 'sev-none'];
@@ -142,6 +145,33 @@ export default function DesignPage() {
               </Drawer>
             </div>
           )}
+        </section>
+
+        <section>
+          <h2>אותות מודל<span className="ds-proposal">הצעה</span></h2>
+          <p className="entity-note">אות: שם, חומרה (טקסט, צורה, צבע), תג מודל, 2-3 גורמי "למה", זמן עדכון וגרסת מודל. אין ציון מסכם לחברה.</p>
+          <div className="signals-strip">
+            {COMPANIES[12].signals.slice(0, 3).map((s) => <div key={s.kind} className="signal-card"><SignalDetail signal={s} /></div>)}
+          </div>
+        </section>
+
+        <section>
+          <h2>גרף קשרים בין חברות<span className="ds-proposal">הצעה</span></h2>
+          <p className="entity-note">SVG עם פריסה סטטית, ללא ספרייה: הקל ביותר שמספיק לאב-טיפוס. סוג הקשר מובחן בסגנון הקו, וקשר חריג בצבע, עובי וסמל. לצד הגרף טבלה לאותו מידע.</p>
+          <RelationsView companyId="c13" />
+        </section>
+
+        <section>
+          <h2>לשוניות ופס אינדיקטורים</h2>
+          <Tabs label="דוגמת לשוניות" tabs={[
+            { id: 'a', label: 'מקור א', content: <p className="entity-note">תוכן מקור א.</p> },
+            { id: 'b', label: 'מקור ב', content: <p className="entity-note">תוכן מקור ב.</p> },
+            { id: 'c', label: 'מקור ג', content: <p className="entity-note">תוכן מקור ג.</p> },
+          ]} />
+          <div className="indicator-strip">
+            <SeverityBadge severity="high" label="אינדיקטור פעילות חריגה · גבוה" />
+            <span><Mono>2</Mono> אינדיקטורים:</span><Chip>מפגש ship-to-ship</Chip><Chip>שינוי זהות</Chip>
+          </div>
         </section>
 
         <section>

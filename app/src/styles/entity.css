@@ -1,0 +1,80 @@
+/* ===== דפי ישות (כלי, חברה) ===== */
+.entity { overflow: clip; display: grid; grid-template-columns: 216px minmax(0, 1fr); height: 100%; min-height: 0; }
+.entity-nav { display: flex; flex-direction: column; gap: 2px; padding: var(--space-4) var(--space-2); background: var(--surface); border-inline-end: 1px solid var(--border); overflow: auto; }
+.entity-nav a { display: flex; align-items: center; min-height: var(--control-h); padding: 0 var(--space-4); border-radius: var(--radius-md); color: var(--text-secondary); border-inline-start: 3px solid transparent; }
+.entity-nav a:hover { background: var(--surface-raised); color: var(--text-primary); }
+.entity-nav a[aria-current=location] { background: var(--accent-bg); color: var(--text-primary); font-weight: 600; border-inline-start-color: var(--accent-text); }
+.entity-scroll { overflow: auto; min-height: 0; --head-h: 120px; }
+/* מיכל ברוחב מרבי וממורכז: הכותרת, הפס והמקטעים */
+.entity-inner { max-width: var(--entity-max); margin-inline: auto; }
+.entity-head { position: sticky; top: 0; z-index: var(--z-sticky-top); background: var(--surface); border-bottom: 1px solid var(--border); }
+.entity-head > .entity-inner { padding: var(--space-4) var(--space-6); }
+.entity-head-row { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
+.entity-head-main { display: grid; gap: var(--space-1); justify-items: start; min-width: 0; }
+.entity-head h1 { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); }
+.entity-meta { color: var(--text-secondary); }
+.entity-badges { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
+.entity-actions { display: flex; gap: var(--space-2); }
+.entity-back { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--accent-text); font-size: var(--fs-sm); }
+.entity-back:hover { text-decoration: underline; }
+.entity-status { padding: var(--space-5) var(--space-6); }
+
+/* "המסקנה לפני הנתון": פס מיד מתחת לכותרת הדביקה */
+.entity-summary { padding: var(--space-5) var(--space-6) 0; }
+.signals-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.signal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-4); }
+.signal-card .signal-detail { border: 0; padding: 0; }
+.indicator-strip { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+
+.entity-section { padding: var(--space-6); border-bottom: 1px solid var(--border); scroll-margin-top: var(--head-h); display: grid; gap: var(--space-5); align-content: start; }
+.entity-section:last-child { min-height: 40vh; border-bottom: 0; }
+/* חותמת המקור והעדכון צמודה לכותרת הקטע */
+.entity-section-head { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+.entity-section-head h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
+.entity-src { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
+.entity-sub { margin: 0 0 var(--space-2); font-size: var(--fs-md); font-weight: 600; color: var(--text-secondary); }
+.entity-note { margin: 0; color: var(--text-secondary); }
+.fact-group { display: grid; gap: var(--space-3); }
+.fact-group .entity-sub { margin: 0; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.wrap { white-space: normal; }
+.proposal-tag { font-size: var(--fs-xs); color: var(--text-tertiary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 var(--space-2); margin-inline-end: var(--space-2); }
+.ui-metrics { display: flex; flex-wrap: wrap; gap: var(--space-5) var(--space-7); margin: 0; }
+.ui-metrics dt { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--space-1); }
+.ui-metrics dd { margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 600; font-family: var(--mono); }
+.plain-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
+.plain-list.bulleted { list-style: disc; padding-inline-start: var(--space-5); }
+.ui-table.static td.wrap-cell, .ui-table td .wrap { white-space: normal; }
+
+/* ===== לשוניות ===== */
+.ui-tablist { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--border); margin-bottom: var(--space-4); }
+.ui-tablist [role=tab] { min-height: var(--control-h); padding: 0 var(--space-4); background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary); font-weight: 600; margin-bottom: -1px; }
+.ui-tablist [role=tab]:hover { color: var(--text-primary); }
+.ui-tablist [role=tab][aria-selected=true] { color: var(--accent-text); border-bottom-color: var(--accent-text); }
+
+/* ===== גרף קשרים ===== */
+.rel { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: var(--space-5); align-items: start; }
+.rel-graph { display: grid; gap: var(--space-3); }
+.rel-svg { width: 100%; height: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.rel-node rect { fill: var(--surface-raised); stroke: var(--border-strong); stroke-width: 1; }
+.rel-node text { fill: var(--text-primary); font-size: var(--fs-sm); font-family: var(--font); }
+.rel-node { cursor: pointer; }
+.rel-node:hover rect, .rel-node.selected rect { stroke: var(--accent-text); stroke-width: 2; }
+.rel-node.center rect { fill: var(--surface-raised); stroke: var(--accent-text); stroke-width: 2; }
+.rel-node.center { cursor: default; }
+.rel-edge { cursor: pointer; }
+.rel-edge .hit { stroke: transparent; stroke-width: 16; }
+.rel-edge .stroke, .rel-key { stroke: var(--text-secondary); stroke-width: 2; fill: none; }
+.type-ownership.stroke, .rel-edge.type-ownership .stroke, .rel-key.type-ownership { stroke-width: 4; }
+.rel-edge.type-sharedVessels .stroke, .rel-key.type-sharedVessels { stroke-dasharray: 8 5; }
+.rel-edge.type-sharedAddress .stroke, .rel-key.type-sharedAddress { stroke-dasharray: 2 5; stroke-linecap: round; }
+.rel-edge.unusual .stroke { stroke: var(--sev-high); stroke-width: 3; }
+.rel-edge:hover .stroke, .rel-edge.selected .stroke { stroke: var(--accent-text); }
+.rel-edge.unusual:hover .stroke, .rel-edge.unusual.selected .stroke { stroke: var(--sev-high); stroke-width: 4; }
+.rel-flag .bg { fill: var(--surface); stroke: none; }
+.rel-flag path { fill: var(--sev-high); }
+.rel-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); font-size: var(--fs-sm); color: var(--text-secondary); }
+.rel-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.rel-panel { min-height: 72px; padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.rel-panel h3 { margin: 0 0 var(--space-1); font-size: var(--fs-md); display: flex; align-items: center; gap: var(--space-3); }
+.rel-panel p { margin: 0 0 var(--space-1); }
+.rel-table { max-height: 420px; }

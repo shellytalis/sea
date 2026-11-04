@@ -1,4 +1,16 @@
 /**
+ * @typedef {Object} Indicator אינדיקטור פעילות חריגה (BRAIN §6)
+ * @property {string} id
+ * @property {string} type       הפסקת שידור AIS | מפגש ship-to-ship | ביקור בנמל ברשימת מעקב | שיטוט חשוד | שינוי זהות
+ * @property {import('../ui/severity').Severity} severity
+ * @property {string} time       YYYY-MM-DD HH:mm
+ * @property {number} lat
+ * @property {number} lon
+ * @property {string} source
+ * @property {string} evidence
+ */
+
+/**
  * @typedef {Object} Vessel
  * @property {string} id            "v1".."vN"
  * @property {string} name
@@ -15,11 +27,23 @@
  * @property {number} lat
  * @property {number} lon
  * @property {string[]} lists       רשימות מעקב שהכלי נמצא בהן
+ * @property {import('../ui/severity').Severity} risk  החומרה הגבוהה ביותר מבין האינדיקטורים (נגזר)
+ * @property {Indicator[]} indicators
+ * @property {string} subType
+ * @property {number} beam
+ * @property {number} draft
+ * @property {string} classSociety
+ * @property {string} pandi
+ * @property {string} beneficialOwner
+ * @property {string} operator
+ * @property {string} technicalManager
+ * @property {string} commercialManager
+ * @property {string} aisTransmitter
+ * @property {{date: string, field: string, from: string, to: string, source: string}[]} history
  * @property {{source: string, updated: string}} stamp
  */
 
-/** @type {Vessel[]} */
-export const VESSELS = [
+const RAW = [
   {
     id: "v1",
     name: "NORDIC AURORA",
@@ -42,8 +66,6 @@ export const VESSELS = [
     destination: "HAIFA",
     lastReceived: "2026-10-27 08:14",
     lists: ["רשימת מעקב א"],
-    risk: "none",
-    riskNotes: [],
     stamp: {
       source: "מקור א",
       updated: "2026-10-27 08:14"
@@ -71,8 +93,6 @@ export const VESSELS = [
     destination: "ASHDOD",
     lastReceived: "2026-10-27 07:52",
     lists: [],
-    risk: "medium",
-    riskNotes: ["כיבוי AIS לפרק זמן של 9 שעות"],
     stamp: {
       source: "מקור א",
       updated: "2026-10-27 07:52"
@@ -100,8 +120,6 @@ export const VESSELS = [
     destination: "PORT SAID",
     lastReceived: "2026-10-27 08:20",
     lists: ["רשימת מעקב א", "רשימת מעקב ב"],
-    risk: "none",
-    riskNotes: [],
     stamp: {
       source: "מקור א",
       updated: "2026-10-27 08:20"
@@ -129,8 +147,6 @@ export const VESSELS = [
     destination: "—",
     lastReceived: "2026-10-26 22:03",
     lists: ["רשימת מעקב ב"],
-    risk: "high",
-    riskNotes: ["שינוי שם בשנה האחרונה", "העברה בין כלים באזור ללא נמל"],
     stamp: {
       source: "מקור א",
       updated: "2026-10-26 22:03"
@@ -158,8 +174,6 @@ export const VESSELS = [
     destination: "MERSIN",
     lastReceived: "2026-10-27 08:01",
     lists: [],
-    risk: "none",
-    riskNotes: [],
     stamp: {
       source: "מקור א",
       updated: "2026-10-27 08:01"
@@ -187,8 +201,6 @@ export const VESSELS = [
     destination: "PORT SAID",
     lastReceived: "2026-10-27 08:18",
     lists: ["רשימת מעקב א"],
-    risk: "none",
-    riskNotes: [],
     stamp: {
       source: "מקור א",
       updated: "2026-10-27 08:18"
@@ -233,3 +245,50 @@ export function searchVessels(q) {
   return VESSELS.filter((v) => v.name.toLowerCase().includes(s) || v.imo.includes(s) || v.mmsi.includes(s));
 }
 export const getVessel = (id) => VESSELS.find((v) => v.id === id);
+
+// שדות נוספים לפי BRAIN §7. הרשימה הוצעה, האפיון לא מגדיר אותה: ערכי דמה.
+const EXTRA = {
+  v1: { subType: "Aframax", beam: 44, draft: 14.8, classSociety: "DNV", pandi: "Gard", beneficialOwner: "Fjord Holding AS", operator: "Fjord Marine AS", technicalManager: "Nordic Ship Mgmt", commercialManager: "Fjord Marine AS", aisTransmitter: "Class A" },
+  v2: { subType: "Panamax", beam: 32, draft: 14.2, classSociety: "Lloyd's Register", pandi: "UK Club", beneficialOwner: "Hellas Holdings", operator: "Aegean Bulk Ltd", technicalManager: "Hellas Ship Mgmt", commercialManager: "Aegean Bulk Ltd", aisTransmitter: "Class A" },
+  v3: { subType: "Neo-Panamax", beam: 48, draft: 14.5, classSociety: "ABS", pandi: "Skuld", beneficialOwner: "Lotus Shipping Co", operator: "Lotus Shipping Co", technicalManager: "Lotus Ship Mgmt", commercialManager: "Lotus Logistics", aisTransmitter: "Class A" },
+  v4: { subType: "Multipurpose", beam: 20, draft: 7.9, classSociety: "לא ידוע", pandi: "לא ידוע", beneficialOwner: "לא ידוע", operator: "Falcon Maritime", technicalManager: "Falcon Maritime", commercialManager: "Falcon Maritime", aisTransmitter: "Class B" },
+  v5: { subType: "MR Tanker", beam: 32, draft: 11.0, classSociety: "Bureau Veritas", pandi: "Britannia", beneficialOwner: "Marmara Tankers", operator: "Marmara Tankers", technicalManager: "Bosphorus Mgmt", commercialManager: "Marmara Tankers", aisTransmitter: "Class A" },
+  v6: { subType: "LNG Carrier", beam: 46, draft: 11.5, classSociety: "ClassNK", pandi: "Gard", beneficialOwner: "Atlas Group", operator: "Atlas Gas Transport", technicalManager: "Atlas Ship Mgmt", commercialManager: "Atlas Gas Transport", aisTransmitter: "Class A" }
+};
+
+/** @type {Record<string, Indicator[]>} */
+const INDICATORS = {
+  v2: [
+    { id: "i1", type: "הפסקת שידור AIS", severity: "medium", time: "2026-10-26 22:10", lat: 36.1, lon: 20.9, source: "מקור א", evidence: "כיבוי AIS לפרק זמן של 9 שעות, עם קליטה חוזרת כ-40 ק״מ מנקודת ההפסקה" }
+  ],
+  v4: [
+    { id: "i2", type: "מפגש ship-to-ship", severity: "high", time: "2026-10-24 03:40", lat: 33.5, lon: 29.4, source: "מקור א", evidence: "העברה בין כלים באזור ללא נמל, שהייה משותפת של כ-5 שעות במהירות נמוכה מ-1 קשר" },
+    { id: "i3", type: "שינוי זהות", severity: "medium", time: "2026-06-12 09:00", lat: 34.9, lon: 32.9, source: "מקור ב", evidence: "שינוי שם הכלי בשנה האחרונה (ראו היסטוריית שינויים)" }
+  ]
+};
+
+/** @type {Record<string, Vessel['history']>} */
+const HISTORY = {
+  v4: [
+    { date: "2026-06-12", field: "שם", from: "SEA HAWK", to: "SEA FALCON", source: "מקור ב" },
+    { date: "2025-11-03", field: "מנהל טכני", from: "Hawk Ship Mgmt", to: "Falcon Maritime", source: "מקור ב" }
+  ],
+  v2: [{ date: "2025-04-18", field: "מנהל טכני", from: "Aegean Ship Mgmt", to: "Hellas Ship Mgmt", source: "מקור ב" }]
+};
+
+const RANK = { critical: 4, high: 3, medium: 2, low: 1, unassessed: 0, none: 0 };
+
+/** @type {Vessel[]} */
+export const VESSELS = RAW.map((v) => {
+  const indicators = INDICATORS[v.id] ?? [];
+  const risk = indicators.reduce((a, i) => (RANK[i.severity] > RANK[a] ? i.severity : a), "none");
+  return { ...v, ...EXTRA[v.id], indicators, risk, history: HISTORY[v.id] ?? [] };
+});
+
+/** פעילות כללית ממקור א: דמה, בנויה מנתוני הכלי */
+export const activityA = (v) => [
+  { time: v.lastReceived, activity: "דיווח מיקום", place: `${v.lat.toFixed(2)}, ${v.lon.toFixed(2)}`, details: `${v.speed} kn · כיוון ${v.course}°` },
+  { time: "2026-10-26 18:30", activity: "שינוי כיוון", place: "מזרח הים התיכון", details: "סטייה של 24° מהמסלול" },
+  { time: "2026-10-25 07:05", activity: "יציאה מאזור נמל", place: v.destination, details: "הפלגה לכיוון נמל היעד" },
+  { time: "2026-10-23 21:15", activity: "הפחתת מהירות", place: "מצרי קפריסין", details: "ירידה מתחת ל-3 קשר ל-2 שעות" }
+];

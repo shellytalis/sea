@@ -444,6 +444,15 @@ const makeSignals = (pattern, i, updated) => SIGNAL_KINDS.map((k, n) => {
   return { kind: k.id, severity, why, updated, modelVersion: "0.3" };
 });
 
+/** שיוך כלים לחברות שלא הוגדרו ב-EXTRA (דמה): [מזהה כלי, תפקיד] */
+const FLEET_OF = {
+  c13: [["v7", "מפעיל"], ["v8", "מפעיל"], ["v9", "בעלים רשום"], ["v10", "מפעיל"], ["v11", "בעלים רשום"]],
+  c5: [["v5", "בעלים רשום"], ["v12", "בעלים רשום"]]
+};
+const withFleet = (c) => FLEET_OF[c.id]
+  ? { ...c, vesselIds: FLEET_OF[c.id].map(([v]) => v), roles: FLEET_OF[c.id].map(([vessel, role]) => ({ vessel, role })) }
+  : c;
+
 /** @type {Company[]} */
 export const COMPANIES = ROWS.map(([name, type, country, city, fleetSize, pattern, , , roleList, updated], i) => ({
   id: `c${i + 1}`,
@@ -469,7 +478,7 @@ export const COMPANIES = ROWS.map(([name, type, country, city, fleetSize, patter
     updated
   },
   ...EXTRA[i]
-}));
+})).map(withFleet);
 export const FLEET_MAX = 100;
 export const COMPANY_COUNTRIES = [...new Set(COMPANIES.map((c) => c.country))].sort((a, b) => a.localeCompare(b, "he"));
 export const citiesOf = (country) => [...new Set(COMPANIES.filter((c) => c.country === country).map((c) => c.city))].sort();

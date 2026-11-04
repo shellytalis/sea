@@ -38,3 +38,15 @@ export function useDensity() {
   };
 }
 export const readStore = read;
+
+/** "הערות מפרט": הערות פיתוח בממשק (הצעה, טעון אפיון). מוסתרות כברירת מחדל; המתג ב-/design */
+export function useSpecNotes() {
+  const [on, set] = useState(() => document.documentElement.dataset.specNotes === 'on');
+  const setOn = useCallback((v) => {
+    if (v) document.documentElement.dataset.specNotes = 'on';
+    else delete document.documentElement.dataset.specNotes;
+    write('sea-spec-notes', v ? 'on' : 'off');
+    set(v);
+  }, []);
+  return { on, setOn };
+}

@@ -9,14 +9,17 @@ import { EmptyState } from '../ui/States';
 /*
  * גרף קשרים: SVG עם פריסה סטטית (החברה במרכז, הקשורות על אליפסה), ללא ספרייה.
  * נבחר כי באב-טיפוס יש כמה צמתים בלבד; פריסה דינמית או ספרייה לא מוסיפות מידע.
- * לצד הגרף טבלה לאותו מידע, ולחיצה על צומת/קשר (או שורה) פותחת פאנל פרטים.
+ * סוג הקשר מובחן בדפוס הקו ובתווית קצרה על הקשר; קשר חריג מסומן ביהלום כתום בלבד.
+ * לצד הגרף: טבלה לאותו מידע, ומתחתיה פאנל פרטים שמתמלא בלחיצה על צומת, קשר או שורה.
  */
 const W = 640, H = 360, CX = W / 2, CY = H / 2, RX = 235, RY = 130, NODE_W = 172, NODE_H = 32;
+const SHORT = { ownership: 'בעלות', management: 'ניהול', sharedVessels: 'כלים', sharedAddress: 'כתובת' };
 
 const nodePos = (i, n) => {
   const a = (-Math.PI / 2) + (i * 2 * Math.PI) / Math.max(n, 1);
   return { x: CX + RX * Math.cos(a), y: CY + RY * Math.sin(a) };
 };
+const along = (p, t) => ({ x: CX + (p.x - CX) * t, y: CY + (p.y - CY) * t });
 
 export default function RelationsView({ companyId }) {
   const center = getCompany(companyId);
@@ -29,6 +32,9 @@ export default function RelationsView({ companyId }) {
   const others = rels.map(otherOf);
   const selRel = sel?.kind === 'edge' ? rels.find((r) => r.id === sel.id) : null;
   const selNode = sel?.kind === 'node' ? getCompany(sel.id) : null;
+  const press = (kind, id) => (e) => {
+    if (e.type === 'click' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel({ kind, id }); }
+  };
 
   const columns = [
     { id: 'other', label: 'חברה קשורה', render: (r) => <Ltr className="cell-name">{otherOf(r).name}</Ltr> },
@@ -42,29 +48,26 @@ export default function RelationsView({ companyId }) {
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`גרף קשרים של ${center.name}`} className="rel-svg">
           {rels.map((r, i) => {
             const p = nodePos(i, rels.length);
-            const mx = (CX + p.x) / 2, my = (CY + p.y) / 2;
-            const on = selRel?.id === r.id;
+            const label = along(p, 0.55), flag = along(p, 0.3);
             return (
-              <g key={r.id} className={`rel-edge type-${r.type}${r.unusual ? ' unusual' : ''}${on ? ' selected' : ''}`}
+              <g key={r.id} className={`rel-edge type-${r.type}${selRel?.id === r.id ? ' selected' : ''}`}
                 role="button" tabIndex={0} aria-label={`קשר: ${RELATION_TYPES[r.type]} עם ${otherOf(r).name}${r.unusual ? ', חריג' : ''}`}
-                onClick={() => setSel({ kind: 'edge', id: r.id })}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel({ kind: 'edge', id: r.id }); } }}>
+                onClick={press('edge', r.id)} onKeyDown={press('edge', r.id)}>
                 <line x1={CX} y1={CY} x2={p.x} y2={p.y} className="hit" />
                 <line x1={CX} y1={CY} x2={p.x} y2={p.y} className="stroke" />
+                <text x={label.x} y={label.y + 4} textAnchor="middle" className="rel-label">{SHORT[r.type]}</text>
                 {r.unusual && (
-                  <g transform={`translate(${mx - 6} ${my - 6})`} className="rel-flag"><rect x="-4" y="-4" width="20" height="20" className="bg" /><path d="M6 .5 11.5 6 6 11.5.5 6Z" /></g>
+                  <g transform={`translate(${flag.x - 6} ${flag.y - 6})`} className="rel-flag"><rect x="-4" y="-4" width="20" height="20" className="bg" /><path d="M6 .5 11.5 6 6 11.5.5 6Z" /></g>
                 )}
               </g>
             );
           })}
           {others.map((c, i) => {
             const p = nodePos(i, rels.length);
-            const on = selNode?.id === c.id;
             return (
-              <g key={c.id} className={`rel-node${on ? ' selected' : ''}`} role="button" tabIndex={0} aria-label={`חברה: ${c.name}`}
+              <g key={c.id} className={`rel-node${selNode?.id === c.id ? ' selected' : ''}`} role="button" tabIndex={0} aria-label={`חברה: ${c.name}`}
                 transform={`translate(${p.x - NODE_W / 2} ${p.y - NODE_H / 2})`}
-                onClick={() => setSel({ kind: 'node', id: c.id })}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel({ kind: 'node', id: c.id }); } }}>
+                onClick={press('node', c.id)} onKeyDown={press('node', c.id)}>
                 <rect width={NODE_W} height={NODE_H} rx="4" />
                 <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" direction="ltr">{c.name}</text>
               </g>
@@ -81,7 +84,13 @@ export default function RelationsView({ companyId }) {
           ))}
           <li><Shape risk="high" />קשר חריג</li>
         </ul>
-        <div className="rel-panel" aria-live="polite">
+      </div>
+      <div className="rel-side">
+        <div className="rel-table ui-table-scroll bordered">
+          <TableCore caption="קשרים בין חברות" columns={columns} rows={rels} rowKey={(r) => r.id} stickyHead={false}
+            onRowClick={(r) => setSel({ kind: 'edge', id: r.id })} selectedKey={selRel?.id} />
+        </div>
+        <div className="rel-panel" aria-live="polite" data-testid="rel-panel">
           {!sel && <p className="sub">בחר צומת או קשר כדי להציג פרטים.</p>}
           {selNode && (
             <>
@@ -98,10 +107,6 @@ export default function RelationsView({ companyId }) {
             </>
           )}
         </div>
-      </div>
-      <div className="rel-table ui-table-scroll bordered">
-        <TableCore caption="קשרים בין חברות" columns={columns} rows={rels} rowKey={(r) => r.id} stickyHead={false}
-          onRowClick={(r) => setSel({ kind: 'edge', id: r.id })} selectedKey={selRel?.id} />
       </div>
     </div>
   );

@@ -3,11 +3,12 @@ import { ArrowRight, Map } from 'lucide-react';
 import { getCompanyApi } from '../data/api';
 import { getVessel } from '../data/vessels';
 import { historyOf } from '../data/companies';
-import { EntityHead, EntityPage, EntityStatus, FactGroup, Section, StaticTable } from '../ui/Entity';
-import { SeverityBadge } from '../ui/Badges';
+import { EntityHead, EntityPage, EntityStatus, FactGroup, Section, StaticTable, goSection } from '../ui/Entity';
+import { SeverityBadge, Tooltip } from '../ui/Badges';
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import { Ltr, Mono } from '../ui/Ltr';
+import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
 import useAsync from '../ui/useAsync';
 import { SignalDetail } from '../components/Signals';
@@ -15,8 +16,10 @@ import RelationsView from '../components/RelationsView';
 import CompanyRef from '../components/CompanyRef';
 import { VesselFlags } from '../components/VesselFlags';
 
+/** כל כרטיס אות גולל למקטע הרלוונטי. הצעה: פעילות וזהות מפנות ל"צי", כי אין להן מקטע משלהן */
+const SIGNAL_TARGET = { fleet: 'fleet', activity: 'fleet', identity: 'fleet', links: 'relations' };
+
 const SECTIONS = [
-  { id: 'overview', label: 'סקירה' },
   { id: 'fleet', label: 'צי' },
   { id: 'relations', label: 'קשרים בין חברות' },
   { id: 'registration', label: 'פרטי רישום ובעלות' },
@@ -41,12 +44,14 @@ export default function CompanyPage() {
   const back = <Link to={backTo} className="entity-back"><ArrowRight size={14} aria-hidden="true" />חזרה לחיפוש חברות</Link>;
   const fleet = c.vesselIds.map(getVessel).filter(Boolean);
   const src = c.stamp;
+  const allUnassessed = c.signals.every((s) => s.severity === 'unassessed');
+  const mapIcon = <Map size={16} aria-hidden="true" />;
   const columns = [
     { id: 'name', label: 'שם', render: (v) => <Link to={`/vessels/${v.id}`} className="link cell-name"><Ltr>{v.name}</Ltr></Link> },
     { id: 'imo', label: 'IMO', render: (v) => <Mono>{v.imo}</Mono> },
     { id: 'type', label: 'סוג', render: (v) => v.type },
     { id: 'role', label: 'תפקיד החברה', render: (v) => c.roles.find((r) => r.vessel === v.id)?.role ?? '—' },
-    { id: 'flags', label: 'אינדיקטורים', render: (v) => (v.indicators.length === 0 ? <SeverityBadge severity="none" /> : <VesselFlags v={v} withLists={false} />) },
+    { id: 'flags', label: 'אינדיקטורים', render: (v) => <VesselFlags v={v} withLists={false} /> },
   ];
   const historyCols = [
     { id: 'date', label: 'תאריך', render: (r) => <Mono>{r.date}</Mono> },
@@ -60,25 +65,29 @@ export default function CompanyPage() {
     <EntityPage resetKey={c.id} sections={SECTIONS}
       header={
         <EntityHead back={back} title={<Ltr>{c.name}</Ltr>}
-          meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Mono>{c.fleetSize}</Mono></>}
-          badges={c.roleList.map((r) => <Chip key={r}>{r}</Chip>)}
+          meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Mono>{c.fleetSize}</Mono> · עדכון אחרון <Mono>{c.updated}</Mono></>}
+          badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)}
           actions={fleet.length > 0
-            ? <Button to={`/?v=${fleet[0].id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>
-            : <Button disabled icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>} />
+            ? <Button to={`/?v=${fleet[0].id}`} icon={mapIcon}>הצג על המפה</Button>
+            : <Tooltip text="אין כלים משויכים במערכת" focusable><Button disabled icon={mapIcon}>הצג על המפה</Button></Tooltip>} />
       }
       summary={
-        <section aria-label="אותות" className="signals-strip">
-          {c.signals.map((s) => <div key={s.kind} className="signal-card"><SignalDetail signal={s} /></div>)}
-        </section>
+        allUnassessed ? (
+          <section aria-label="אותות" className="signals-strip unassessed">
+            <SeverityBadge severity="unassessed" />
+            <span className="sub">אין מספיק נתוני פעילות בחלון הניתוח</span>
+          </section>
+        ) : (
+          <section aria-label="אותות" className="signals-strip">
+            {c.signals.map((s) => (
+              <a key={s.kind} className="signal-card" href={`#${SIGNAL_TARGET[s.kind]}`}
+                onClick={(e) => { e.preventDefault(); goSection(SIGNAL_TARGET[s.kind]); }}>
+                <SignalDetail signal={s} />
+              </a>
+            ))}
+          </section>
+        )
       }>
-      <Section id="overview" title="סקירה" source={src}>
-        <FactGroup title="זיהוי" items={[
-          ['סוג חברה', c.type], ['תפקידים', c.roleList.join(', ')],
-          ['מדינה', c.country], ['עיר', <Ltr key="c">{c.city}</Ltr>],
-          ['גודל צי', <Mono key="f">{c.fleetSize}</Mono>], ['עדכון אחרון', <Mono key="u">{c.updated}</Mono>],
-        ]} />
-      </Section>
-
       <Section id="fleet" title="צי" source={src}>
         {fleet.length === 0 ? (
           <EmptyState compact title="אין כלים משויכים במערכת">
@@ -93,7 +102,7 @@ export default function CompanyPage() {
       </Section>
 
       <Section id="relations" title="קשרים בין חברות" source={src}>
-        <p className="entity-note"><span className="proposal-tag">הצעה</span> סוגי הקשרים ונתוני הדמה טעונים אפיון (אפיון §4.5).</p>
+        <p className="entity-note spec-note"><SpecNote tag>הצעה</SpecNote>סוגי הקשרים ונתוני הדמה טעונים אפיון (אפיון §4.5).</p>
         <RelationsView companyId={c.id} />
       </Section>
 
@@ -114,7 +123,7 @@ export default function CompanyPage() {
       </Section>
 
       <Section id="notes" title="הערות וקבצים">
-        <EmptyState compact title="אין הערות או קבצים לחברה זו"><span>סוגי קבצים והרשאות העלאה טרם הוגדרו.</span></EmptyState>
+        <EmptyState compact title="אין הערות או קבצים לחברה זו"><SpecNote>סוגי קבצים והרשאות העלאה טרם הוגדרו.</SpecNote></EmptyState>
       </Section>
     </EntityPage>
   );

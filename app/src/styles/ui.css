@@ -82,6 +82,7 @@
 /* ===== צ'יפים, חומרה, טולטיפ ===== */
 .ui-chip { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 28px; padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); font-size: var(--fs-sm); white-space: nowrap; }
 .ui-chip.removable { padding-inline-end: var(--space-1); }
+.ui-chip.tag { border: 0; background: var(--border); color: var(--text-primary); border-radius: var(--radius-sm); min-height: var(--space-5); padding: 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); }
 .ui-chip-x { width: var(--space-5); height: var(--space-5); display: grid; place-items: center; border: 0; background: none; border-radius: var(--radius-sm); color: var(--text-secondary); }
 .ui-chip-x:hover { background: var(--accent-bg); color: var(--text-primary); }
 .ui-sev { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
@@ -90,6 +91,7 @@
 .ui-sev.unassessed { color: var(--sev-unassessed); font-weight: 400; } .ui-sev.none { color: var(--sev-none); font-weight: 400; }
 .ui-shape { flex: none; }
 .ui-tip { position: relative; display: inline-flex; border-radius: var(--radius-md); }
+.ui-tip > .ui-btn:disabled { pointer-events: none; }
 .ui-tooltip.side { inset-block-start: 50%; inset-inline-start: calc(100% + var(--space-2)); transform: translateY(-50%); }
 .ui-tooltip {
   position: absolute; z-index: var(--z-tooltip); inset-block-start: calc(100% + var(--space-2)); inset-inline-start: 50%; transform: translateX(50%);
@@ -116,7 +118,7 @@
 .ui-facts { margin: 0; }
 .ui-facts dt { color: var(--text-secondary); font-size: var(--fs-sm); }
 .ui-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.ui-facts.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-5) var(--space-6); }
+.ui-facts.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 240px)); justify-content: start; gap: var(--space-5) var(--space-6); }
 .ui-facts.grid dt { margin-bottom: 2px; }
 .ui-facts.list { display: grid; gap: var(--space-2); }
 .ui-facts.list .ui-fact { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: var(--space-4); }
@@ -223,6 +225,7 @@
 .ds-states { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-4); }
 .ds-panel { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .ds-panel.pad { padding-block: var(--space-4); }
+.ds-spec-toggle { width: fit-content; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .ds-proposal { font-size: var(--fs-xs); color: var(--text-tertiary); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 0 var(--space-2); margin-inline-start: var(--space-2); }
 .ds-drawer-demo { position: relative; height: 320px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-base); }
 

@@ -12,6 +12,9 @@ import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
 import { Facts, StaticTable } from '../ui/Entity';
 import { EmptyState, ErrorState, ForbiddenState, NoResults, TableSkeleton } from '../ui/States';
+import { EntityStatus } from '../ui/Entity';
+import { useSpecNotes } from '../ui/prefs';
+import SpecNote from '../ui/SpecNote';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
 import { SignalDetail } from '../components/Signals';
 import RelationsView from '../components/RelationsView';
@@ -40,11 +43,16 @@ export default function DesignPage() {
   const [pop, setPop] = useState(false);
   const [q, setQ] = useState('fal');
   const [picked, setPicked] = useState('');
+  const specNotes = useSpecNotes();
 
   return (
     <div className="page-scroll">
       <div className="ds">
         <h1>מערכת עיצוב Sea</h1>
+        <label className="ui-check ds-spec-toggle">
+          <input type="checkbox" checked={specNotes.on} onChange={(e) => specNotes.setOn(e.target.checked)} />
+          <span>הערות מפרט (הצג הערות פיתוח ותגי "הצעה" בממשק; נשמר בדפדפן)</span>
+        </label>
 
         <section>
           <h2>צבעים (מתחלפים עם ערכת הנושא)</h2>
@@ -148,7 +156,7 @@ export default function DesignPage() {
         </section>
 
         <section>
-          <h2>אותות מודל<span className="ds-proposal">הצעה</span></h2>
+          <h2>אותות מודל<SpecNote tag>הצעה</SpecNote></h2>
           <p className="entity-note">אות: שם, חומרה (טקסט, צורה, צבע), תג מודל, 2-3 גורמי "למה", זמן עדכון וגרסת מודל. אין ציון מסכם לחברה.</p>
           <div className="signals-strip">
             {COMPANIES[12].signals.slice(0, 3).map((s) => <div key={s.kind} className="signal-card"><SignalDetail signal={s} /></div>)}
@@ -156,7 +164,7 @@ export default function DesignPage() {
         </section>
 
         <section>
-          <h2>גרף קשרים בין חברות<span className="ds-proposal">הצעה</span></h2>
+          <h2>גרף קשרים בין חברות<SpecNote tag>הצעה</SpecNote></h2>
           <p className="entity-note">SVG עם פריסה סטטית, ללא ספרייה: הקל ביותר שמספיק לאב-טיפוס. סוג הקשר מובחן בסגנון הקו, וקשר חריג בצבע, עובי וסמל. לצד הגרף טבלה לאותו מידע.</p>
           <RelationsView companyId="c13" />
         </section>
@@ -171,6 +179,17 @@ export default function DesignPage() {
           <div className="indicator-strip">
             <SeverityBadge severity="high" label="אינדיקטור פעילות חריגה · גבוה" />
             <span><Mono>2</Mono> אינדיקטורים:</span><Chip>מפגש ship-to-ship</Chip><Chip>שינוי זהות</Chip>
+          </div>
+        </section>
+
+        <section>
+          <h2>מצבי דף ישות</h2>
+          <p className="entity-note">טעינה, שגיאה ואין הרשאה של דף חברה/כלי. מקטע בלי הרשאה (למשל שרטוטים) מוסתר בדף עצמו, ופריט הניווט שלו איתו.</p>
+          <div className="ds-states">
+            <div className="ds-panel" data-testid="ds-entity-loading"><EntityStatus status="loading" /></div>
+            <div className="ds-panel" data-testid="ds-entity-error"><EntityStatus status="error" onRetry={() => {}} /></div>
+            <div className="ds-panel" data-testid="ds-entity-forbidden"><EntityStatus status="forbidden" /></div>
+            <div className="ds-panel"><ForbiddenState title="אין הרשאה לצפייה בשרטוטים">נדרשת הרשאה ייעודית. פנה למנהל המערכת.</ForbiddenState></div>
           </div>
         </section>
 

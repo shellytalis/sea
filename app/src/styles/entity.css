@@ -11,6 +11,14 @@
 .entity-head > .entity-inner { padding: var(--space-4) var(--space-6); }
 .entity-head-row { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
 .entity-head-main { display: grid; gap: var(--space-1); justify-items: start; min-width: 0; }
+.entity-title-line { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.entity-compact-badge { display: none; }
+.entity-head.compact { border-bottom-width: 0; box-shadow: 0 1px 0 var(--border); }
+.entity-head.compact > .entity-inner { padding-block: var(--space-2); }
+.entity-head.compact .entity-back, .entity-head.compact .entity-meta, .entity-head.compact .entity-badges { display: none; }
+.entity-head.compact h1 { font-size: var(--fs-lg); line-height: var(--lh-lg); }
+.entity-head.compact .entity-compact-badge { display: inline-flex; }
+.entity-head.compact .entity-head-row { flex-wrap: nowrap; gap: var(--space-4); max-height: 56px; }
 .entity-head h1 { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); }
 .entity-meta { color: var(--text-secondary); }
 .entity-badges { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
@@ -20,14 +28,18 @@
 .entity-status { padding: var(--space-5) var(--space-6); }
 
 /* "המסקנה לפני הנתון": פס מיד מתחת לכותרת הדביקה */
-.entity-summary { padding: var(--space-5) var(--space-6) 0; }
+.entity-summary { padding: var(--space-5) var(--space-6) 0; display: grid; gap: var(--space-3); }
 .signals-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
-.signal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-4); }
+.signal-card { display: block; width: 100%; text-align: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-4); color: inherit; }
+a.signal-card { cursor: pointer; }
+a.signal-card:hover { border-color: var(--accent-text); }
+.signals-strip.unassessed { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
 .signal-card .signal-detail { border: 0; padding: 0; }
 .indicator-strip { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
 
-.entity-section { padding: var(--space-6); border-bottom: 1px solid var(--border); scroll-margin-top: var(--head-h); display: grid; gap: var(--space-5); align-content: start; }
-.entity-section:last-child { min-height: 40vh; border-bottom: 0; }
+.entity-section { padding: 0 var(--space-6); margin-top: var(--space-6); scroll-margin-top: var(--head-h); display: grid; gap: var(--space-3); align-content: start; }
+.entity-section:last-child { min-height: 60vh; }
+.entity-section-body { display: grid; gap: var(--space-5); align-content: start; min-width: 0; }
 /* חותמת המקור והעדכון צמודה לכותרת הקטע */
 .entity-section-head { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
 .entity-section-head h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
@@ -52,7 +64,8 @@
 .ui-tablist [role=tab][aria-selected=true] { color: var(--accent-text); border-bottom-color: var(--accent-text); }
 
 /* ===== גרף קשרים ===== */
-.rel { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: var(--space-5); align-items: start; }
+.rel { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: var(--space-5); align-items: start; }
+.rel-side { display: grid; gap: var(--space-4); min-width: 0; }
 .rel-graph { display: grid; gap: var(--space-3); }
 .rel-svg { width: 100%; height: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
 .rel-node rect { fill: var(--surface-raised); stroke: var(--border-strong); stroke-width: 1; }
@@ -67,10 +80,10 @@
 .type-ownership.stroke, .rel-edge.type-ownership .stroke, .rel-key.type-ownership { stroke-width: 4; }
 .rel-edge.type-sharedVessels .stroke, .rel-key.type-sharedVessels { stroke-dasharray: 8 5; }
 .rel-edge.type-sharedAddress .stroke, .rel-key.type-sharedAddress { stroke-dasharray: 2 5; stroke-linecap: round; }
-.rel-edge.unusual .stroke { stroke: var(--sev-high); stroke-width: 3; }
 .rel-edge:hover .stroke, .rel-edge.selected .stroke { stroke: var(--accent-text); }
-.rel-edge.unusual:hover .stroke, .rel-edge.unusual.selected .stroke { stroke: var(--sev-high); stroke-width: 4; }
 .rel-flag .bg { fill: var(--surface); stroke: none; }
+.rel-label { fill: var(--text-secondary); font-size: var(--fs-xs); font-family: var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+.rel-edge.selected .rel-label { fill: var(--text-primary); }
 .rel-flag path { fill: var(--sev-high); }
 .rel-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); font-size: var(--fs-sm); color: var(--text-secondary); }
 .rel-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -78,3 +91,4 @@
 .rel-panel h3 { margin: 0 0 var(--space-1); font-size: var(--fs-md); display: flex; align-items: center; gap: var(--space-3); }
 .rel-panel p { margin: 0 0 var(--space-1); }
 .rel-table { max-height: 420px; }
+.rel-panel { margin: 0; }

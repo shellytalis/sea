@@ -3,13 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { ListPlus, Map, Upload } from 'lucide-react';
 import { getVesselApi } from '../data/api';
 import { VISITS_B, VISITS_C, activityA } from '../data/vessels';
-import { EntityHead, EntityPage, EntityStatus, FactGroup, Section, StaticTable } from '../ui/Entity';
+import { EntityHead, EntityPage, EntityStatus, Facts, FactGroup, Section, StaticTable, goSection } from '../ui/Entity';
 import { SeverityBadge } from '../ui/Badges';
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import { Ltr, Mono } from '../ui/Ltr';
-import { EmptyState, ForbiddenState } from '../ui/States';
-import { SEVERITY_LABEL } from '../ui/severity';
+import SpecNote from '../ui/SpecNote';
+import { EmptyState } from '../ui/States';
 import Tabs from '../ui/Tabs';
 import useAsync from '../ui/useAsync';
 import { VesselFlags } from '../components/VesselFlags';
@@ -36,6 +36,7 @@ const historyCols = [
   { id: 'src', label: 'מקור', render: (r) => r.source },
 ];
 
+/** שרטוטים: המקטע ופריט הניווט שלו מוסתרים כשאין הרשאה (מצב "אין הרשאה" מודגם ב-/design) */
 const SECTIONS = [
   { id: 'overview', label: 'סקירה' },
   { id: 'risk', label: 'סיכון ואינדיקטורים' },
@@ -44,15 +45,9 @@ const SECTIONS = [
   { id: 'identity', label: 'זהות והיסטוריית שינויים' },
   { id: 'ownership', label: 'בעלות וניהול' },
   { id: 'spec', label: 'מפרט טכני' },
-  { id: 'drawings', label: 'שרטוטים' },
   { id: 'photos', label: 'תמונות' },
   { id: 'files', label: 'קבצים והערות' },
 ];
-
-const goRisk = (e) => {
-  e.preventDefault();
-  document.querySelector('.entity-nav a[href="#risk"]')?.click();
-};
 
 export default function VesselPage() {
   const { id } = useParams();
@@ -86,6 +81,7 @@ export default function VesselPage() {
           <EntityHead title={<Ltr>{v.name}</Ltr>}
             meta={<>{v.type} · {v.flag} · <Mono>IMO {v.imo}</Mono> · <Mono>MMSI {v.mmsi}</Mono></>}
             badges={<VesselFlags v={v} />}
+            compactBadge={<VesselFlags v={v} withLists={false} />}
             actions={
               <>
                 <Button to={`/?v=${v.id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>
@@ -93,32 +89,26 @@ export default function VesselPage() {
               </>
             } />
         }
-        summary={
-          <section className="indicator-strip" aria-label="אינדיקטורי פעילות חריגה">
-            {n === 0 ? (
-              <><SeverityBadge severity="none" /><span className="sub">לא זוהו אינדיקטורי פעילות חריגה לכלי זה.</span></>
-            ) : (
-              <>
-                <SeverityBadge severity={v.risk} label={`אינדיקטור פעילות חריגה · ${SEVERITY_LABEL[v.risk]}`} />
-                <span><Mono>{n}</Mono> {n === 1 ? 'אינדיקטור' : 'אינדיקטורים'}:</span>
-                {v.indicators.map((i) => <Chip key={i.id}>{i.type}</Chip>)}
-                <a href="#risk" className="link" onClick={goRisk}>עבור לסיכון ואינדיקטורים</a>
-              </>
-            )}
+        summary={n > 0 && (
+          <section className="indicator-strip" aria-label="אינדיקטורים">
+            <span><Mono>{n}</Mono> {n === 1 ? 'אינדיקטור' : 'אינדיקטורים'}:</span>
+            {v.indicators.map((i) => <Chip key={i.id}>{i.type}</Chip>)}
+            <a href="#risk" className="link" onClick={(e) => { e.preventDefault(); goSection('risk'); }}>עבור לסיכון ואינדיקטורים</a>
           </section>
-        }>
+        )}>
         <Section id="overview" title="סקירה" source={src}>
-          <FactGroup title="תמצית" items={[
-            ['סוג', v.type], ['דגל', v.flag], ['שנת בנייה', <Mono key="b">{v.built}</Mono>],
+          <Facts items={[
+            ['שנת בנייה', <Mono key="b">{v.built}</Mono>],
             ['מיקום', <Mono key="p">{v.lat.toFixed(3)}, {v.lon.toFixed(3)}</Mono>],
             ['קליטה אחרונה', <Mono key="r">{v.lastReceived}</Mono>],
-            ['ברשימה', v.lists.length ? v.lists.join(', ') : 'לא ברשימה'],
           ]} />
         </Section>
 
         <Section id="risk" title="סיכון ואינדיקטורים" source={src}>
           {n === 0 ? (
-            <EmptyState compact title="אין אינדיקטורים"><span>הכלי נבדק ולא זוהו אינדיקטורי פעילות חריגה.</span></EmptyState>
+            <EmptyState compact title={v.risk === 'unassessed' ? 'לא הוערך' : 'אין אינדיקטורים'}>
+              <span>{v.risk === 'unassessed' ? 'אין מספיק נתונים להערכת הכלי.' : 'הכלי נבדק ולא זוהו אינדיקטורי פעילות חריגה.'}</span>
+            </EmptyState>
           ) : (
             <StaticTable caption="אינדיקטורי פעילות חריגה" columns={indicatorCols} rows={v.indicators} rowKey={(i) => i.id} />
           )}
@@ -133,7 +123,7 @@ export default function VesselPage() {
         </Section>
 
         <Section id="position" title="מיקום ותנועה" source={src}>
-          <FactGroup title="מיקום נוכחי" items={[
+          <Facts items={[
             ['מיקום', <Mono key="p">{v.lat.toFixed(3)}, {v.lon.toFixed(3)}</Mono>],
             ['מהירות', <Mono key="s">{v.speed} kn</Mono>], ['כיוון', <Mono key="c">{v.course}°</Mono>],
             ['יעד', <Ltr key="d">{v.destination}</Ltr>], ['קליטה אחרונה', <Mono key="r">{v.lastReceived}</Mono>],
@@ -147,7 +137,7 @@ export default function VesselPage() {
             ['דגל', v.flag], ['סימן קריאה', <Mono key="c">{v.callSign}</Mono>],
             ['סוג', v.type], ['תת-סוג', v.subType], ['שנת בנייה', <Mono key="b">{v.built}</Mono>],
           ]} />
-          <div>
+          <div className="fact-group">
             <h3 className="entity-sub">היסטוריית שינויים</h3>
             {v.history.length === 0
               ? <EmptyState compact title="לא נרשמו שינויים"><span>מוצגים רק שינויים שנרשמו בפרטי הישות.</span></EmptyState>
@@ -175,17 +165,13 @@ export default function VesselPage() {
           ]} />
         </Section>
 
-        <Section id="drawings" title="שרטוטים">
-          <ForbiddenState title="אין הרשאה לצפייה בשרטוטים">נדרשת הרשאה ייעודית. פנה למנהל המערכת.</ForbiddenState>
-        </Section>
-
         <Section id="photos" title="תמונות">
           <EmptyState compact title="אין תמונות זמינות לכלי זה" />
         </Section>
 
         <Section id="files" title="קבצים והערות">
           <EmptyState compact title="אין קבצים או הערות">
-            <span>סוגי קבצים, מגבלת גודל והרשאות העלאה טרם הוגדרו.</span>
+            <SpecNote>סוגי קבצים, מגבלת גודל והרשאות העלאה טרם הוגדרו.</SpecNote>
             <Button disabled icon={<Upload size={16} aria-hidden="true" />}>העלה קובץ</Button>
           </EmptyState>
         </Section>

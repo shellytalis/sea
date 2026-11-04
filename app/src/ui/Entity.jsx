@@ -10,15 +10,22 @@ function scrollToSection(root, el, headH, smooth) {
   root.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
 }
 
+/** מעבר למקטע לפי מזהה (לשימוש כרטיסים וקישורים בתוך הדף), דרך פריט הניווט שלו */
+export const goSection = (id) => document.querySelector(`.entity-nav a[href="#${id}"]`)?.click();
+
+const COLLAPSE_AT = 60;
+const EXPAND_AT = 20;
+
 /**
- * מעטפת דף ישות: כותרת-על דביקה (בתוך מיכל ברוחב מרבי וממורכז), פס מסקנה מיד מתחתיה,
- * ניווט מקטעים בצד ההתחלה (scrollspy) והמקטע הנוכחי נשמר ב-hash של ה-URL.
+ * מעטפת דף ישות: כותרת-על דביקה (בתוך מיכל ברוחב מרבי וממורכז) שמתכווצת לשורה אחת בגלילה,
+ * פס מסקנה מיד מתחתיה, ניווט מקטעים בצד ההתחלה (scrollspy) והמקטע הנוכחי נשמר ב-hash.
  */
 export function EntityPage({ header, summary, sections, resetKey, children }) {
   const scroller = useRef(null);
   const head = useRef(null);
   const { hash } = useLocation();
   const [active, setActive] = useState(() => (sections.find((s) => `#${s.id}` === hash) ?? sections[0])?.id);
+  const [compact, setCompact] = useState(false);
   const ids = sections.map((s) => s.id).join();
 
   // גובה הכותרת הדביקה, לשימוש ב-scroll-margin ובאזור הזיהוי של המקטע הנוכחי
@@ -30,10 +37,20 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
     return () => ro.disconnect();
   }, [resetKey]);
 
+  // התכווצות הכותרת בגלילה (עם היסטרזיס, כדי שהשינוי בגובה לא יגרום להתנדנדות)
   useEffect(() => {
     const root = scroller.current;
     if (!root) return undefined;
-    const top = (head.current?.offsetHeight ?? 0) + 8;
+    setCompact(false);
+    const onScroll = () => setCompact((c) => (c ? root.scrollTop > EXPAND_AT : root.scrollTop > COLLAPSE_AT));
+    root.addEventListener('scroll', onScroll, { passive: true });
+    return () => root.removeEventListener('scroll', onScroll);
+  }, [resetKey]);
+
+  useEffect(() => {
+    const root = scroller.current;
+    if (!root) return undefined;
+    const top = 64;
     const io = new IntersectionObserver((es) => {
       const e = es.find((x) => x.isIntersecting);
       if (!e) return;
@@ -43,14 +60,14 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
     sections.forEach((s) => { const n = root.querySelector(`#${s.id}`); if (n) io.observe(n); });
     // קישור עם hash: גלילה למקטע
     const target = hash && root.querySelector(hash);
-    if (target) scrollToSection(root, target, head.current?.offsetHeight ?? 0, false);
+    if (target) scrollToSection(root, target, 72, false);
     return () => io.disconnect();
   }, [resetKey, ids]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (id) => {
     setActive(id);
     const el = scroller.current?.querySelector(`#${id}`);
-    if (el) scrollToSection(scroller.current, el, head.current?.offsetHeight ?? 0, true);
+    if (el) scrollToSection(scroller.current, el, 72, true);
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${id}`);
   };
 
@@ -63,7 +80,7 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
         ))}
       </nav>
       <div className="entity-scroll" ref={scroller}>
-        <header className="entity-head" ref={head}><div className="entity-inner">{header}</div></header>
+        <header className={`entity-head${compact ? ' compact' : ''}`} ref={head}><div className="entity-inner">{header}</div></header>
         <div className="entity-inner">
           {summary && <div className="entity-summary">{summary}</div>}
           {children}
@@ -73,13 +90,19 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
   );
 }
 
-/** שם ומטא-דאטה בצד ההתחלה, והפעולות צמודות אליהם באותה שורה */
-export function EntityHead({ back, title, meta, badges, actions }) {
+/**
+ * שם ומטא-דאטה בצד ההתחלה, והפעולות צמודות אליהם באותה שורה.
+ * compactBadge: החיווי שנשאר ליד השם כשהכותרת מכווצת לשורה אחת (שם, חיווי, פעולות).
+ */
+export function EntityHead({ back, title, meta, badges, compactBadge, actions }) {
   return (
     <div className="entity-head-row">
       <div className="entity-head-main">
         {back}
-        <h1>{title}</h1>
+        <div className="entity-title-line">
+          <h1>{title}</h1>
+          {compactBadge && <span className="entity-compact-badge">{compactBadge}</span>}
+        </div>
         {meta && <div className="entity-meta">{meta}</div>}
         {badges && <div className="entity-badges">{badges}</div>}
       </div>
@@ -93,6 +116,7 @@ export function Source({ source, updated }) {
   return <span className="entity-src">{source} · עודכן <Mono>{updated}</Mono></span>;
 }
 
+/** מקטע: 32px בין מקטעים ו-12px בין הכותרת לגוף (ב-CSS); בלוקים בתוך הגוף מרווחים ב-24px */
 export function Section({ id, title, source, children }) {
   return (
     <section id={id} className="entity-section" aria-labelledby={`${id}-h`}>
@@ -100,7 +124,7 @@ export function Section({ id, title, source, children }) {
         <h2 id={`${id}-h`}>{title}</h2>
         {source && <Source {...source} />}
       </div>
-      {children}
+      <div className="entity-section-body">{children}</div>
     </section>
   );
 }
@@ -114,7 +138,7 @@ export function Facts({ items, layout = 'grid' }) {
   );
 }
 
-/** קבוצת שדות עם כותרת משנה */
+/** קבוצת שדות. כותרת משנה רק כשיש יותר מקבוצה אחת במקטע: בקבוצה יחידה משתמשים ב-Facts ישירות */
 export function FactGroup({ title, items }) {
   return (
     <div className="fact-group">

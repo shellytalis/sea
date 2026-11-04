@@ -1,90 +1,80 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
-import Button from "../ui/Button";
-import { Autocomplete, CheckGroup, RangeField, Select, TextField } from "../ui/Fields";
-import { Chip, ModelTag, RISKS, RiskBadge, Tooltip } from "../ui/Badges";
-import DataTable from "../ui/DataTable";
-import Drawer from "../ui/Drawer";
-import { EmptyState, ErrorState, ForbiddenState, NoResults, TableSkeleton } from "../ui/States";
-import { COMPANIES } from "../data/companies";
-const TOKENS = [
-  "bg-base",
-  "surface",
-  "surface-raised",
-  "border",
-  "border-strong",
-  "text-primary",
-  "text-secondary",
-  "text-tertiary",
-  "accent",
-  "accent-text",
-  "risk-low",
-  "risk-med",
-  "risk-high",
-  "focus"
-];
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import Button from '../ui/Button';
+import Chip from '../ui/Chip';
+import Combobox from '../ui/Combobox';
+import Popover from '../ui/Popover';
+import { Ltr, Mono } from '../ui/Ltr';
+import { Autocomplete, CheckGroup, MultiSelect, RangeField, Select, TextField } from '../ui/Fields';
+import { ModelTag, SeverityBadge, Tooltip } from '../ui/Badges';
+import { SEVERITIES } from '../ui/severity';
+import DataTable from '../ui/DataTable';
+import Drawer from '../ui/Drawer';
+import { Facts, StaticTable } from '../ui/Entity';
+import { EmptyState, ErrorState, ForbiddenState, NoResults, TableSkeleton } from '../ui/States';
+import { COMPANIES, COMPANY_TYPES } from '../data/companies';
+
+const COLORS = ['bg-base', 'surface', 'surface-raised', 'border', 'border-strong', 'text-primary', 'text-secondary', 'text-tertiary', 'accent', 'accent-text', 'focus'];
+const SEV_TOKENS = ['sev-low', 'sev-medium', 'sev-high', 'sev-critical', 'sev-unassessed', 'sev-none'];
+
 const cols = [
-  {
-    id: "name",
-    label: "שם חברה",
-    locked: true,
-    sort: (c) => c.name,
-    render: (c) => <bdi dir="ltr">{c.name}</bdi>
-  },
-  {
-    id: "risk",
-    label: "סיכון",
-    badge: <ModelTag />,
-    sort: (c) => c.riskScore ?? -1,
-    render: (c) => <RiskBadge risk={c.risk} />
-  },
-  {
-    id: "fleet",
-    label: "גודל צי",
-    align: "end",
-    sort: (c) => c.fleetSize,
-    render: (c) => <span className="mono" dir="ltr">{c.fleetSize}</span>
-  }
+  { id: 'name', label: 'שם חברה', locked: true, sort: (c) => c.name, render: (c) => <Ltr>{c.name}</Ltr> },
+  { id: 'country', label: 'מדינה', sort: (c) => c.country, render: (c) => c.country },
+  { id: 'fleet', label: 'גודל צי', align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
 ];
+
+const GROUPED = [
+  { id: 'vessels', label: 'כלי שיט', items: [{ key: 'v1', text: 'SEA FALCON', render: () => <><Ltr className="cell-name">SEA FALCON</Ltr><span className="sub"><Mono>IMO 9198364</Mono></span></> }] },
+  { id: 'companies', label: 'חברות', items: [{ key: 'c1', text: 'Falcon Maritime', render: () => <Ltr className="cell-name">Falcon Maritime</Ltr> }] },
+];
+
 export default function DesignPage() {
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
   const [range, setRange] = useState([10, 60]);
-  const [checks, setChecks] = useState(["a"]);
+  const [checks, setChecks] = useState(['a']);
+  const [types, setTypes] = useState(['מפעיל']);
   const [drawer, setDrawer] = useState(false);
-  return <div className="page-scroll">
+  const [pop, setPop] = useState(false);
+  const [q, setQ] = useState('fal');
+  const [picked, setPicked] = useState('');
+
+  return (
+    <div className="page-scroll">
       <div className="ds">
         <h1>מערכת עיצוב Sea</h1>
+
         <section>
           <h2>צבעים (מתחלפים עם ערכת הנושא)</h2>
           <div className="ds-swatches">
-            {TOKENS.map((t) => <div key={t} className="ds-sw"><i style={{ background: `var(--${t})` }} /><span dir="ltr">--{t}</span></div>)}
+            {COLORS.map((t) => <div key={t} className="ds-sw"><i className={`sw-${t}`} /><Ltr>--{t}</Ltr></div>)}
           </div>
         </section>
+
         <section>
-          <h2>טיפוגרפיה</h2>
-          <div style={{
-    display: "grid",
-    gap: 8
-  }}>
-            <div style={{
-    fontSize: 24,
-    lineHeight: "32px",
-    fontWeight: 600
-  }}>כותרת עמוד · 24</div>
-            <div style={{
-    fontSize: 18,
-    lineHeight: "24px",
-    fontWeight: 600
-  }}>כותרת קטע · 18</div>
-            <div>גוף · 14 · <bdi dir="ltr" className="mono">IMO 9487231 · MMSI 257184000</bdi></div>
-            <div className="sub">גוף קטן · 13</div>
-            <div style={{
-    fontSize: 12,
-    fontWeight: 600,
-    color: "var(--text-secondary)"
-  }}>תווית · 12</div>
+          <h2>סולם חומרה אחד</h2>
+          <p className="entity-note">ארבע רמות חומרה ושני מצבים שאינם חומרה. כל חיווי: טקסט, צורה וצבע יחד. היעדר נתון אינו "נמוך".</p>
+          <div className="ds-swatches">
+            {SEV_TOKENS.map((t) => <div key={t} className="ds-sw"><i className={`sw-${t}`} /><Ltr>--{t}</Ltr></div>)}
+          </div>
+          <div className="ds-row">
+            {SEVERITIES.map((s) => <SeverityBadge key={s} severity={s} />)}
+            <span>אותות מודל <ModelTag /></span>
           </div>
         </section>
+
+        <section>
+          <h2>טיפוגרפיה וריווח</h2>
+          <div className="ds-type">
+            <div className="t-2xl">כותרת עמוד · 24</div>
+            <div className="t-xl">כותרת גדולה · 20</div>
+            <div className="t-lg">כותרת קטע · 16</div>
+            <div>גוף · 14 · <Mono>IMO 9487231 · MMSI 257184000</Mono></div>
+            <div className="sub">טבלה דחוסה · 13</div>
+            <div className="t-xs">מטא-דאטה וחותמות זמן · 12</div>
+          </div>
+          <p className="entity-note">ריווח: 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64. רדיוס: 2px ו-4px בלבד.</p>
+        </section>
+
         <section>
           <h2>כפתורים</h2>
           <div className="ds-row">
@@ -92,58 +82,79 @@ export default function DesignPage() {
             <Button variant="primary" disabled>מושבת</Button><Button disabled>מושבת</Button>
             <Button variant="primary" loading>טוען</Button>
             <Button variant="primary" icon={<Search size={16} aria-hidden="true" />}>עם אייקון</Button>
+            <Button variant="icon" aria-label="חיפוש" icon={<Search size={18} aria-hidden="true" />} />
           </div>
         </section>
+
         <section>
           <h2>שדות</h2>
-          <div className="ds-row" style={{ alignItems: "start" }}>
-            <div style={{ width: 240 }}><TextField label="שדה טקסט" placeholder="הקלד כאן" /></div>
-            <div style={{ width: 240 }}><Autocomplete label="Autocomplete" value={name} onChange={setName} suggestions={COMPANIES.map((c) => c.name)} placeholder="נסה: Lotus" /></div>
-            <div style={{ width: 240 }}><Select label="Select" options={["אפשרות א", "אפשרות ב"]} /></div>
-            <div style={{ width: 280 }}><RangeField label="שדה טווח" min={0} max={100} value={range} onChange={setRange} /></div>
-            <div style={{ width: 200 }}><CheckGroup legend="בחירה מרובה" options={["a", "b"]} value={checks} onChange={setChecks} render={(o) => `אפשרות ${o}`} /></div>
+          <div className="ds-row start">
+            <div className="ds-w-sm"><TextField label="שדה טקסט" placeholder="הקלד כאן" /></div>
+            <div className="ds-w-sm"><Autocomplete label="Autocomplete" value={name} onChange={setName} suggestions={COMPANIES.map((c) => c.name)} placeholder="נסה: Lotus" /></div>
+            <div className="ds-w-sm"><Select label="Select" options={['אפשרות א', 'אפשרות ב']} /></div>
+            <div className="ds-w-sm"><MultiSelect label="בחירה מרובה (dropdown)" options={COMPANY_TYPES} value={types} onChange={setTypes} /></div>
+            <div className="ds-w-xs"><RangeField label="שדה טווח" min={0} max={100} value={range} onChange={setRange} /></div>
+            <div className="ds-w-xs"><CheckGroup legend="קבוצת סימון" options={['a', 'b']} value={checks} onChange={setChecks} render={(o) => `אפשרות ${o}`} /></div>
           </div>
         </section>
+
         <section>
-          <h2>צ'יפים, תגי סיכון ותג מודל</h2>
+          <h2>Combobox מקובץ ו-Popover</h2>
+          <div className="ds-row start">
+            <div className="ds-w-md">
+              <Combobox value={q} onChange={setQ} ariaLabel="דוגמת combobox מקובץ" placeholder="חפש שם, IMO, MMSI"
+                emptyText="לא נמצאו תוצאות" groups={q.trim() ? GROUPED : []} onSelect={(it) => setPicked(it.text)} />
+              {picked && <p className="ui-hint">נבחר: <Ltr>{picked}</Ltr></p>}
+            </div>
+            <Popover open={pop} onClose={() => setPop(false)} panelProps={{ role: 'dialog', 'aria-label': 'דוגמת popover' }}
+              anchor={<Button aria-expanded={pop} onClick={() => setPop(!pop)}>פתח popover</Button>}>
+              <p>נסגר בלחיצה מחוץ לחלונית או ב-Esc.</p>
+            </Popover>
+          </div>
+        </section>
+
+        <section>
+          <h2>צ'יפים, תגים וטולטיפ</h2>
           <div className="ds-row">
-            <Chip label="מדינה: יוון" onRemove={() => {}} /><Chip label="ללא הסרה" />
-            {RISKS.map((r) => <RiskBadge key={r} risk={r} />)}
-            <span>ציון סיכון <ModelTag /></span>
+            <Chip label="מדינה: יוון" onRemove={() => {}} /><Chip label="צ'יפ סטטי" />
             <Tooltip text="טולטיפ מופיע גם בפוקוס מקלדת" focusable><span className="ui-chip">רחף או הקש Tab</span></Tooltip>
           </div>
         </section>
+
         <section>
-          <h2>טבלה</h2>
-          <div style={{
-    height: 420,
-    display: "flex"
-  }}><DataTable rows={COMPANIES} columns={cols} rowKey={(c) => c.id} caption="דוגמת טבלה" /></div>
+          <h2>שדה-ערך (Facts)</h2>
+          <Facts items={[['שם', 'Fjord Marine AS'], ['IMO', <Mono key="i">9487231</Mono>], ['דגל', 'נורווגיה'], ['סוג', 'מפעיל']]} />
         </section>
+
+        <section>
+          <h2>טבלאות: ליבה אחת</h2>
+          <div className="ds-table-demo"><DataTable rows={COMPANIES} columns={cols} rowKey={(c) => c.id} caption="דוגמת טבלה" /></div>
+          <StaticTable caption="דוגמת טבלה סטטית" columns={cols} rows={COMPANIES.slice(0, 3)} rowKey={(c) => c.id} />
+        </section>
+
         <section>
           <h2>מגירה</h2>
           <Button onClick={() => setDrawer(true)}>פתח מגירה</Button>
-          {drawer && <div style={{
-    position: "fixed",
-    inset: "var(--top-h) auto 0 0",
-    zIndex: 70,
-    display: "flex"
-  }}><Drawer title="דוגמת מגירה" onClose={() => setDrawer(false)}><p>תוכן המגירה. Esc או כפתור הסגירה סוגרים, והפוקוס חוזר לפותח.</p></Drawer></div>}
+          {drawer && (
+            <div className="ds-drawer-demo">
+              <Drawer title="דוגמת מגירה" overlay onClose={() => setDrawer(false)}>
+                <p>שכבה מעל התוכן. Esc או כפתור הסגירה סוגרים, והפוקוס חוזר לפותח.</p>
+              </Drawer>
+            </div>
+          )}
         </section>
+
         <section>
           <h2>מצבי מערכת</h2>
-          <div style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))",
-    gap: 16
-  }}>
-            <div className="panel"><EmptyState title="אין נתונים להצגה"><span>הנתונים יופיעו כאן לאחר ההוספה.</span></EmptyState></div>
-            <div className="panel"><NoResults onClear={() => {}} /></div>
-            <div className="panel"><ErrorState onRetry={() => {}} /></div>
-            <div className="panel"><ForbiddenState /></div>
-            <div className="panel" style={{ paddingBlock: 16 }}><TableSkeleton rows={4} cols={4} /></div>
+          <div className="ds-states">
+            <div className="ds-panel"><EmptyState title="אין נתונים להצגה"><span>הנתונים יופיעו כאן לאחר ההוספה.</span></EmptyState></div>
+            <div className="ds-panel"><NoResults onClear={() => {}} /></div>
+            <div className="ds-panel"><ErrorState onRetry={() => {}} /></div>
+            <div className="ds-panel"><ForbiddenState /></div>
+            <div className="ds-panel pad"><TableSkeleton rows={4} cols={4} /></div>
           </div>
         </section>
       </div>
-    </div>;
+    </div>
+  );
 }

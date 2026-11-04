@@ -4,7 +4,10 @@ import { ListPlus, Map, Upload } from "lucide-react";
 import { VISITS_B, VISITS_C, getVessel } from "../data/vessels";
 import { COMPANIES } from "../data/companies";
 import { EntityHead, EntityPage, Facts, Section, StaticTable } from "../ui/Entity";
-import Button, { LinkButton } from "../ui/Button";
+import Button from "../ui/Button";
+import { Ltr, Mono } from "../ui/Ltr";
+import Chip from "../ui/Chip";
+
 import { EmptyState, ForbiddenState } from "../ui/States";
 import { VesselFlags } from "../components/VesselFlags";
 import AddToListDialog from "../components/AddToListDialog";
@@ -12,7 +15,7 @@ const visitCols = [
   {
     id: "port",
     label: "נמל",
-    render: (r) => <bdi dir="ltr">{r.port}</bdi>
+    render: (r) => <Ltr>{r.port}</Ltr>
   },
   {
     id: "country",
@@ -22,18 +25,18 @@ const visitCols = [
   {
     id: "arrival",
     label: "הגעה",
-    render: (r) => <span className="mono" dir="ltr">{r.arrival}</span>
+    render: (r) => <Mono>{r.arrival}</Mono>
   },
   {
     id: "departure",
     label: "יציאה",
-    render: (r) => <span className="mono" dir="ltr">{r.departure}</span>
+    render: (r) => <Mono>{r.departure}</Mono>
   }
 ];
 /** שם חברה שקיים כישות במערכת הופך לקישור לפרופיל */
 function CompanyRef({ name }) {
   const c = COMPANIES.find((x) => x.name === name);
-  return c ? <Link to={`/companies/${c.id}`} className="link"><bdi dir="ltr">{name}</bdi></Link> : <bdi dir="ltr">{name}</bdi>;
+  return c ? <Link to={`/companies/${c.id}`} className="link"><Ltr>{name}</Ltr></Link> : <Ltr>{name}</Ltr>;
 }
 export default function VesselPage() {
   const { id } = useParams();
@@ -42,7 +45,7 @@ export default function VesselPage() {
   if (!v) {
     return <EmptyState title="הכלי לא נמצא">
         <span>בדוק את המזהה ונסה שוב.</span>
-        <LinkButton to="/">חזרה למפה</LinkButton>
+        <Button to="/">חזרה למפה</Button>
       </EmptyState>;
   }
   const src = v.stamp;
@@ -77,18 +80,18 @@ export default function VesselPage() {
     }
   ];
   return <>
-      <EntityPage resetKey={v.id} sections={sections} header={<EntityHead title={<bdi dir="ltr">{v.name}</bdi>} meta={<>{v.type} · {v.flag} · <bdi dir="ltr" className="mono">IMO {v.imo}</bdi> · <bdi dir="ltr" className="mono">MMSI {v.mmsi}</bdi></>} badges={<VesselFlags v={v} />} actions={<>
-              <LinkButton to={`/?v=${v.id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</LinkButton>
+      <EntityPage resetKey={v.id} sections={sections} header={<EntityHead title={<Ltr>{v.name}</Ltr>} meta={<>{v.type} · {v.flag} · <Mono>IMO {v.imo}</Mono> · <Mono>MMSI {v.mmsi}</Mono></>} badges={<VesselFlags v={v} />} actions={<>
+              <Button to={`/?v=${v.id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>
               <Button variant="primary" icon={<ListPlus size={16} aria-hidden="true" />} onClick={() => setAdding(true)}>הוסף לרשימה</Button>
             </>} />}>
         <Section id="details" title="פרטי הכלי" source={src}>
           <Facts items={[
     ["סוג", v.type],
     ["דגל", v.flag],
-    ["שנת בנייה", <span key="b" className="mono" dir="ltr">{v.built}</span>],
-    ["DWT", <span key="d" className="mono" dir="ltr">{v.dwt.toLocaleString("en")} t</span>],
-    ["אורך", <span key="l" className="mono" dir="ltr">{v.length} m</span>],
-    ["סימן קריאה", <span key="c" className="mono" dir="ltr">{v.callSign}</span>],
+    ["שנת בנייה", <Mono key="b">{v.built}</Mono>],
+    ["DWT", <Mono key="d">{v.dwt.toLocaleString("en")} t</Mono>],
+    ["אורך", <Mono key="l">{v.length} m</Mono>],
+    ["סימן קריאה", <Mono key="c">{v.callSign}</Mono>],
     ["בעלים", <CompanyRef key="o" name={v.owner} />],
     ["מפעיל", <CompanyRef key="m" name={v.manager} />]
   ]} />
@@ -96,11 +99,11 @@ export default function VesselPage() {
 
         <Section id="position" title="מיקום ותנועה" source={src}>
           <Facts items={[
-    ["מיקום", <span key="p" className="mono" dir="ltr">{v.lat.toFixed(3)}, {v.lon.toFixed(3)}</span>],
-    ["מהירות", <span key="s" className="mono" dir="ltr">{v.speed} kn</span>],
-    ["כיוון", <span key="c" className="mono" dir="ltr">{v.course}°</span>],
-    ["יעד", <bdi key="d" dir="ltr">{v.destination}</bdi>],
-    ["קליטה אחרונה", <span key="r" className="mono" dir="ltr">{v.lastReceived}</span>]
+    ["מיקום", <Mono key="p">{v.lat.toFixed(3)}, {v.lon.toFixed(3)}</Mono>],
+    ["מהירות", <Mono key="s">{v.speed} kn</Mono>],
+    ["כיוון", <Mono key="c">{v.course}°</Mono>],
+    ["יעד", <Ltr key="d">{v.destination}</Ltr>],
+    ["קליטה אחרונה", <Mono key="r">{v.lastReceived}</Mono>]
   ]} />
         </Section>
 

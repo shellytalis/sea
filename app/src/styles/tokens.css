@@ -1,13 +1,52 @@
-/* Tokens סמנטיים. הערכים נקבעו ב-DESIGN.md ואומתו בחישוב ניגודיות. */
+/* Tokens סמנטיים. מקור האמת לערכים: SEA-PROJECT-BRAIN.md ו-DESIGN.md. */
 :root {
+  /* מבנה */
   --nav-w: 56px;
   --top-h: 48px;
   --drawer-w: 400px;
-  --filters-w: 320px;
-  --radius: 6px;
+  --entity-max: 1680px;
   --row-h: 40px;
+  --control-h: 40px;
+  --control-h-sm: 32px;
+
+  /* רדיוס: שני ערכים בלבד. עיגולים אמיתיים (נקודה, אווטאר) משתמשים ב-50% */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* טיפוגרפיה: סולם יחיד */
   --font: 'Heebo', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  --fs-xs: 12px;  /* מטא-דאטה וחותמות זמן בלבד */
+  --fs-sm: 13px;  /* טבלאות במצב דחוס */
+  --fs-md: 14px;  /* גוף */
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --lh-xs: 16px;
+  --lh-sm: 20px;
+  --lh-md: 20px;
+  --lh-lg: 24px;
+  --lh-xl: 28px;
+  --lh-2xl: 32px;
+
+  /* ריווח */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* שכבות */
+  --z-sticky: 2;
+  --z-sticky-top: 3;
+  --z-map-ui: 5;
+  --z-popover: 30;
+  --z-tooltip: 40;
+  --z-drawer: 55;
+  --z-scrim: 90;
 }
 :root[data-density='compact'] { --row-h: 32px; }
 
@@ -26,11 +65,21 @@
   --accent-text: #6ba4ff;
   --accent-bg: rgba(107, 164, 255, 0.14);
   --on-accent: #ffffff;
-  --risk-low: #34c38f;
-  --risk-med: #f0a93b;
-  --risk-high: #ff6b63;
   --focus: #6ba4ff;
+
+  /* חומרה: נמוך / בינוני / גבוה / קריטי, ושני מצבים שאינם חומרה */
+  --sev-low: #34c38f;
+  --sev-medium: #f0a93b;
+  --sev-high: #ff9a4d;
+  --sev-critical: #ff6b63;
+  --sev-unassessed: #8296b4;
+  --sev-none: #9aa9c2;
+
+  --scrim: rgba(5, 10, 20, 0.6);
   --shadow-raised: none;
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-drawer: 0 0 32px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
 
@@ -48,11 +97,25 @@
   --accent-text: #1d5fd1;
   --accent-bg: rgba(29, 95, 209, 0.1);
   --on-accent: #ffffff;
-  --risk-low: #0f7b53;
-  --risk-med: #8a5a00;
-  --risk-high: #c4281f;
   --focus: #1d5fd1;
+
+  --sev-low: #0f7b53;
+  --sev-medium: #8a5a00;
+  --sev-high: #b34700;
+  --sev-critical: #c4281f;
+  --sev-unassessed: #5c6b85;
+  --sev-none: #52627d;
+
+  --scrim: rgba(15, 27, 45, 0.45);
   --shadow-raised: 0 1px 3px rgba(15, 27, 45, 0.12);
+  --shadow-pop: 0 8px 24px rgba(15, 27, 45, 0.18);
+  --shadow-modal: 0 16px 48px rgba(15, 27, 45, 0.28);
+  --shadow-drawer: 0 0 32px rgba(15, 27, 45, 0.2);
   color-scheme: light;
 }
 
+/* כינויים לקוד המפה המוקפא, שקורא את --risk-med ו---risk-high */
+:root {
+  --risk-med: var(--sev-medium);
+  --risk-high: var(--sev-high);
+}

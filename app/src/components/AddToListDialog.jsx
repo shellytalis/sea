@@ -15,8 +15,8 @@ export default function AddToListDialog({ vessel, onClose }) {
       </Dialog>;
   }
   return <Dialog title="הוספה לרשימה" onClose={onClose} footer={<>
-        <Button onClick={onClose}>ביטול</Button>
         <Button variant="primary" disabled={!sel} onClick={() => setDone(sel)}>הוסף</Button>
+        <Button onClick={onClose}>ביטול</Button>
       </>}>
       <fieldset className="ui-checks">
         <legend>בחר רשימה</legend>

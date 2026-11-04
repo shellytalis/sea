@@ -6,9 +6,10 @@ import VesselPage from "./pages/VesselPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import CompanyPage from "./pages/CompanyPage";
 import DesignPage from "./pages/DesignPage";
+import { Mono } from "./ui/Ltr";
 function Soon() {
   const { pathname } = useLocation();
-  return <EmptyState title="המסך בפיתוח"><bdi dir="ltr" className="mono">{pathname}</bdi></EmptyState>;
+  return <EmptyState title="המסך בפיתוח"><Mono>{pathname}</Mono></EmptyState>;
 }
 export default function App() {
   return <Routes>

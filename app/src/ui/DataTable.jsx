@@ -1,130 +1,92 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Columns3 } from "lucide-react";
-import { useDensity } from "./prefs";
-import Button from "./Button";
-const PAGE_SIZES = [
-  10,
-  25,
-  50
-];
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Columns3 } from 'lucide-react';
+import { useDensity } from './prefs';
+import Button from './Button';
+import Popover from './Popover';
+import TableCore, { sortRows } from './Table';
+import { Ltr } from './Ltr';
+
+export const PAGE_SIZES = [10, 25, 50];
+
+/** ערך מבוקר כשהועבר, אחרת state פנימי */
+function useControllable(value, onChange, initial) {
+  const [inner, setInner] = useState(initial);
+  const controlled = value !== undefined;
+  return [controlled ? value : inner, (v) => { if (!controlled) setInner(v); onChange?.(v); }];
+}
+
 function ColumnManager({ cols, hidden, onToggle }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (!ref.current?.contains(e.target)) setOpen(false);
-    };
-    const k = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    document.addEventListener("keydown", k);
-    return () => {
-      document.removeEventListener("mousedown", h);
-      document.removeEventListener("keydown", k);
-    };
-  }, [open]);
-  return <div className="ui-pop-wrap" ref={ref}>
-      <Button variant="secondary" icon={<Columns3 size={16} aria-hidden="true" />} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}>ניהול עמודות</Button>
-      {open && <div className="ui-pop" role="group" aria-label="ניהול עמודות">
-          {cols.map((c) => <label key={c.id} className="ui-check">
-              <input type="checkbox" checked={!hidden.has(c.id)} disabled={c.locked} onChange={() => onToggle(c.id)} />
-              <span>{c.label}{c.locked && <span className="ui-hint"> (חובה)</span>}</span>
-            </label>)}
-        </div>}
-    </div>;
+  return (
+    <Popover open={open} onClose={() => setOpen(false)} panelProps={{ role: 'group', 'aria-label': 'ניהול עמודות' }}
+      anchor={<Button icon={<Columns3 size={16} aria-hidden="true" />} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}>ניהול עמודות</Button>}>
+      {cols.map((c) => (
+        <label key={c.id} className="ui-check">
+          <input type="checkbox" checked={!hidden.includes(c.id)} disabled={c.locked} onChange={() => onToggle(c.id)} />
+          <span>{c.label}{c.locked && <span className="ui-hint"> (חובה)</span>}</span>
+        </label>
+      ))}
+    </Popover>
+  );
 }
+
 export function DensityToggle() {
   const { density, setDensity } = useDensity();
-  return <div className="ui-seg" role="group" aria-label="צפיפות תצוגה">
-      {["comfortable", "compact"].map((d) => <button key={d} type="button" aria-pressed={density === d} onClick={() => setDensity(d)}>{d === "comfortable" ? "נוח" : "דחוס"}</button>)}
-    </div>;
+  return (
+    <div className="ui-seg" role="group" aria-label="צפיפות תצוגה">
+      {['comfortable', 'compact'].map((d) => (
+        <Button key={d} variant="seg" size="sm" active={density === d} onClick={() => setDensity(d)}>{d === 'comfortable' ? 'נוח' : 'דחוס'}</Button>
+      ))}
+    </div>
+  );
 }
-export default function DataTable({ rows, columns, rowKey, onRowClick, selectedKey, caption, resetKey }) {
-  const [sort, setSort] = useState(null);
-  const [hidden, setHidden] = useState(() => new Set(columns.filter((c) => c.hidden).map((c) => c.id)));
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(PAGE_SIZES[0]);
-  useEffect(() => {
-    setPage(0);
-  }, [resetKey, size]);
-  const visible = columns.filter((c) => !hidden.has(c.id));
-  const sorted = useMemo(() => {
-    const col = columns.find((c) => c.id === sort?.id);
-    if (!col?.sort || !sort) return rows;
-    const f = col.sort;
-    const k = sort.dir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => {
-      const x = f(a), y = f(b);
-      return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "he")) * k;
-    });
-  }, [
-    rows,
-    columns,
-    sort
-  ]);
+
+/**
+ * טבלת נתונים: מיון, ניהול עמודות, עימוד. כל חלקי המצב ניתנים לשליטה מבחוץ (למשל מה-URL):
+ * sort {id,dir}|null · page (0-based) · size · hidden (מערך מזהי עמודות).
+ */
+export default function DataTable({
+  rows, columns, rowKey, onRowClick, selectedKey, caption, resetKey,
+  sort: sortProp, onSortChange, page: pageProp, onPageChange, size: sizeProp, onSizeChange, hidden: hiddenProp, onHiddenChange,
+}) {
+  const [sort, setSort] = useControllable(sortProp, onSortChange, null);
+  const [page, setPage] = useControllable(pageProp, onPageChange, 0);
+  const [size, setSize] = useControllable(sizeProp, onSizeChange, PAGE_SIZES[0]);
+  const [hidden, setHidden] = useControllable(hiddenProp, onHiddenChange, columns.filter((c) => c.hidden).map((c) => c.id));
+
+  useEffect(() => { if (resetKey !== undefined && pageProp === undefined) setPage(0); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visible = columns.filter((c) => !hidden.includes(c.id) || c.locked);
+  const sorted = useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
   const pages = Math.max(1, Math.ceil(sorted.length / size));
   const cur = Math.min(page, pages - 1);
   const slice = sorted.slice(cur * size, cur * size + size);
   const from = sorted.length ? cur * size + 1 : 0;
-  const toggleSort = (id) => setSort((s) => !s || s.id !== id ? {
-    id,
-    dir: "asc"
-  } : s.dir === "asc" ? {
-    id,
-    dir: "desc"
-  } : null);
-  return <div className="ui-table-block">
+  const toggleSort = (id) => setSort(!sort || sort.id !== id ? { id, dir: 'asc' } : sort.dir === 'asc' ? { id, dir: 'desc' } : null);
+
+  return (
+    <div className="ui-table-block">
       <div className="ui-table-toolbar">
-        <ColumnManager cols={columns} hidden={hidden} onToggle={(id) => setHidden((h) => {
-    const n = new Set(h);
-    if (n.has(id)) n.delete(id);
-    else n.add(id);
-    return n;
-  })} />
+        <ColumnManager cols={columns} hidden={hidden}
+          onToggle={(id) => setHidden(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])} />
         <DensityToggle />
       </div>
       <div className="ui-table-scroll">
-        <table className="ui-table">
-          <caption className="sr-only">{caption}</caption>
-          <thead>
-            <tr>
-              {visible.map((c) => {
-    const dir = sort?.id === c.id ? sort.dir : null;
-    return <th key={c.id} scope="col" className={c.align === "end" ? "end" : ""} aria-sort={dir ? dir === "asc" ? "ascending" : "descending" : c.sort ? "none" : undefined}>
-                    {c.sort ? <button type="button" onClick={() => toggleSort(c.id)} className="ui-th-btn">
-                        {c.label}{c.badge}
-                        {dir === "asc" ? <ArrowUp size={14} aria-hidden="true" /> : dir === "desc" ? <ArrowDown size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" className="dim" />}
-                      </button> : <span className="ui-th-btn static">{c.label}{c.badge}</span>}
-                  </th>;
-  })}
-            </tr>
-          </thead>
-          <tbody>
-            {slice.map((r) => {
-    const k = rowKey(r);
-    return <tr key={k} className={selectedKey === k ? "selected" : ""} aria-selected={onRowClick ? selectedKey === k : undefined} tabIndex={onRowClick ? 0 : undefined} onClick={() => onRowClick?.(r)} onKeyDown={(e) => {
-      if (onRowClick && (e.key === "Enter" || e.key === " ")) {
-        e.preventDefault();
-        onRowClick(r);
-      }
-    }}>
-                  {visible.map((c) => <td key={c.id} className={c.align === "end" ? "end" : ""}>{c.render(r)}</td>)}
-                </tr>;
-  })}
-          </tbody>
-        </table>
+        <TableCore caption={caption} columns={visible} rows={slice} rowKey={rowKey} sort={sort} onSort={toggleSort}
+          onRowClick={onRowClick} selectedKey={selectedKey} />
       </div>
       <div className="ui-pager">
         <label>שורות בעמוד
-          <select className="ui-input sm" value={size} onChange={(e) => setSize(+e.target.value)}>{PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}</select>
+          <select className="ui-input sm" value={size} onChange={(e) => { setSize(+e.target.value); setPage(0); }}>
+            {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
+          </select>
         </label>
-        <span className="ui-pager-range" dir="ltr">{from}–{Math.min(sorted.length, cur * size + size)} / {sorted.length}</span>
+        <Ltr className="ui-pager-range">{from}–{Math.min(sorted.length, cur * size + size)} / {sorted.length}</Ltr>
         <div className="ui-pager-nav">
-          <button type="button" className="ui-icon-btn" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={18} aria-hidden="true" /></button>
-          <button type="button" className="ui-icon-btn" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+          <Button variant="icon" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={18} aria-hidden="true" /></Button>
+          <Button variant="icon" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }

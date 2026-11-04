@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Mono } from "./Ltr";
+import TableCore from "./Table";
 /** מעטפת דף ישות: ניווט מקטעים בצד ההתחלה, גלילה מרכזית והדגשת המקטע הנוכחי */
 export function EntityPage({ header, sections, resetKey, children }) {
   const scroller = useRef(null);
@@ -52,7 +54,7 @@ export function EntityHead({ back, title, meta, badges, actions }) {
     </div>;
 }
 export function Source({ source, updated }) {
-  return <span className="entity-src">{source} · עודכן <span className="mono" dir="ltr">{updated}</span></span>;
+  return <span className="entity-src">{source} · עודכן <Mono>{updated}</Mono></span>;
 }
 export function Section({ id, title, source, children }) {
   return <section id={id} className="entity-section" aria-labelledby={id + "-h"}>
@@ -63,9 +65,9 @@ export function Section({ id, title, source, children }) {
       {children}
     </section>;
 }
-/** שדות עם תווית מעל הערך: צפופים אך קריאים */
-export function Facts({ items }) {
-  return <dl className="ui-fact-grid">
+/** שדה-ערך: דפוס יחיד. layout="grid" (תווית מעל הערך, בדפי ישות) או "list" (תווית וערך בשורה, במגירות) */
+export function Facts({ items, layout = "grid" }) {
+  return <dl className={`ui-facts ${layout}`}>
       {items.map(([k, v]) => <div key={k} className="ui-fact"><dt>{k}</dt><dd>{v}</dd></div>)}
     </dl>;
 }
@@ -76,12 +78,6 @@ export function Metrics({ items }) {
 }
 export function StaticTable({ caption, columns, rows, rowKey }) {
   return <div className="ui-table-scroll bordered">
-      <table className="ui-table static">
-        <caption className="sr-only">{caption}</caption>
-        <thead><tr>{columns.map((c) => <th key={c.id} scope="col" className={c.align === "end" ? "end" : ""}><span className="ui-th-btn static">{c.label}</span></th>)}</tr></thead>
-        <tbody>
-          {rows.map((r) => <tr key={rowKey(r)}>{columns.map((c) => <td key={c.id} className={c.align === "end" ? "end" : ""}>{c.render(r)}</td>)}</tr>)}
-        </tbody>
-      </table>
+      <TableCore caption={caption} columns={columns} rows={rows} rowKey={rowKey} stickyHead={false} className="static" />
     </div>;
 }

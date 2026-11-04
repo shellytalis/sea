@@ -71,7 +71,7 @@ export const VESSELS = [
     destination: "ASHDOD",
     lastReceived: "2026-10-27 07:52",
     lists: [],
-    risk: "warning",
+    risk: "medium",
     riskNotes: ["כיבוי AIS לפרק זמן של 9 שעות"],
     stamp: {
       source: "מקור א",
@@ -129,7 +129,7 @@ export const VESSELS = [
     destination: "—",
     lastReceived: "2026-10-26 22:03",
     lists: ["רשימת מעקב ב"],
-    risk: "danger",
+    risk: "high",
     riskNotes: ["שינוי שם בשנה האחרונה", "העברה בין כלים באזור ללא נמל"],
     stamp: {
       source: "מקור א",

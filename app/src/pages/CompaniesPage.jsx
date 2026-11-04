@@ -2,9 +2,14 @@ import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clock, History, ListFilter, Search } from "lucide-react";
 import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, FLEET_MAX, citiesOf, getCompany, hasParams, searchCompanies } from "../data/companies";
-import Button, { LinkButton } from "../ui/Button";
+import Button from "../ui/Button";
+import Chip from "../ui/Chip";
+import { Ltr, Mono } from "../ui/Ltr";
 import { Autocomplete, CheckGroup, RangeField, Select } from "../ui/Fields";
-import { Chip, ModelTag, RISKS, RISK_LABEL, RiskBadge } from "../ui/Badges";
+import { ModelTag, SeverityBadge } from "../ui/Badges";
+import { SEVERITIES, SEVERITY_LABEL as RISK_LABEL } from "../ui/severity";
+const RISKS = SEVERITIES;
+const RiskBadge = ({ risk }) => <SeverityBadge severity={risk} />;
 import DataTable from "../ui/DataTable";
 import Drawer from "../ui/Drawer";
 import { ErrorState, ForbiddenState, NoResults, TableSkeleton } from "../ui/States";
@@ -144,7 +149,7 @@ export default function CompaniesPage() {
       label: "שם חברה",
       locked: true,
       sort: (c) => c.name.toLowerCase(),
-      render: (c) => <bdi dir="ltr" className="cell-name">{c.name}</bdi>
+      render: (c) => <Ltr className="cell-name">{c.name}</Ltr>
     },
     {
       id: "risk",
@@ -156,7 +161,7 @@ export default function CompaniesPage() {
         gap: 8,
         alignItems: "center"
       }}>
-        <RiskBadge risk={c.risk} />{c.riskScore !== null && <span className="mono" dir="ltr">{c.riskScore}</span>}
+        <RiskBadge risk={c.risk} />{c.riskScore !== null && <Mono>{c.riskScore}</Mono>}
       </span>
     },
     {
@@ -169,7 +174,7 @@ export default function CompaniesPage() {
       id: "city",
       label: "עיר",
       sort: (c) => c.city,
-      render: (c) => <bdi dir="ltr">{c.city}</bdi>
+      render: (c) => <Ltr>{c.city}</Ltr>
     },
     {
       id: "type",
@@ -182,7 +187,7 @@ export default function CompaniesPage() {
       label: "גודל צי",
       align: "end",
       sort: (c) => c.fleetSize,
-      render: (c) => <span className="mono" dir="ltr">{c.fleetSize}</span>
+      render: (c) => <Mono>{c.fleetSize}</Mono>
     },
     {
       id: "roles",
@@ -195,13 +200,13 @@ export default function CompaniesPage() {
       badge: <ModelTag />,
       align: "end",
       sort: (c) => c.anomalies ?? -1,
-      render: (c) => c.anomalies === null ? <span className="ui-hint">לא נבדק</span> : <span className="mono" dir="ltr">{c.anomalies}</span>
+      render: (c) => c.anomalies === null ? <span className="ui-hint">לא נבדק</span> : <Mono>{c.anomalies}</Mono>
     },
     {
       id: "updated",
       label: "עדכון אחרון",
       sort: (c) => c.updated,
-      render: (c) => <span className="mono" dir="ltr">{c.updated}</span>
+      render: (c) => <Mono>{c.updated}</Mono>
     }
   ], []);
   const sel = getCompany(selected);
@@ -285,7 +290,7 @@ export default function CompaniesPage() {
               <section>
                 <h2><Clock size={16} aria-hidden="true" style={{ verticalAlign: "-2px" }} /> חברות שנצפו לאחרונה</h2>
                 <ul className="cs-list">
-                  {DEMO_VIEWED.map(getCompany).map((c) => c && <li key={c.id}><button type="button" onClick={() => setSelected(c.id)}><bdi dir="ltr">{c.name}</bdi><RiskBadge risk={c.risk} /></button></li>)}
+                  {DEMO_VIEWED.map(getCompany).map((c) => c && <li key={c.id}><button type="button" onClick={() => setSelected(c.id)}><Ltr>{c.name}</Ltr><RiskBadge risk={c.risk} /></button></li>)}
                 </ul>
               </section>
             </div>
@@ -297,7 +302,7 @@ export default function CompaniesPage() {
         {status === "done" && results.length > 0 && <DataTable rows={results} columns={columns} rowKey={(c) => c.id} selectedKey={selected} onRowClick={(c) => setSelected(c.id)} caption="תוצאות חיפוש חברות" resetKey={results} />}
       </main>
 
-      {sel && <Drawer title={<><bdi dir="ltr">{sel.name}</bdi></>} onClose={() => setSelected(null)} footer={<LinkButton to={`/companies/${sel.id}`} variant="primary" block icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</LinkButton>}>
+      {sel && <Drawer title={<><Ltr>{sel.name}</Ltr></>} onClose={() => setSelected(null)} footer={<Button to={`/companies/${sel.id}`} variant="primary" block icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
           <div style={{
     display: "grid",
     gap: 8
@@ -309,16 +314,16 @@ export default function CompaniesPage() {
     gap: 12
   }}>
               <span style={{ fontSize: 16 }}><RiskBadge risk={sel.risk} /></span>
-              {sel.riskScore !== null && <span className="mono" dir="ltr" style={{ fontSize: 24 }}>{sel.riskScore}<span className="ui-hint">/100</span></span>}
+              {sel.riskScore !== null && <Mono>{sel.riskScore}<span className="ui-hint">/100</span></Mono>}
             </div>
           </div>
           <dl className="ui-facts">
             <dt>סוג</dt><dd>{sel.type}</dd>
-            <dt>מיקום</dt><dd>{sel.country}, <bdi dir="ltr">{sel.city}</bdi></dd>
-            <dt>גודל צי</dt><dd><span className="mono" dir="ltr">{sel.fleetSize}</span></dd>
-            <dt>חריגות פעילות <ModelTag /></dt><dd>{sel.anomalies === null ? "לא נבדק" : <span className="mono" dir="ltr">{sel.anomalies}</span>}</dd>
-            <dt>עדכון אחרון</dt><dd><span className="mono" dir="ltr">{sel.updated}</span></dd>
-            <dt>D&amp;B</dt><dd><span className="mono" dir="ltr">{sel.dnb}</span></dd>
+            <dt>מיקום</dt><dd>{sel.country}, <Ltr>{sel.city}</Ltr></dd>
+            <dt>גודל צי</dt><dd><Mono>{sel.fleetSize}</Mono></dd>
+            <dt>חריגות פעילות <ModelTag /></dt><dd>{sel.anomalies === null ? "לא נבדק" : <Mono>{sel.anomalies}</Mono>}</dd>
+            <dt>עדכון אחרון</dt><dd><Mono>{sel.updated}</Mono></dd>
+            <dt>D&amp;B</dt><dd><Mono>{sel.dnb}</Mono></dd>
           </dl>
         </Drawer>}
     </div>;

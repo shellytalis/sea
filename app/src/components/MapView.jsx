@@ -205,8 +205,8 @@ export default function MapView({ vessels, selectedId, onSelect }) {
       <div ref={el} className="map-canvas" />
       <div className="map-legend" role="group" aria-label="מקרא">
         <div className="legend-row"><Shape risk="low" color="var(--accent-text)" />כלי שיט</div>
-        <div className="legend-row"><Shape risk="med" />חיווי אזהרה</div>
-        <div className="legend-row"><Shape risk="high" />חיווי פעולה מסוכנת</div>
+        <div className="legend-row"><Shape risk="medium" />אינדיקטור פעילות חריגה · בינוני</div>
+        <div className="legend-row"><Shape risk="high" />אינדיקטור פעילות חריגה · גבוה ומעלה</div>
       </div>
     </div>;
 }

@@ -1,19 +1,29 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
-export function Field({ label, id, children, hint }) {
-  return <div className="ui-field">
+import { useId, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import Chip from './Chip';
+import Combobox from './Combobox';
+import Popover from './Popover';
+import { Mono } from './Ltr';
+
+export function Field({ label, id, children, hint, className = '' }) {
+  return (
+    <div className={`ui-field ${className}`.trim()}>
       <label htmlFor={id}>{label}</label>
       {children}
       {hint && <span className="ui-hint">{hint}</span>}
-    </div>;
+    </div>
+  );
 }
-export function TextField({ label, hint, ...rest }) {
+
+export function TextField({ label, hint, className, ...rest }) {
   const id = useId();
-  return <Field label={label} id={id} hint={hint}><input {...rest} id={id} className="ui-input" /></Field>;
+  return <Field label={label} id={id} hint={hint} className={className}><input {...rest} id={id} className="ui-input" /></Field>;
 }
-export function Select({ label, options, placeholder = "הכל", ...rest }) {
+
+export function Select({ label, options, placeholder = 'הכל', className, ...rest }) {
   const id = useId();
-  return <Field label={label} id={id}>
+  return (
+    <Field label={label} id={id} className={className}>
       <div className="ui-select">
         <select {...rest} id={id} className="ui-input">
           <option value="">{placeholder}</option>
@@ -21,96 +31,85 @@ export function Select({ label, options, placeholder = "הכל", ...rest }) {
         </select>
         <ChevronDown size={16} aria-hidden="true" />
       </div>
-    </Field>;
+    </Field>
+  );
 }
-/** שדה עם השלמה: combobox לפי ARIA 1.2 וניווט מקלדת */
-export function Autocomplete({ label, value, onChange, suggestions, placeholder, onEnter }) {
+
+/** שדה עם השלמה: Combobox שבחירה בו ממלאת את הטקסט */
+export function Autocomplete({ label, value, onChange, suggestions, placeholder, onEnter, className }) {
+  const id = useId();
+  const q = value.trim().toLowerCase();
+  const items = q
+    ? suggestions.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q).slice(0, 6)
+        .map((s) => ({ key: s, text: s, render: () => <Mono>{s}</Mono> }))
+    : [];
+  return (
+    <Field label={label} id={id} className={className}>
+      <Combobox id={id} value={value} onChange={onChange} onEnter={onEnter} placeholder={placeholder}
+        groups={[{ id: 'all', items }]} onSelect={(it) => onChange(it.text)} />
+    </Field>
+  );
+}
+
+/** בחירה מרובה כ-dropdown: הנבחרים מוצגים כצ'יפים בתוך השדה */
+export function MultiSelect({ label, options, value, onChange, placeholder = 'הכל' }) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
-  const wrap = useRef(null);
-  const matches = useMemo(() => {
-    const q = value.trim().toLowerCase();
-    return q ? suggestions.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q).slice(0, 6) : [];
-  }, [value, suggestions]);
-  const show = open && matches.length > 0;
-  useEffect(() => {
-    const h = (e) => {
-      if (!wrap.current?.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const pick = (s) => {
-    onChange(s);
-    setOpen(false);
-    setActive(-1);
-  };
-  return <Field label={label} id={id}>
-      <div className="ui-ac" ref={wrap}>
-        <input id={id} className="ui-input" role="combobox" aria-expanded={show} aria-controls={id + "-list"} aria-autocomplete="list" aria-activedescendant={active >= 0 ? `${id}-o${active}` : undefined} autoComplete="off" value={value} placeholder={placeholder} onChange={(e) => {
-    onChange(e.target.value);
-    setOpen(true);
-    setActive(-1);
-  }} onFocus={() => setOpen(true)} onKeyDown={(e) => {
-    if (e.key === "ArrowDown" && show) {
-      e.preventDefault();
-      setActive((a) => (a + 1) % matches.length);
-    } else if (e.key === "ArrowUp" && show) {
-      e.preventDefault();
-      setActive((a) => a <= 0 ? matches.length - 1 : a - 1);
-    } else if (e.key === "Escape") setOpen(false);
-    else if (e.key === "Enter") {
-      if (show && active >= 0) {
-        e.preventDefault();
-        pick(matches[active]);
-      } else onEnter?.();
-    }
-  }} />
-        {show && <ul id={id + "-list"} role="listbox" className="ui-listbox">
-            {matches.map((m, i) => <li key={m} id={`${id}-o${i}`} role="option" aria-selected={i === active} className={i === active ? "active" : ""} onMouseDown={(e) => {
-    e.preventDefault();
-    pick(m);
-  }}><span dir="ltr">{m}</span></li>)}
-          </ul>}
-      </div>
-    </Field>;
+  const toggle = (o) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
+  return (
+    <Field label={label} id={id}>
+      <Popover open={open} onClose={() => setOpen(false)} fit panelProps={{ role: 'group', 'aria-label': label }}
+        anchor={
+          <div className="ui-input ui-multi">
+            {value.map((v) => <Chip key={v} label={v} removeLabel={`הסר ${v}`} onRemove={() => toggle(v)} />)}
+            <button type="button" id={id} className="ui-multi-toggle" aria-expanded={open} aria-haspopup="true"
+              onClick={() => setOpen(!open)}>
+              {value.length === 0 && <span className="ui-multi-ph">{placeholder}</span>}
+              <ChevronDown size={16} aria-hidden="true" />
+            </button>
+          </div>
+        }>
+        {options.map((o) => (
+          <label key={o} className="ui-check">
+            <input type="checkbox" checked={value.includes(o)} onChange={() => toggle(o)} />
+            <span>{o}</span>
+          </label>
+        ))}
+      </Popover>
+    </Field>
+  );
 }
-/** טווח: סליידר כפול ושני שדות מספר מסונכרנים */
+
+/** טווח: שני שדות מספר מסונכרנים (בלי סליידר: הוא לא מוסיף דיוק) */
 export function RangeField({ label, min, max, value, onChange }) {
   const id = useId();
   const [lo, hi] = value;
   const clamp = (n) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
-  const setLo = (n) => onChange([Math.min(clamp(n), hi), hi]);
-  const setHi = (n) => onChange([lo, Math.max(clamp(n), lo)]);
-  const pct = (n) => (n - min) / (max - min) * 100;
-  return <fieldset className="ui-range">
+  return (
+    <fieldset className="ui-range">
       <legend>{label}</legend>
       <div className="ui-range-inputs">
-        <div className="ui-field"><label htmlFor={id + "a"}>מ-</label>
-          <input id={id + "a"} className="ui-input num" type="number" min={min} max={max} value={lo} onChange={(e) => setLo(+e.target.value)} dir="ltr" /></div>
+        <input id={id + 'a'} className="ui-input num" type="number" min={min} max={max} value={lo} aria-label={`${label}, מ-`}
+          onChange={(e) => onChange([Math.min(clamp(+e.target.value), hi), hi])} dir="ltr" />
         <span className="ui-range-dash" aria-hidden="true">–</span>
-        <div className="ui-field"><label htmlFor={id + "b"}>עד</label>
-          <input id={id + "b"} className="ui-input num" type="number" min={min} max={max} value={hi} onChange={(e) => setHi(+e.target.value)} dir="ltr" /></div>
+        <input id={id + 'b'} className="ui-input num" type="number" min={min} max={max} value={hi} aria-label={`${label}, עד`}
+          onChange={(e) => onChange([lo, Math.max(clamp(+e.target.value), lo)])} dir="ltr" />
       </div>
-      <div className="ui-slider">
-        <div className="ui-slider-track" />
-        <div className="ui-slider-fill" style={{
-    insetInlineStart: pct(lo) + "%",
-    insetInlineEnd: 100 - pct(hi) + "%"
-  }} />
-        <input type="range" min={min} max={max} value={lo} onChange={(e) => setLo(+e.target.value)} aria-label={`${label}, מינימום`} />
-        <input type="range" min={min} max={max} value={hi} onChange={(e) => setHi(+e.target.value)} aria-label={`${label}, מקסימום`} />
-      </div>
-    </fieldset>;
+    </fieldset>
+  );
 }
+
 export function CheckGroup({ legend, options, value, onChange, render }) {
   const toggle = (o) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
-  return <fieldset className="ui-checks">
+  return (
+    <fieldset className="ui-checks">
       <legend>{legend}</legend>
-      {options.map((o) => <label key={o} className="ui-check">
+      {options.map((o) => (
+        <label key={o} className="ui-check">
           <input type="checkbox" checked={value.includes(o)} onChange={() => toggle(o)} />
           <span>{render ? render(o) : o}</span>
-        </label>)}
-    </fieldset>;
+        </label>
+      ))}
+    </fieldset>
+  );
 }

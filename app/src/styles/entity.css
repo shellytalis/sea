@@ -111,3 +111,4 @@
 .entity-section-body { padding-inline: var(--space-4); }
 .entity-section-body > .ui-table-scroll, .entity-section-body > .ui-tabs, .entity-section-body > .rel { margin-inline: calc(-1 * var(--space-4)); }
 .rel-legend { padding-inline: var(--space-4); }
+.rel-table td { white-space: normal; }

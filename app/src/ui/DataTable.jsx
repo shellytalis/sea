@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Columns3 } from 'lucide-react';
-import { useDensity } from './prefs';
 import Button from './Button';
 import Popover from './Popover';
 import TableCore, { sortRows } from './Table';
@@ -30,20 +29,9 @@ function ColumnManager({ cols, hidden, onToggle }) {
   );
 }
 
-export function DensityToggle() {
-  const { density, setDensity } = useDensity();
-  return (
-    <div className="ui-seg" role="group" aria-label="צפיפות תצוגה">
-      {['comfortable', 'compact'].map((d) => (
-        <Button key={d} variant="seg" size="sm" active={density === d} onClick={() => setDensity(d)}>{d === 'comfortable' ? 'נוח' : 'דחוס'}</Button>
-      ))}
-    </div>
-  );
-}
-
 /**
- * טבלת נתונים: מיון, ניהול עמודות, עימוד. כל חלקי המצב ניתנים לשליטה מבחוץ (למשל מה-URL):
- * sort {id,dir}|null · page (0-based) · size · hidden (מערך מזהי עמודות).
+ * טבלת נתונים כמיכל אחד: שורת כלים (ניהול עמודות), כותרת, שורות בגובה קבוע ופוטר עימוד, הכול על אותו רקע.
+ * כל חלקי המצב ניתנים לשליטה מבחוץ (למשל מה-URL): sort {id,dir}|null · page (0-based) · size · hidden.
  */
 export default function DataTable({
   rows, columns, rowKey, onRowClick, selectedKey, caption, resetKey,
@@ -53,6 +41,8 @@ export default function DataTable({
   const [page, setPage] = useControllable(pageProp, onPageChange, 0);
   const [size, setSize] = useControllable(sizeProp, onSizeChange, PAGE_SIZES[1]);
   const [hidden, setHidden] = useControllable(hiddenProp, onHiddenChange, columns.filter((c) => c.hidden).map((c) => c.id));
+  const scroller = useRef(null);
+  const [scrolledX, setScrolledX] = useState(false);
 
   useEffect(() => { if (resetKey !== undefined && pageProp === undefined) setPage(0); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -62,16 +52,19 @@ export default function DataTable({
   const cur = Math.min(page, pages - 1);
   const slice = sorted.slice(cur * size, cur * size + size);
   const from = sorted.length ? cur * size + 1 : 0;
+  const to = Math.min(sorted.length, cur * size + size);
   const toggleSort = (id) => setSort(!sort || sort.id !== id ? { id, dir: 'asc' } : sort.dir === 'asc' ? { id, dir: 'desc' } : null);
+
+  // עמודת השם דביקה רק כשיש גלילה אופקית, עם צל בשוליה
+  const onScroll = () => setScrolledX(Math.abs(scroller.current?.scrollLeft ?? 0) > 1);
 
   return (
     <div className="ui-table-block">
       <div className="ui-table-toolbar">
-        <DensityToggle />
         <ColumnManager cols={columns} hidden={hidden}
           onToggle={(id) => setHidden(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])} />
       </div>
-      <div className="ui-table-scroll">
+      <div className={`ui-table-scroll${scrolledX ? ' scrolled-x' : ''}`} ref={scroller} onScroll={onScroll}>
         <TableCore caption={caption} columns={visible} rows={slice} rowKey={rowKey} sort={sort} onSort={toggleSort}
           onRowClick={onRowClick} selectedKey={selectedKey} />
       </div>
@@ -81,10 +74,10 @@ export default function DataTable({
             {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
           </select>
         </label>
-        <Ltr className="ui-pager-range">{from}–{Math.min(sorted.length, cur * size + size)} / {sorted.length}</Ltr>
+        <span className="ui-pager-range"><Ltr>{from}–{to}</Ltr> מתוך <Ltr>{sorted.length}</Ltr></span>
         <div className="ui-pager-nav">
-          <Button variant="icon" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={18} aria-hidden="true" /></Button>
-          <Button variant="icon" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
+          <Button variant="icon" size="sm" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={18} aria-hidden="true" /></Button>
+          <Button variant="icon" size="sm" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
         </div>
       </div>
     </div>

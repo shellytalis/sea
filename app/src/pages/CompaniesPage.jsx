@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, History, PanelLeftOpen, Pencil, Search } from 'lucide-react';
 import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, citiesOf, getCompany } from '../data/companies';
@@ -14,6 +14,7 @@ import Drawer from '../ui/Drawer';
 import { Facts } from '../ui/Entity';
 import { ErrorState, NoResults, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
+import useScrollbarGap from '../ui/useScrollbarGap';
 import { SIGNAL_COLUMNS, SignalDetail, SignalsHeading } from '../components/Signals';
 
 const fleetText = ([lo, hi]) => (lo === null && hi === null ? '' : `גודל צי ${lo ?? ''}–${hi ?? ''}`);
@@ -30,7 +31,7 @@ const DEMO_VIEWED = ['c4', 'c13', 'c2', 'c10'];
 const plural = (n) => (n === 1 ? 'חברה אחת' : `${n} חברות`);
 const NAME_SUGGESTIONS = COMPANIES.map((c) => c.name);
 const SCROLL_KEY = 'sea-cs-scroll';
-const scroller = () => document.querySelector('.cs-body .ui-table-scroll');
+const scroller = () => document.querySelector('.cs');
 
 /** תפקידים: עד שניים + "+N" */
 const Roles = ({ list }) => (
@@ -51,6 +52,8 @@ export default function CompaniesPage() {
   const [draft, setDraft] = useState(applied);
   const [editing, setEditing] = useState(false);
   const [recent, setRecent] = useState(DEMO_RECENT);
+  const page = useRef(null);
+  useScrollbarGap(page);
 
   // חזרה/קדימה בדפדפן מעדכנות את הטופס
   useEffect(() => { setDraft(applied); }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -136,15 +139,8 @@ export default function CompaniesPage() {
   const showForm = !isApplied || editing;
 
   return (
-    <div className="cs">
+    <div className="cs" ref={page}>
       <header className="cs-head">
-        <div className="cs-title-row">
-          <h1>חיפוש חברות</h1>
-          {isApplied && !editing && <span className="cs-count" aria-live="polite">{status === 'done' ? plural(results.length) : 'מחפש…'}</span>}
-          {isApplied && !editing && (
-            <Button className="cs-edit" icon={<Pencil size={16} aria-hidden="true" />} onClick={() => setEditing(true)}>ערוך חיפוש</Button>
-          )}
-        </div>
         {showForm ? (
           <form className="cs-form" onSubmit={submit} aria-label="חיפוש חברות">
             <Autocomplete className="span-4" label="שם חברה" value={draft.name} onChange={(name) => setDraft({ ...draft, name })}
@@ -162,9 +158,11 @@ export default function CompaniesPage() {
             </div>
           </form>
         ) : (
-          <div className="cs-summary" aria-label="מסננים פעילים">
+          <div className="cs-summary" aria-label="סיכום החיפוש">
+            <span className="cs-count" aria-live="polite">{status === 'done' ? plural(results.length) : 'מחפש…'}</span>
             {chips.map((c) => <Chip key={c.key} label={c.label} removeLabel={`הסר ${c.label}`} onRemove={() => apply(c.next)} />)}
-            <Button variant="text" className="cs-clear" onClick={reset}>נקה הכול</Button>
+            <Button variant="text" size="sm" className="cs-clear" onClick={reset}>נקה הכול</Button>
+            <Button size="sm" icon={<Pencil size={16} aria-hidden="true" />} onClick={() => setEditing(true)}>ערוך חיפוש</Button>
           </div>
         )}
       </header>

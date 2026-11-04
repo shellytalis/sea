@@ -1,11 +1,11 @@
 /* Tokens סמנטיים. מקור האמת לערכים: SEA-PROJECT-BRAIN.md ו-DESIGN.md. */
 :root {
   /* מבנה */
-  --nav-w: 56px;
-  --top-h: 48px;
+  --nav-w: 72px;
+  --top-h: 56px;
   --drawer-w: 400px;
   --entity-max: 1680px;
-  --row-h: 40px;
+  --row-h: 44px;
   --control-h: 40px;
   --control-h-sm: 32px;
 
@@ -48,7 +48,6 @@
   --z-drawer: 55;
   --z-scrim: 90;
 }
-:root[data-density='compact'] { --row-h: 32px; }
 
 :root,
 :root[data-theme='dark'] {
@@ -56,6 +55,7 @@
   --surface: #111a2b;
   --surface-raised: #162238;
   --border: #243049;
+  --border-subtle: #1a2539;
   --border-strong: #5b6e8f;
   --text-primary: #e6ecf5;
   --text-secondary: #9aa9c2;
@@ -80,6 +80,7 @@
   --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.28);
   --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.4);
   --shadow-drawer: 0 0 32px rgba(0, 0, 0, 0.4);
+  --shadow-sticky: -8px 0 8px -8px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
@@ -88,6 +89,7 @@
   --surface: #ffffff;
   --surface-raised: #ffffff;
   --border: #d9e1ec;
+  --border-subtle: #e8edf5;
   --border-strong: #74849e;
   --text-primary: #0f1b2d;
   --text-secondary: #52627d;
@@ -111,6 +113,7 @@
   --shadow-pop: 0 8px 24px rgba(15, 27, 45, 0.18);
   --shadow-modal: 0 16px 48px rgba(15, 27, 45, 0.28);
   --shadow-drawer: 0 0 32px rgba(15, 27, 45, 0.2);
+  --shadow-sticky: -8px 0 8px -8px rgba(15, 27, 45, 0.3);
   color-scheme: light;
 }
 

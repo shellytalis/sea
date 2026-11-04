@@ -24,19 +24,6 @@ export function useTheme() {
     toggle: () => setTheme(theme === "dark" ? "light" : "dark")
   };
 }
-export function useDensity() {
-  const [density, set] = useState(() => document.documentElement.dataset.density === "compact" ? "compact" : "comfortable");
-  const setDensity = useCallback((d) => {
-    if (d === "compact") document.documentElement.dataset.density = "compact";
-    else delete document.documentElement.dataset.density;
-    write("sea-density", d);
-    set(d);
-  }, []);
-  return {
-    density,
-    setDensity
-  };
-}
 export const readStore = read;
 
 /** "הערות מפרט": הערות פיתוח בממשק (הצעה, טעון אפיון). מוסתרות כברירת מחדל; המתג ב-/design */

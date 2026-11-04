@@ -7,7 +7,7 @@ export default function Chip({ children, label, onRemove, removeLabel = 'הסר'
       {label ?? children}
       {onRemove && (
         <button type="button" className="ui-chip-x" onClick={onRemove} aria-label={removeLabel}>
-          <X size={12} aria-hidden="true" />
+          <X size={14} aria-hidden="true" />
         </button>
       )}
     </span>

@@ -17,7 +17,7 @@ export default function Button({
   }
   return (
     <button {...rest} type={rest.type ?? 'button'} disabled={disabled || loading} aria-busy={loading || undefined}
-      aria-pressed={variant === 'seg' ? !!active : rest['aria-pressed']} className={cls}>
+      className={cls}>
       {body}
     </button>
   );

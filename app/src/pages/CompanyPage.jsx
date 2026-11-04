@@ -1,5 +1,5 @@
-import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowRight, Map } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { Map } from 'lucide-react';
 import { getCompanyApi } from '../data/api';
 import { getVessel } from '../data/vessels';
 import { historyOf } from '../data/companies';
@@ -29,7 +29,6 @@ const SECTIONS = [
 
 export default function CompanyPage() {
   const { id } = useParams();
-  const backTo = `/companies${useLocation().state?.back ?? ''}`;
   const { status, data: c, reload } = useAsync(() => getCompanyApi(id), [id]);
 
   if (status === 'done' && !c) {
@@ -41,7 +40,6 @@ export default function CompanyPage() {
   }
   if (status !== 'done') return <EntityStatus status={status} onRetry={reload} />;
 
-  const back = <Link to={backTo} className="entity-back"><ArrowRight size={14} aria-hidden="true" />חזרה לחיפוש חברות</Link>;
   const fleet = c.vesselIds.map(getVessel).filter(Boolean);
   const src = c.stamp;
   const allUnassessed = c.signals.every((s) => s.severity === 'unassessed');
@@ -71,7 +69,7 @@ export default function CompanyPage() {
   return (
     <EntityPage resetKey={c.id} sections={SECTIONS}
       header={
-        <EntityHead back={back} title={<Ltr>{c.name}</Ltr>}
+        <EntityHead title={<Ltr>{c.name}</Ltr>}
           meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Mono>{c.fleetSize}</Mono> · עדכון אחרון <Mono>{c.updated}</Mono></>}
           badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)} />
       }

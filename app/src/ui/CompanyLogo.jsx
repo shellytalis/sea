@@ -4,11 +4,11 @@
  */
 export const COMPANY_NAME = 'חברה לדוגמה';
 
-export default function CompanyLogo({ size = 28 }) {
+export default function CompanyLogo({ size = 24 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" role="img" aria-label={COMPANY_NAME} className="company-logo">
-      <rect x="1" y="1" width="26" height="26" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M7 19c3-6 5-6 7-3s4 2 7-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label={COMPANY_NAME} className="company-logo">
+      <path d="M3 16c3-7 6-7 9-3s6 3 9-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="20" r="1.5" fill="currentColor" />
     </svg>
   );
 }

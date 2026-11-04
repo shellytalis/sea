@@ -11,7 +11,7 @@ export default function AddToListDialog({ vessel, onClose }) {
   const [done, setDone] = useState(null);
   if (done) {
     return <Dialog title="הוספה לרשימה" onClose={onClose} footer={<Button variant="primary" onClick={onClose}>סגור</Button>}>
-        <p className="ui-success" role="status"><CircleCheck size={18} aria-hidden="true" />הכלי נוסף לרשימה "{done}"</p>
+        <p className="ui-success" role="status"><CircleCheck size={16} aria-hidden="true" />הכלי נוסף לרשימה "{done}"</p>
       </Dialog>;
   }
   return <Dialog title="הוספה לרשימה" onClose={onClose} footer={<>

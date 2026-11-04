@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Mono } from './Ltr';
+import { Num } from './Ltr';
+import Panel from './Panel';
 import TableCore from './Table';
 import { ErrorState, ForbiddenState, TableSkeleton } from './States';
 
@@ -67,14 +68,14 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
     sections.forEach((s) => { const n = root.querySelector(`#${s.id}`); if (n) io.observe(n); });
     // קישור עם hash: גלילה למקטע
     const target = hash && root.querySelector(hash);
-    if (target) scrollToSection(root, target, 72, false);
+    if (target) scrollToSection(root, target, (head.current?.offsetHeight ?? 0) + 16, false);
     return () => io.disconnect();
   }, [resetKey, ids]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (id) => {
     setActive(id);
     const el = scroller.current?.querySelector(`#${id}`);
-    if (el) scrollToSection(scroller.current, el, 72, true);
+    if (el) scrollToSection(scroller.current, el, (head.current?.offsetHeight ?? 0) + 16, true);
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${id}`);
   };
 
@@ -89,8 +90,10 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
       <div className="entity-scroll" ref={scroller}>
         <header className={`entity-head${compact ? ' compact' : ''}`} ref={head}><div className="entity-inner">{header}</div></header>
         <div className="entity-inner">
-          {summary && <div className="entity-summary">{summary}</div>}
-          {children}
+          <div className="entity-stack">
+            {summary}
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -118,36 +121,22 @@ export function EntityHead({ back, title, meta, badges, compactBadge, actions })
   );
 }
 
-/** חותמת מקור ועדכון, צמודה לכותרת הקטע */
+/** חותמת מקור ועדכון (מטא בכותרת הפאנל): "מקור א · עודכן 2026-10-31" */
 export function Source({ source, updated }) {
-  return <span className="entity-src">{source} · עודכן <Mono>{updated}</Mono></span>;
+  return <>{source} · עודכן <Num>{updated}</Num></>;
 }
 
-/** מקטע: רצועת כותרת 40px (שם המקטע וחותמת המקור), 48px בין מקטעים, והתוכן ישירות על רקע הדף */
-export function Section({ id, title, source, children }) {
-  return (
-    <section id={id} className="entity-section" aria-labelledby={`${id}-h`}>
-      <div className="entity-section-head">
-        <h2 id={`${id}-h`}>{title}</h2>
-        {source && <><span className="entity-sep" aria-hidden="true">·</span><Source {...source} /></>}
-      </div>
-      <div className="entity-section-body">{children}</div>
-    </section>
-  );
+/** מקטע בדף ישות = Panel. source: חותמת בכותרת; meta: מטא נוסף אחריה (למשל "מוצגים 5 מתוך 23") */
+export function Section({ id, title, source, meta, flush, actions, children }) {
+  const m = (source || meta) ? <>{source && <Source {...source} />}{source && meta && ' · '}{meta}</> : null;
+  return <Panel id={id} title={title} meta={m} actions={actions} flush={flush}>{children}</Panel>;
 }
 
-/** שדה-ערך: דפוס יחיד. layout="grid" (תווית מעל הערך, בדפי ישות) או "list" (תווית וערך בשורה, במגירות) */
-/** עמודות קבועות: עד 5 שדות בשורה אחת; מעל זה המחלק הגדול ביותר של הכמות עד 4 (בלי שדה יתום) */
-const columnsFor = (n) => {
-  if (n <= 5) return Math.max(n, 1);
-  for (const c of [4, 3, 2]) if (n % c === 0) return c;
-  return 4;
-};
-
+/** שדה-ערך: דפוס יחיד. layout="grid" (4 עמודות קבועות, תווית 12 מעל ערך 14, בדפי ישות) או "list" (תווית וערך בשורה, במגירות) */
 export function Facts({ items, layout = 'grid' }) {
   return (
-    <dl className={`ui-facts ${layout}${layout === 'grid' ? ` cols-${columnsFor(items.length)}` : ''}`}>
-      {items.map(([k, v]) => <div key={k} className="ui-fact"><dt>{k}</dt><dd>{v}</dd></div>)}
+    <dl className={`ui-facts ${layout}`}>
+      {items.map(([k, v]) => <div key={k} className="ui-fact"><dt>{k}</dt><dd>{v === undefined || v === null || v === '' ? <span className="empty-value">—</span> : v}</dd></div>)}
     </dl>
   );
 }
@@ -156,7 +145,7 @@ export function Facts({ items, layout = 'grid' }) {
 export function FactGroup({ title, items }) {
   return (
     <div className="fact-group">
-      <h3 className="entity-sub">{title}</h3>
+      <h3 className="fact-group-label">{title}</h3>
       <Facts items={items} />
     </div>
   );

@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
  * fit: החלונית ברוחב העוגן (combobox); אחרת ברוחב התוכן.
  * panelProps: role / id / aria-* לחלונית.
  */
-export default function Popover({ open, onClose, anchor, children, fit, className = '', panelProps }) {
+export default function Popover({ open, onClose, anchor, children, fit, align, className = '', panelProps }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -23,7 +23,7 @@ export default function Popover({ open, onClose, anchor, children, fit, classNam
   return (
     <div className={`ui-pop-wrap${fit ? ' fit' : ''}`} ref={ref}>
       {anchor}
-      {open && <div {...panelProps} className={`ui-pop ${className}`.trim()}>{children}</div>}
+      {open && <div {...panelProps} className={`ui-pop${align === 'end' ? ' align-end' : ''} ${className}`.trim()}>{children}</div>}
     </div>
   );
 }

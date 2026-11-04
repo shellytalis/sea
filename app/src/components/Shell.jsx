@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
-import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship, BookUser, MessageSquare } from 'lucide-react';
+import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship, BookUser, MessageSquare, ChevronDown, LogOut } from 'lucide-react';
 import { searchEntities } from '../data/api';
 import { getCompany } from '../data/companies';
 import { getVessel } from '../data/vessels';
@@ -12,6 +12,7 @@ import Clock from '../ui/Clock';
 import Combobox from '../ui/Combobox';
 import CompanyLogo from '../ui/CompanyLogo';
 import Drawer from '../ui/Drawer';
+import Popover from '../ui/Popover';
 import { Ltr, Mono } from '../ui/Ltr';
 import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
@@ -30,7 +31,7 @@ const NAV = [
 const TITLES = { '/': 'מפה', '/companies': 'חברות', '/tracking': 'אוניות למעקב', '/od': 'ניתוח מקור–יעד', '/models': 'מודלים', '/ports': 'נמלים', '/design': 'מערכת עיצוב' };
 
 /** משתמש לדוגמה (נתוני דמה) */
-const USER = { name: 'דנה כהן', initials: 'דכ' };
+const USER = { name: 'דנה כהן', role: 'אנליסטית ימית', initials: 'דכ' };
 
 /** פאנלים צדדיים שטרם הוגדרו (הצעה): מצב ריק מכוון */
 const PANELS = {
@@ -72,7 +73,7 @@ function GlobalSearch() {
   const { vessels, companies } = searchEntities(q);
   const groups = [
     {
-      id: 'vessels', label: 'כלי שיט', icon: <Ship size={12} aria-hidden="true" />,
+      id: 'vessels', label: 'כלי שיט', icon: <Ship size={16} aria-hidden="true" />,
       items: vessels.map((v) => ({
         key: v.id, text: v.name, to: `/vessels/${v.id}`,
         render: () => (
@@ -85,7 +86,7 @@ function GlobalSearch() {
       })),
     },
     {
-      id: 'companies', label: 'חברות', icon: <Building2 size={12} aria-hidden="true" />,
+      id: 'companies', label: 'חברות', icon: <Building2 size={16} aria-hidden="true" />,
       items: companies.map((c) => ({
         key: c.id, text: c.name, to: `/companies/${c.id}`,
         render: () => (
@@ -105,6 +106,27 @@ function GlobalSearch() {
       <Combobox value={q} onChange={setQ} ariaLabel="חיפוש כלי שיט וחברות" placeholder="חפש שם, IMO, MMSI" inputClassName=""
         emptyText="לא נמצאו תוצאות" groups={groups} onSelect={(it) => go(it.to)} onEnter={() => { if (first) go(first.to); }} />
     </div>
+  );
+}
+
+/** תפריט משתמש (נתוני דמה; "התנתק" הוא placeholder) */
+function UserMenu() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onClose={() => setOpen(false)} align="end" panelProps={{ role: 'menu', 'aria-label': 'תפריט משתמש' }}
+      anchor={
+        <Button variant="ghost" size="sm" className="user-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span className="avatar" aria-hidden="true">{USER.initials}</span>
+          <span className="user-name">{USER.name}</span>
+          <ChevronDown size={16} aria-hidden="true" />
+        </Button>
+      }>
+      <div className="user-menu">
+        <div className="user-menu-head"><strong>{USER.name}</strong><span className="sub">{USER.role}</span></div>
+        <Button variant="text" size="sm" role="menuitem" icon={<LogOut size={16} aria-hidden="true" />} onClick={() => setOpen(false)}>התנתק</Button>
+        <SpecNote tag>הצעה</SpecNote>
+      </div>
+    </Popover>
   );
 }
 
@@ -134,12 +156,16 @@ export default function Shell() {
         <div className="tb-search"><GlobalSearch /></div>
         <div className="tb-end">
           <Clock />
-          <ToolbarButton icon={BookUser} label="ספר טלפונים" active={panel === 'phonebook'} expanded={panel === 'phonebook'} onClick={() => togglePanel('phonebook')} />
-          <ToolbarButton icon={MessageSquare} label="צ'אט תמיכה" active={panel === 'chat'} expanded={panel === 'chat'} onClick={() => togglePanel('chat')} />
-          <ToolbarButton icon={Bell} label="התראות" active={panel === 'alerts'} expanded={panel === 'alerts'} onClick={() => togglePanel('alerts')} />
-          <ToolbarButton icon={light ? Moon : Sun} label={light ? 'מצב כהה' : 'מצב בהיר'} onClick={toggle} />
           <span className="tb-sep" aria-hidden="true" />
-          <span className="user"><span className="avatar" aria-hidden="true">{USER.initials}</span><span className="user-name">{USER.name}</span></span>
+          <div className="tb-icons">
+            <ToolbarButton icon={BookUser} label="ספר טלפונים" active={panel === 'phonebook'} expanded={panel === 'phonebook'} onClick={() => togglePanel('phonebook')} />
+            <ToolbarButton icon={MessageSquare} label="צ'אט תמיכה" active={panel === 'chat'} expanded={panel === 'chat'} onClick={() => togglePanel('chat')} />
+            <ToolbarButton icon={Bell} label="התראות" active={panel === 'alerts'} expanded={panel === 'alerts'} onClick={() => togglePanel('alerts')} />
+            <ToolbarButton icon={light ? Moon : Sun} label={light ? 'מצב כהה' : 'מצב בהיר'} onClick={toggle} />
+          </div>
+          <span className="tb-sep" aria-hidden="true" />
+          <UserMenu />
+          <span className="tb-sep" aria-hidden="true" />
           <CompanyLogo />
         </div>
       </header>

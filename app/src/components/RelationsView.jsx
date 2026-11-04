@@ -44,14 +44,11 @@ export default function RelationsView({ companyId }) {
 
   return (
     <div className="rel">
+      <div className="rel-table ui-table-scroll">
+        <TableCore caption="קשרים בין חברות" columns={columns} rows={rels} rowKey={(r) => r.id} stickyHead={false}
+          onRowClick={(r) => setSel({ kind: 'edge', id: r.id })} selectedKey={selRel?.id} />
+      </div>
       <div className="rel-graph">
-        <ul className="rel-legend" aria-label="מקרא סוגי קשר">
-          {Object.entries(SHORT).map(([k, label]) => (
-            <li key={k}><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" className={`rel-key type-${k}`} /></svg>{label}</li>
-          ))}
-          <li><Shape risk="high" />חריג</li>
-        </ul>
-
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`גרף קשרים של ${center.name}`} className="rel-svg">
           {rels.map((r, i) => {
             const p = nodePos(i, rels.length);
@@ -85,29 +82,29 @@ export default function RelationsView({ companyId }) {
             <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" direction="ltr">{center.name}</text>
           </g>
         </svg>
+        <ul className="rel-legend" aria-label="מקרא סוגי קשר">
+          {Object.entries(SHORT).map(([k, label]) => (
+            <li key={k}><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" className={`rel-key type-${k}`} /></svg>{label}</li>
+          ))}
+          <li><Shape risk="high" />חריג</li>
+        </ul>
       </div>
-      <div className="rel-side">
-        <div className="rel-table ui-table-scroll bordered">
-          <TableCore caption="קשרים בין חברות" columns={columns} rows={rels} rowKey={(r) => r.id} stickyHead={false}
-            onRowClick={(r) => setSel({ kind: 'edge', id: r.id })} selectedKey={selRel?.id} />
-        </div>
-        <div className="rel-panel" aria-live="polite" data-testid="rel-panel">
-          {!sel && <p className="sub">בחר צומת או קשר כדי להציג פרטים.</p>}
-          {selNode && (
-            <>
-              <h3><Ltr>{selNode.name}</Ltr></h3>
-              <p className="sub">{selNode.type} · {selNode.country}, <Ltr>{selNode.city}</Ltr></p>
-              <Button to={`/companies/${selNode.id}`} variant="text">פתח פרופיל</Button>
-            </>
-          )}
-          {selRel && (
-            <>
-              <h3>{RELATION_TYPES[selRel.type]}{selRel.unusual && <span className="ui-sev high rel-unusual"><Shape risk="high" />קשר חריג</span>}</h3>
-              <p><Ltr>{getCompany(selRel.from).name}</Ltr> ← → <Ltr>{getCompany(selRel.to).name}</Ltr></p>
-              <p className="sub">{selRel.note}</p>
-            </>
-          )}
-        </div>
+      <div className="rel-details" aria-live="polite" data-testid="rel-panel">
+        {!sel && <p className="sub">בחר צומת או קשר כדי להציג פרטים.</p>}
+        {selNode && (
+          <>
+            <h3><Ltr>{selNode.name}</Ltr></h3>
+            <p className="sub">{selNode.type} · {selNode.country}, <Ltr>{selNode.city}</Ltr></p>
+            <Button to={`/companies/${selNode.id}`} variant="text" size="sm">פתח פרופיל</Button>
+          </>
+        )}
+        {selRel && (
+          <>
+            <h3>{RELATION_TYPES[selRel.type]}{selRel.unusual && <span className="ui-sev high rel-unusual"><Shape risk="high" />קשר חריג</span>}</h3>
+            <p><Ltr>{getCompany(selRel.from).name}</Ltr> ← → <Ltr>{getCompany(selRel.to).name}</Ltr></p>
+            <p className="sub">{selRel.note}</p>
+          </>
+        )}
       </div>
     </div>
   );

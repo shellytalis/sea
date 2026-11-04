@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import Chip from './Chip';
 import Combobox from './Combobox';
 import Popover from './Popover';
-import { Ltr, Mono } from './Ltr';
+import { Ltr, Num } from './Ltr';
 
 export function Field({ label, id, children, hint, className = '' }) {
   return (
@@ -41,7 +41,7 @@ export function Autocomplete({ label, value, onChange, suggestions, placeholder,
   const q = value.trim().toLowerCase();
   const items = q
     ? suggestions.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q).slice(0, 6)
-        .map((s) => ({ key: s, text: s, render: () => <Mono>{s}</Mono> }))
+        .map((s) => ({ key: s, text: s, render: () => <Num>{s}</Num> }))
     : [];
   return (
     <Field label={label} id={id} className={className}>

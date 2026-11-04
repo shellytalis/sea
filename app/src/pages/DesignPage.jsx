@@ -4,9 +4,9 @@ import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import Combobox from '../ui/Combobox';
 import Popover from '../ui/Popover';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr, Mono, Num } from '../ui/Ltr';
 import { Autocomplete, CheckGroup, MultiSelect, RangeField, Select, TextField } from '../ui/Fields';
-import { ModelTag, SeverityBadge, Tooltip } from '../ui/Badges';
+import { SeverityBadge, Tooltip } from '../ui/Badges';
 import { SEVERITIES } from '../ui/severity';
 import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
@@ -16,7 +16,8 @@ import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
-import { SignalCard, SignalsHeading } from '../components/Signals';
+import { SignalsPanel } from '../components/Signals';
+import Panel from '../ui/Panel';
 import RelationsView from '../components/RelationsView';
 import Tabs from '../ui/Tabs';
 
@@ -26,7 +27,7 @@ const SEV_TOKENS = ['sev-low', 'sev-medium', 'sev-high', 'sev-critical', 'sev-un
 const cols = [
   { id: 'name', label: 'שם חברה', locked: true, sort: (c) => c.name, render: (c) => <Ltr>{c.name}</Ltr> },
   { id: 'country', label: 'מדינה', sort: (c) => c.country, render: (c) => c.country },
-  { id: 'fleet', label: 'גודל צי', align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
+  { id: 'fleet', label: 'גודל צי', align: 'end', sort: (c) => c.fleetSize, render: (c) => <Num>{c.fleetSize}</Num> },
 ];
 
 const GROUPED = [
@@ -69,21 +70,33 @@ export default function DesignPage() {
           </div>
           <div className="ds-row">
             {SEVERITIES.map((s) => <SeverityBadge key={s} severity={s} />)}
-            <span>אותות מודל <ModelTag /></span>
           </div>
         </section>
 
         <section>
-          <h2>טיפוגרפיה וריווח</h2>
+          <h2>טיפוגרפיה, צבע טקסט וריווח</h2>
           <div className="ds-type">
-            <div className="t-2xl">כותרת עמוד · 24</div>
-            <div className="t-xl">כותרת גדולה · 20</div>
-            <div className="t-lg">כותרת קטע · 16</div>
-            <div>גוף · 14 · <Mono>IMO 9487231 · MMSI 257184000</Mono></div>
-            <div className="sub">טבלה דחוסה · 13</div>
-            <div className="t-xs">מטא-דאטה וחותמות זמן · 12</div>
+            <div className="t-2xl">24 · כותרת דף ישות (600)</div>
+            <div className="t-lg">16 · כותרת פאנל (600)</div>
+            <div>14 · ערכים ושמות (ראשי)</div>
+            <div className="sub">13 · משני: תוויות שדות, טקסט עזר, תאריכים ומספרים (tabular-nums)</div>
+            <div className="t-xs">12 · כותרת טבלה (600, משני) ומטא: מקור · עודכן · גרסה</div>
+            <div>mono רק למזהים: <Mono>IMO 9487231 · MMSI 257184000 · D&amp;B 044937043</Mono></div>
           </div>
-          <p className="entity-note">ריווח: 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64. רדיוס: 2px ו-4px בלבד.</p>
+          <p className="entity-note">צבע טקסט: ראשי לערכים ושמות; משני לתוויות ומטא; tertiary ל-✓ ול-placeholder. ריווח על סולם 4px; רדיוס 2px/4px. סולם הגופנים: 12/13/14/16/20/24.</p>
+        </section>
+
+        <section>
+          <h2>Panel</h2>
+          <p className="entity-note">הקומפוננטה היחידה לקבוצת תוכן: רקע surface, גבול 1px, radius 4px. כותרת 48px (שם 16/600 · מטא 12 משני · פעולות בקצה ה-end). טבלאות flush לקצוות. מרווח 24px בין פאנלים ו-32px שוליים לדף. שלוש שכבות רקע בלבד: base &lt; surface &lt; raised.</p>
+          <Panel title="דוגמה" meta="מקור א · עודכן 2026-10-31" actions={<Button size="sm">פעולה</Button>}>
+            <Facts items={[['שם', 'Fjord Marine AS'], ['IMO', <Mono key="i">9487231</Mono>], ['דגל', 'נורווגיה'], ['חברת אם', '']]} />
+          </Panel>
+        </section>
+
+        <section>
+          <h2>מעטפת<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">סרגל עליון 56px: SEA · שם הדף/breadcrumb · חיפוש · תאריך ושעה | ספר טלפונים, צ'אט, התראות, ערכה | משתמש | לוגו. כפתורי אייקון 32px (אייקון 20), קבוצות 16px עם מפריד, אייקונים בקבוצה 4px. סרגל ניווט 72px, פריט 64px.</p>
         </section>
 
         <section>
@@ -93,7 +106,7 @@ export default function DesignPage() {
             <Button variant="primary" disabled>מושבת</Button><Button disabled>מושבת</Button>
             <Button variant="primary" loading>טוען</Button>
             <Button variant="primary" icon={<Search size={16} aria-hidden="true" />}>עם אייקון</Button>
-            <Button variant="icon" aria-label="חיפוש" icon={<Search size={18} aria-hidden="true" />} />
+            <Button variant="icon" aria-label="חיפוש" icon={<Search size={16} aria-hidden="true" />} />
           </div>
         </section>
 
@@ -158,16 +171,13 @@ export default function DesignPage() {
         <section>
           <h2>אותות מודל<SpecNote tag>הצעה</SpecNote></h2>
           <p className="entity-note">כותרת אחת לרצועה (מקור, עדכון, גרסה); כל כרטיס: שם, חומרה בשורה קבועה, סיבה אחת עם +N. אין ציון מסכם לחברה. הכרטיס כולו לחיץ.</p>
-          <SignalsHeading signals={COMPANIES[12].signals} />
-          <div className="signals-strip">
-            {COMPANIES[12].signals.map((s) => <SignalCard key={s.kind} signal={s} href="#" onGo={() => {}} />)}
-          </div>
+          <SignalsPanel signals={COMPANIES[12].signals} target={{ fleet: '#', activity: '#', identity: '#', links: '#' }} onGo={() => {}} />
         </section>
 
         <section>
           <h2>גרף קשרים בין חברות<SpecNote tag>הצעה</SpecNote></h2>
           <p className="entity-note">SVG עם פריסה סטטית, ללא ספרייה: הקל ביותר שמספיק לאב-טיפוס. סוג הקשר מובחן בסגנון הקו, וקשר חריג בצבע, עובי וסמל. לצד הגרף טבלה לאותו מידע.</p>
-          <RelationsView companyId="c13" />
+          <Panel title="קשרים בין חברות" flush><RelationsView companyId="c13" /></Panel>
         </section>
 
         <section>
@@ -179,7 +189,7 @@ export default function DesignPage() {
           ]} />
           <div className="indicator-strip">
             <SeverityBadge severity="high" label="אינדיקטור פעילות חריגה · גבוה" />
-            <span><Mono>2</Mono> אינדיקטורים:</span><Chip>מפגש ship-to-ship</Chip><Chip>שינוי זהות</Chip>
+            <span><Num>2</Num> אינדיקטורים:</span><Chip>מפגש ship-to-ship</Chip><Chip>שינוי זהות</Chip>
           </div>
         </section>
 

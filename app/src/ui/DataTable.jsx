@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Columns3 } from 'lucide-react';
 import Button from './Button';
 import Popover from './Popover';
+import { Tooltip } from './Badges';
 import TableCore, { sortRows } from './Table';
 import { Ltr } from './Ltr';
 
@@ -18,7 +19,7 @@ function ColumnManager({ cols, hidden, onToggle }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onClose={() => setOpen(false)} panelProps={{ role: 'group', 'aria-label': 'ניהול עמודות' }}
-      anchor={<Button size="sm" icon={<Columns3 size={16} aria-hidden="true" />} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}>ניהול עמודות</Button>}>
+      anchor={<Tooltip text="ניהול עמודות"><Button variant="icon" size="sm" aria-label="ניהול עמודות" icon={<Columns3 size={16} aria-hidden="true" />} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)} /></Tooltip>}>
       {cols.filter((c) => !c.noManage).map((c) => (
         <label key={c.id} className="ui-check">
           <input type="checkbox" checked={!hidden.includes(c.id)} disabled={c.locked} onChange={() => onToggle(c.id)} />
@@ -30,7 +31,7 @@ function ColumnManager({ cols, hidden, onToggle }) {
 }
 
 /**
- * טבלת נתונים כמיכל אחד: שורת כלים (ניהול עמודות), כותרת, שורות בגובה קבוע ופוטר עימוד, הכול על אותו רקע.
+ * טבלת נתונים כ-Panel אחד: כותרת (ניהול עמודות באייקון בעמודה האחרונה), שורות בגובה קבוע ופוטר עימוד, הכול על אותו רקע.
  * כל חלקי המצב ניתנים לשליטה מבחוץ (למשל מה-URL): sort {id,dir}|null · page (0-based) · size · hidden.
  */
 export default function DataTable({
@@ -46,7 +47,10 @@ export default function DataTable({
 
   useEffect(() => { if (resetKey !== undefined && pageProp === undefined) setPage(0); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visible = columns.filter((c) => !hidden.includes(c.id) || c.locked || c.noManage);
+  const manager = <ColumnManager cols={columns} hidden={hidden}
+    onToggle={(id) => setHidden(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])} />;
+  // ניהול עמודות: אייקון בכותרת העמודה האחרונה (עמודת הפעולות), בלי שורת כלים נפרדת
+  const visible = columns.filter((c) => !hidden.includes(c.id) || c.locked || c.noManage).map((c) => (c.id === 'actions' ? { ...c, header: manager } : c));
   const sorted = useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
   const pages = Math.max(1, Math.ceil(sorted.length / size));
   const cur = Math.min(page, pages - 1);
@@ -59,11 +63,7 @@ export default function DataTable({
   const onScroll = () => setScrolledX(Math.abs(scroller.current?.scrollLeft ?? 0) > 1);
 
   return (
-    <div className="ui-table-block">
-      <div className="ui-table-toolbar">
-        <ColumnManager cols={columns} hidden={hidden}
-          onToggle={(id) => setHidden(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])} />
-      </div>
+    <div className="ui-table-block panel">
       <div className={`ui-table-scroll${scrolledX ? ' scrolled-x' : ''}`} ref={scroller} onScroll={onScroll}>
         <TableCore caption={caption} columns={visible} rows={slice} rowKey={rowKey} sort={sort} onSort={toggleSort}
           onRowClick={onRowClick} selectedKey={selectedKey} />
@@ -76,8 +76,8 @@ export default function DataTable({
         </label>
         <span className="ui-pager-range"><Ltr>{from}–{to}</Ltr> מתוך <Ltr>{sorted.length}</Ltr></span>
         <div className="ui-pager-nav">
-          <Button variant="icon" size="sm" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={18} aria-hidden="true" /></Button>
-          <Button variant="icon" size="sm" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
+          <Button variant="icon" size="sm" aria-label="העמוד הקודם" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronRight size={16} aria-hidden="true" /></Button>
+          <Button variant="icon" size="sm" aria-label="העמוד הבא" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronLeft size={16} aria-hidden="true" /></Button>
         </div>
       </div>
     </div>

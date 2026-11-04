@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SeverityBadge, Shape } from '../ui/Badges';
-import Button from '../ui/Button';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr, Num } from '../ui/Ltr';
+import Panel from '../ui/Panel';
 import Popover from '../ui/Popover';
 import { SEVERITY_LABEL, severityRank } from '../ui/severity';
 import { SIGNAL_KINDS } from '../data/companies';
@@ -10,7 +10,7 @@ export const kindOf = (id) => SIGNAL_KINDS.find((k) => k.id === id);
 const signalOf = (c, kind) => c.signals.find((s) => s.kind === kind);
 
 /**
- * תא אות בטבלה: תג חומרה (צורה + מילה); ✓ חלש כשאין אינדיקטורים (רק חריגות בולטות);
+ * תא אות בטבלה: צורה בצבע החומרה + תווית 13/500 בטקסט ראשי; ✓ ב-tertiary כשאין אינדיקטורים;
  * "לא הוערך" כשחסר מידע.
  */
 export function SignalCell({ signal }) {
@@ -25,13 +25,14 @@ export function SignalCell({ signal }) {
   return <SeverityBadge severity={signal.severity} />;
 }
 
-/** שלוש עמודות האותות בטבלה (הצעה), תחת כותרת-על "אותות" שחלה על שלושתן */
+/** שלוש עמודות האותות בטבלה (הצעה), ברוחב קבוע 120, תחת כותרת-על "אותות" */
 export const SIGNAL_COLUMNS = [
-  { id: 'sig-fleet', kind: 'fleet', label: 'חריגות צי', weight: 9 },
-  { id: 'sig-activity', kind: 'activity', label: 'פעילות', weight: 8 },
-  { id: 'sig-links', kind: 'links', label: 'קשרים', weight: 8 },
+  { id: 'sig-fleet', kind: 'fleet', label: 'חריגות צי' },
+  { id: 'sig-activity', kind: 'activity', label: 'פעילות' },
+  { id: 'sig-links', kind: 'links', label: 'קשרים' },
 ].map((c) => ({
   ...c,
+  width: 120,
   group: 'אותות',
   groupTitle: 'תוצרי מודל',
   // לא הוערך נמוך מ'אין אינדיקטורים' במיון
@@ -39,53 +40,70 @@ export const SIGNAL_COLUMNS = [
   render: (co) => <SignalCell signal={signalOf(co, c.kind)} />,
 }));
 
-/** כותרת אחת לכל האותות: מקור (תוצרי מודל), זמן עדכון וגרסה. לא חוזרים בכל כרטיס. */
+/** מטא של הכותרת: תוצרי מודל · עודכן · גרסה */
+export const signalsMeta = (signals) => (
+  <>תוצרי מודל · עודכן <Num>{signals[0].updated}</Num> · גרסה <Num>{signals[0].modelVersion}</Num></>
+);
+
+/** כותרת קטנה לאותות במגירה */
 export function SignalsHeading({ signals }) {
-  const { updated, modelVersion } = signals[0];
   return (
     <div className="signals-heading">
-      <h2>אותות · תוצרי מודל</h2>
-      <span className="signals-meta">עודכן <Mono>{updated}</Mono> · גרסה <Mono>{modelVersion}</Mono></span>
+      <h2>אותות</h2>
+      <span className="panel-sep" aria-hidden="true">·</span>
+      <span className="signals-meta">{signalsMeta(signals)}</span>
     </div>
   );
 }
 
-/** "+N": כל הסיבות בחלונית קטנה */
+/** "עוד N גורמים": כל הסיבות בפופאובר */
 function MoreReasons({ reasons }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onClose={() => setOpen(false)} panelProps={{ role: 'dialog', 'aria-label': 'כל הסיבות' }}
-      anchor={<Button variant="text" size="sm" className="signal-more" aria-expanded={open} aria-label={`עוד ${reasons.length - 1} סיבות`}
-        onClick={() => setOpen(!open)}><Ltr>+{reasons.length - 1}</Ltr></Button>}>
+    <Popover open={open} onClose={() => setOpen(false)} panelProps={{ role: 'dialog', 'aria-label': 'כל הגורמים' }}
+      anchor={<button type="button" className="signal-more" aria-expanded={open} onClick={() => setOpen(!open)}>עוד <Ltr>{reasons.length - 1}</Ltr> גורמים</button>}>
       <ul className="plain-list bulleted">{reasons.map((r) => <li key={r}>{r}</li>)}</ul>
     </Popover>
   );
 }
 
-/**
- * כרטיס אות: שם (14/600), חומרה בשורה קבועה, וסיבה אחת בשורה אחת עם +N.
- * כל הכרטיס לחיץ (קישור על השם נמתח על פני הכרטיס) וגולל למקטע הרלוונטי.
- */
-export function SignalCard({ signal, href, onGo }) {
-  const name = kindOf(signal.kind).label;
-  const [first, ...rest] = signal.why;
+/** עמודת אות: שם, חומרה, הגורם הראשון, "עוד N". כל העמודה לחיצה (קישור על השם נמתח על פניה) */
+function SignalColumn({ signal, href, onGo }) {
+  const [first] = signal.why;
   return (
-    <div className="signal-card">
-      <a className="signal-name" href={href} title={name} onClick={(e) => { e.preventDefault(); onGo(); }}>{name}</a>
+    <div className="signal-col">
+      <a className="signal-name" href={href} onClick={(e) => { e.preventDefault(); onGo(); }}>{kindOf(signal.kind).label}</a>
       <div className="signal-sev">
         {signal.severity === 'none'
-          ? <span className="ui-sev none signal-ok"><Shape risk="none" /><span className="sr-only">{SEVERITY_LABEL.none}</span></span>
+          ? <span className="ui-sev none signal-ok"><Shape risk="none" />אין אינדיקטורים</span>
           : <SeverityBadge severity={signal.severity} />}
       </div>
-      <div className="signal-reason">
-        {first && <span className="signal-reason-text" title={first}>{first}</span>}
-        {rest.length > 0 && <MoreReasons reasons={signal.why} />}
-      </div>
+      <div className="signal-reason">{first}</div>
+      {signal.why.length > 1 ? <MoreReasons reasons={signal.why} /> : <span />}
     </div>
   );
 }
 
-/** מגירת תצוגה מהירה: כל האות עם כל הסיבות (יש מקום), בלי תגי מודל חוזרים */
+/**
+ * Panel יחיד לאותות החברה (אין ציון מסכם). ארבע עמודות שוות; כשכולם "לא הוערך": שורה אחת.
+ * target: לאיזה מקטע גוללים מכל אות.
+ */
+export function SignalsPanel({ signals, target, onGo }) {
+  const allUnassessed = signals.every((s) => s.severity === 'unassessed');
+  return (
+    <Panel id="signals" title="אותות" meta={signalsMeta(signals)} flush={!allUnassessed}>
+      {allUnassessed ? (
+        <div className="signals-note"><SeverityBadge severity="unassessed" /><span className="sub">אין מספיק נתוני פעילות בחלון הניתוח</span></div>
+      ) : (
+        <div className="signals-grid">
+          {signals.map((s) => <SignalColumn key={s.kind} signal={s} href={`#${target[s.kind]}`} onGo={() => onGo(target[s.kind])} />)}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+/** מגירת תצוגה מהירה: כל האות עם כל הסיבות (יש מקום) */
 export function SignalDetail({ signal }) {
   return (
     <div className="signal-detail">

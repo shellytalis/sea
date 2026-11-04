@@ -4,19 +4,19 @@ import { getCompanyApi } from '../data/api';
 import { getVessel } from '../data/vessels';
 import { historyOf } from '../data/companies';
 import { EntityHead, EntityPage, EntityStatus, FactGroup, Section, StaticTable, goSection } from '../ui/Entity';
-import { SeverityBadge, Tooltip } from '../ui/Badges';
+import { Tooltip } from '../ui/Badges';
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr, Mono, Num } from '../ui/Ltr';
 import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
 import useAsync from '../ui/useAsync';
-import { SignalCard, SignalsHeading } from '../components/Signals';
+import { SignalsPanel } from '../components/Signals';
 import RelationsView from '../components/RelationsView';
 import CompanyRef from '../components/CompanyRef';
 import { VesselFlags } from '../components/VesselFlags';
 
-/** כל כרטיס אות גולל למקטע הרלוונטי. הצעה: פעילות וזהות מפנות ל"צי", כי אין להן מקטע משלהן */
+/** כל עמודת אות גוללת למקטע הרלוונטי. הצעה: פעילות וזהות מפנות ל"צי", כי אין להן מקטע משלהן */
 const SIGNAL_TARGET = { fleet: 'fleet', activity: 'fleet', identity: 'fleet', links: 'relations' };
 
 const SECTIONS = [
@@ -25,6 +25,14 @@ const SECTIONS = [
   { id: 'registration', label: 'פרטי רישום ובעלות' },
   { id: 'history', label: 'היסטוריית שינויים' },
   { id: 'notes', label: 'הערות וקבצים' },
+];
+
+const historyCols = [
+  { id: 'date', label: 'תאריך', render: (r) => <Num className="sec">{r.date}</Num> },
+  { id: 'field', label: 'שדה', render: (r) => r.field },
+  { id: 'from', label: 'ערך קודם', render: (r) => <Ltr>{r.from}</Ltr> },
+  { id: 'to', label: 'ערך חדש', render: (r) => <Ltr>{r.to}</Ltr> },
+  { id: 'src', label: 'מקור', render: (r) => r.source },
 ];
 
 export default function CompanyPage() {
@@ -42,15 +50,14 @@ export default function CompanyPage() {
 
   const fleet = c.vesselIds.map(getVessel).filter(Boolean);
   const src = c.stamp;
-  const allUnassessed = c.signals.every((s) => s.severity === 'unassessed');
   const columns = [
-    { id: 'name', label: 'שם', render: (v) => <Link to={`/vessels/${v.id}`} className="link cell-name"><Ltr>{v.name}</Ltr></Link> },
-    { id: 'imo', label: 'IMO', render: (v) => <Mono>{v.imo}</Mono> },
-    { id: 'type', label: 'סוג', render: (v) => v.type },
-    { id: 'role', label: 'תפקיד החברה', render: (v) => c.roles.find((r) => r.vessel === v.id)?.role ?? '—' },
-    { id: 'flags', label: 'אינדיקטורים', render: (v) => <VesselFlags v={v} withLists={false} /> },
+    { id: 'name', label: 'שם', weight: 30, render: (v) => <Link to={`/vessels/${v.id}`} className="cell-link"><Ltr>{v.name}</Ltr></Link> },
+    { id: 'imo', label: 'IMO', weight: 14, render: (v) => <Mono>{v.imo}</Mono> },
+    { id: 'type', label: 'סוג', weight: 20, render: (v) => v.type },
+    { id: 'role', label: 'תפקיד החברה', weight: 16, render: (v) => c.roles.find((r) => r.vessel === v.id)?.role ?? '—' },
+    { id: 'flags', label: 'אינדיקטורים', weight: 20, render: (v) => <VesselFlags v={v} withLists={false} compact /> },
     {
-      id: 'map', label: '', srLabel: 'הצג על המפה', align: 'end',
+      id: 'map', label: '', srLabel: 'הצג על המפה', width: 48, align: 'end',
       render: (v) => (
         <Tooltip text="הצג על המפה">
           <Button to={`/?v=${v.id}`} variant="icon" size="sm" aria-label={`הצג את ${v.name} על המפה`} icon={<Map size={16} aria-hidden="true" />} />
@@ -58,60 +65,34 @@ export default function CompanyPage() {
       ),
     },
   ];
-  const historyCols = [
-    { id: 'date', label: 'תאריך', render: (r) => <Mono>{r.date}</Mono> },
-    { id: 'field', label: 'שדה', render: (r) => r.field },
-    { id: 'from', label: 'ערך קודם', render: (r) => <Ltr>{r.from}</Ltr> },
-    { id: 'to', label: 'ערך חדש', render: (r) => <Ltr>{r.to}</Ltr> },
-    { id: 'src', label: 'מקור', render: (r) => r.source },
-  ];
 
   return (
     <EntityPage resetKey={c.id} sections={SECTIONS}
       header={
         <EntityHead title={<Ltr>{c.name}</Ltr>}
-          meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Mono>{c.fleetSize}</Mono> · עדכון אחרון <Mono>{c.updated}</Mono></>}
+          meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Num>{c.fleetSize}</Num> · עדכון אחרון <Num>{c.updated}</Num></>}
           badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)} />
       }
-      summary={
-        allUnassessed ? (
-          <section aria-label="אותות" className="signals-strip unassessed">
-            <SeverityBadge severity="unassessed" />
-            <span className="sub">אין מספיק נתוני פעילות בחלון הניתוח</span>
-          </section>
-        ) : (
-          <section aria-label="אותות">
-            <SignalsHeading signals={c.signals} />
-            <div className="signals-strip">
-              {c.signals.map((s) => (
-                <SignalCard key={s.kind} signal={s} href={`#${SIGNAL_TARGET[s.kind]}`} onGo={() => goSection(SIGNAL_TARGET[s.kind])} />
-              ))}
-            </div>
-          </section>
-        )
-      }>
-      <Section id="fleet" title="צי" source={src}>
+      summary={<SignalsPanel signals={c.signals} target={SIGNAL_TARGET} onGo={goSection} />}>
+      <Section id="fleet" title="צי" source={src} flush
+        meta={fleet.length > 0 ? <>מוצגים <Num>{fleet.length}</Num> מתוך <Num>{c.fleetSize}</Num> כלים הזמינים במערכת</> : null}>
         {fleet.length === 0 ? (
-          <EmptyState compact title="אין כלים משויכים במערכת">
-            <span>לחברה מוגדרים <Ltr>{c.fleetSize}</Ltr> כלים, אך אף אחד מהם עדיין לא קיים כישות במערכת.</span>
+          <EmptyState title="אין כלים משויכים במערכת">
+            <span>לחברה מוגדרים <Num>{c.fleetSize}</Num> כלים, אך אף אחד מהם עדיין לא קיים כישות במערכת.</span>
           </EmptyState>
         ) : (
-          <>
-            <p className="entity-note">מוצגים {fleet.length} מתוך <Ltr>{c.fleetSize}</Ltr> כלים הזמינים במערכת.</p>
-            <StaticTable caption="כלי השיט של החברה" columns={columns} rows={fleet} rowKey={(v) => v.id} />
-          </>
+          <StaticTable caption="כלי השיט של החברה" columns={columns} rows={fleet} rowKey={(v) => v.id} />
         )}
       </Section>
 
-      <Section id="relations" title="קשרים בין חברות" source={src}>
-        <p className="entity-note spec-note"><SpecNote tag>הצעה</SpecNote>סוגי הקשרים ונתוני הדמה טעונים אפיון (אפיון §4.5).</p>
+      <Section id="relations" title="קשרים בין חברות" source={src} flush actions={<SpecNote tag>הצעה</SpecNote>}>
         <RelationsView companyId={c.id} />
       </Section>
 
       <Section id="registration" title="פרטי רישום ובעלות" source={src}>
         <FactGroup title="רישום" items={[
-          ['כתובת', <Ltr key="a">{c.address}</Ltr>], ['שנת הקמה', <Mono key="y">{c.founded}</Mono>],
-          ['מספר D&B', <Mono key="d">{c.dnb}</Mono>], ['אתר', <Ltr key="w">{c.website}</Ltr>], ['טלפון', <Ltr key="p">{c.phone}</Ltr>],
+          ['כתובת', <Ltr key="a">{c.address}</Ltr>], ['שנת הקמה', <Num key="y">{c.founded}</Num>],
+          ['מספר D&B', <Mono key="d">{c.dnb}</Mono>], ['אתר', c.website === '—' ? '' : <Ltr key="w">{c.website}</Ltr>], ['טלפון', c.phone === '—' ? '' : <Ltr key="p">{c.phone}</Ltr>],
         ]} />
         <FactGroup title="בעלות" items={[
           ['חברת אם', c.parent ? <CompanyRef name={c.parent} /> : 'אין'],
@@ -120,12 +101,12 @@ export default function CompanyPage() {
         ]} />
       </Section>
 
-      <Section id="history" title="היסטוריית שינויים" source={src}>
+      <Section id="history" title="היסטוריית שינויים" source={src} flush>
         <StaticTable caption="היסטוריית שינויים" rowKey={(r) => r.date + r.field} columns={historyCols} rows={historyOf(c)} />
       </Section>
 
-      <Section id="notes" title="הערות וקבצים">
-        <EmptyState compact title="אין הערות או קבצים לחברה זו"><SpecNote>סוגי קבצים והרשאות העלאה טרם הוגדרו.</SpecNote></EmptyState>
+      <Section id="notes" title="הערות וקבצים" flush>
+        <EmptyState title="אין הערות או קבצים לחברה זו"><SpecNote>סוגי קבצים והרשאות העלאה טרם הוגדרו.</SpecNote></EmptyState>
       </Section>
     </EntityPage>
   );

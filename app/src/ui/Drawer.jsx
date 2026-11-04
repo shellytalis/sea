@@ -21,7 +21,7 @@ export default function Drawer({ title, onClose, children, footer, side = 'end',
     <aside className={`ui-drawer${overlay ? ' overlay' : ''}`} role="dialog" aria-label={label} data-side={side} ref={ref} tabIndex={-1}>
       <header>
         <h2>{title}</h2>
-        <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={18} aria-hidden="true" /></Button>
+        <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={16} aria-hidden="true" /></Button>
       </header>
       <div className="ui-drawer-body">{children}</div>
       {footer && <footer>{footer}</footer>}

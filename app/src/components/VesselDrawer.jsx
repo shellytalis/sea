@@ -3,7 +3,7 @@ import { ExternalLink, ListPlus } from 'lucide-react';
 import Drawer from '../ui/Drawer';
 import Button from '../ui/Button';
 import { Facts, Source } from '../ui/Entity';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr, Mono, Num } from '../ui/Ltr';
 import { VesselFlags } from './VesselFlags';
 import AddToListDialog from './AddToListDialog';
 
@@ -29,11 +29,11 @@ export default function VesselDrawer({ v, onClose }) {
         <section className="ui-drawer-group">
           <h3>מיקום ותנועה <Source {...v.stamp} /></h3>
           <Facts layout="list" items={[
-            ['מיקום', <Mono>{`${v.lat.toFixed(3)}, ${v.lon.toFixed(3)}`}</Mono>],
-            ['מהירות', <Mono>{`${v.speed} kn`}</Mono>],
-            ['כיוון', <Mono>{`${v.course}°`}</Mono>],
+            ['מיקום', <Num>{`${v.lat.toFixed(3)}, ${v.lon.toFixed(3)}`}</Num>],
+            ['מהירות', <Num>{`${v.speed} kn`}</Num>],
+            ['כיוון', <Num>{`${v.course}°`}</Num>],
             ['יעד', <Ltr>{v.destination}</Ltr>],
-            ['קליטה אחרונה', <Mono>{v.lastReceived}</Mono>],
+            ['קליטה אחרונה', <Num>{v.lastReceived}</Num>],
           ]} />
         </section>
         {v.indicators.length > 0 && (

@@ -32,7 +32,7 @@ export default function Dialog({ title, onClose, children, footer }) {
       <div className="ui-dialog" role="dialog" aria-modal="true" aria-labelledby={id} ref={box}>
         <header>
           <h2 id={id}>{title}</h2>
-          <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={18} aria-hidden="true" /></Button>
+          <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={16} aria-hidden="true" /></Button>
         </header>
         <div className="ui-dialog-body">{children}</div>
         {footer && <footer>{footer}</footer>}

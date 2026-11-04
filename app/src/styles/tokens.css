@@ -73,7 +73,7 @@
   --sev-high: #ff9a4d;
   --sev-critical: #ff6b63;
   --sev-unassessed: #8296b4;
-  --sev-none: #9aa9c2;
+  --sev-none: #8296b4;
 
   --scrim: rgba(5, 10, 20, 0.6);
   --shadow-raised: none;
@@ -106,7 +106,7 @@
   --sev-high: #a34000;
   --sev-critical: #c4281f;
   --sev-unassessed: #5c6b85;
-  --sev-none: #52627d;
+  --sev-none: #5c6b85;
 
   --scrim: rgba(15, 27, 45, 0.45);
   --shadow-raised: 0 1px 3px rgba(15, 27, 45, 0.12);

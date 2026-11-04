@@ -7,12 +7,13 @@ import { hasParams, parseQuery, parseView, queryToParams } from '../data/company
 import { Tooltip } from '../ui/Badges';
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr, Num } from '../ui/Ltr';
 import { Autocomplete, MultiSelect, RangeField, Select } from '../ui/Fields';
+import Panel from '../ui/Panel';
 import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
 import { Facts } from '../ui/Entity';
-import { ErrorState, NoResults, TableSkeleton } from '../ui/States';
+import { EmptyState, ErrorState, NoResults, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
 import useScrollbarGap from '../ui/useScrollbarGap';
 import { SIGNAL_COLUMNS, SignalDetail, SignalsHeading } from '../components/Signals';
@@ -120,12 +121,12 @@ export default function CompaniesPage() {
     { id: 'country', label: 'מדינה', weight: 10, sort: (c) => c.country, render: (c) => c.country },
     { id: 'city', label: 'עיר', weight: 9, sort: (c) => c.city, render: (c) => <Ltr>{c.city}</Ltr> },
     { id: 'type', label: 'סוג', weight: 9, sort: (c) => c.type, render: (c) => c.type },
-    { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
+    { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Num>{c.fleetSize}</Num> },
     { id: 'roles', label: 'תפקידים', weight: 12, render: (c) => <Roles list={c.roleList} /> },
     ...SIGNAL_COLUMNS,
-    { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Mono>{c.updated}</Mono> },
+    { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Num className="sec">{c.updated}</Num> },
     {
-      id: 'actions', label: '', srLabel: 'תצוגה מהירה', noManage: true, weight: 4, align: 'end',
+      id: 'actions', label: '', srLabel: 'תצוגה מהירה', noManage: true, width: 48, align: 'end',
       render: (c) => (
         <Tooltip text="תצוגה מהירה">
           <Button variant="icon" size="sm" className="row-action" aria-label={`תצוגה מהירה: ${c.name}`}
@@ -135,28 +136,37 @@ export default function CompaniesPage() {
     },
   ], [location.search]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ברירת מחדל: מתחת ל-1500px עמודת התפקידים מוסתרת (ניתנת להחזרה ב"ניהול עמודות"), כדי שהטבלה תיכנס בלי גלילה אופקית
+  const defaultHidden = typeof window !== 'undefined' && window.innerWidth < 1500 ? ['roles'] : [];
   const sel = view.selected ? getCompany(view.selected) : null;
   const showForm = !isApplied || editing;
+
+  const hintId = 'cs-search-hint';
+  const searchButton = (
+    <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
+      aria-describedby={hintId} icon={<Search size={16} aria-hidden="true" />}>חיפוש</Button>
+  );
 
   return (
     <div className="cs" ref={page}>
       <header className="cs-head">
         {showForm ? (
-          <form className="cs-form" onSubmit={submit} aria-label="חיפוש חברות">
-            <Autocomplete className="span-4" label="שם חברה" value={draft.name} onChange={(name) => setDraft({ ...draft, name })}
-              suggestions={NAME_SUGGESTIONS} placeholder="הקלד שם או חלק משם" onEnter={() => submit({ preventDefault() {} })} />
-            <Select className="span-2" label="מדינה" value={draft.country} options={COMPANY_COUNTRIES} onChange={(e) => setDraft({ ...draft, country: e.target.value, city: '' })} />
-            <Select className="span-2" label="עיר" value={draft.city} options={draft.country ? citiesOf(draft.country) : []} disabled={!draft.country}
-              placeholder={draft.country ? 'הכל' : 'בחר מדינה'} onChange={(e) => setDraft({ ...draft, city: e.target.value })} />
-            <MultiSelect className="span-4" label="סוג חברה" options={COMPANY_TYPES} value={draft.types} onChange={(types) => setDraft({ ...draft, types })} />
-            <RangeField className="span-4" label="גודל צי" min={0} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
-            {!draftHasParams && <p className="cs-help">הזן פרמטר אחד לפחות</p>}
-            <div className="cs-actions">
-              <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
-                icon={<Search size={18} aria-hidden="true" />}>חיפוש</Button>
-              <Button onClick={reset} disabled={!draftHasParams && !isApplied}>נקה</Button>
-            </div>
-          </form>
+          <Panel className="cs-form-panel">
+            <form className="cs-form" onSubmit={submit} aria-label="חיפוש חברות">
+              <Autocomplete className="span-4" label="שם חברה" value={draft.name} onChange={(name) => setDraft({ ...draft, name })}
+                suggestions={NAME_SUGGESTIONS} placeholder="הקלד שם או חלק משם" onEnter={() => submit({ preventDefault() {} })} />
+              <Select className="span-2" label="מדינה" value={draft.country} options={COMPANY_COUNTRIES} onChange={(e) => setDraft({ ...draft, country: e.target.value, city: '' })} />
+              <Select className="span-2" label="עיר" value={draft.city} options={draft.country ? citiesOf(draft.country) : []} disabled={!draft.country}
+                placeholder={draft.country ? 'הכל' : 'בחר מדינה'} onChange={(e) => setDraft({ ...draft, city: e.target.value })} />
+              <MultiSelect className="span-4" label="סוג חברה" options={COMPANY_TYPES} value={draft.types} onChange={(types) => setDraft({ ...draft, types })} />
+              <RangeField className="span-4" label="גודל צי" min={0} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
+              <div className="cs-actions">
+                <span id={hintId} className="sr-only">הזן פרמטר אחד לפחות</span>
+                {draftHasParams ? searchButton : <Tooltip text="הזן פרמטר אחד לפחות">{searchButton}</Tooltip>}
+                <Button variant="text" onClick={reset} disabled={!draftHasParams && !isApplied}>נקה</Button>
+              </div>
+            </form>
+          </Panel>
         ) : (
           <div className="cs-summary" aria-label="סיכום החיפוש">
             <span className="cs-count" aria-live="polite">{status === 'done' ? plural(results.length) : 'מחפש…'}</span>
@@ -169,25 +179,30 @@ export default function CompaniesPage() {
 
       <div className="cs-body">
         {!isApplied && (
-          <div className="cs-scroll">
-            <div className="cs-lists">
-              <section>
-                <h2><History size={16} aria-hidden="true" />חיפושים אחרונים</h2>
+          <div className="cs-lists">
+            <Panel title={<><History size={16} aria-hidden="true" />חיפושים אחרונים</>} flush
+              actions={recent.length > 0 && <Button variant="text" size="sm" onClick={() => setRecent([])}>נקה</Button>}>
+              {recent.length === 0 ? (
+                <EmptyState title="אין חיפושים אחרונים"><span>חיפושים שתבצע יופיעו כאן.</span></EmptyState>
+              ) : (
                 <ul className="cs-list">
-                  {recent.map((q) => (
-                    <li key={describe(q)}><button type="button" onClick={() => { setDraft(q); apply(q); }}><span>{describe(q)}</span><ArrowLeft size={16} aria-hidden="true" /></button></li>
+                  {recent.slice(0, 5).map((q) => (
+                    <li key={describe(q)}><button type="button" onClick={() => { setDraft(q); apply(q); }}><span className="cs-list-main">{describe(q)}</span><ArrowLeft size={16} aria-hidden="true" /></button></li>
                   ))}
                 </ul>
-              </section>
-              <section>
-                <h2><Clock size={16} aria-hidden="true" />חברות שנצפו לאחרונה</h2>
+              )}
+            </Panel>
+            <Panel title={<><Clock size={16} aria-hidden="true" />חברות שנצפו לאחרונה</>} flush>
+              {DEMO_VIEWED.length === 0 ? (
+                <EmptyState title="אין חברות שנצפו לאחרונה"><span>חברות שתפתח יופיעו כאן.</span></EmptyState>
+              ) : (
                 <ul className="cs-list">
-                  {DEMO_VIEWED.map(getCompany).map((c) => c && (
-                    <li key={c.id}><Link to={`/companies/${c.id}`} state={{ back: location.search }}><Ltr>{c.name}</Ltr><span className="sub">{c.country}</span></Link></li>
+                  {DEMO_VIEWED.map(getCompany).filter(Boolean).slice(0, 5).map((c) => (
+                    <li key={c.id}><Link to={`/companies/${c.id}`} state={{ back: location.search }}><span className="cs-list-main"><Ltr>{c.name}</Ltr></span><span className="cs-list-detail">{c.country}</span><ArrowLeft size={16} aria-hidden="true" /></Link></li>
                   ))}
                 </ul>
-              </section>
-            </div>
+              )}
+            </Panel>
           </div>
         )}
         {isApplied && status === 'loading' && <TableSkeleton cols={8} />}
@@ -199,13 +214,13 @@ export default function CompaniesPage() {
             sort={view.sort} onSortChange={(s) => patch({ sort: s ? `${s.id}.${s.dir}` : null, page: null })}
             page={view.page} onPageChange={(p) => patch({ page: p > 0 ? String(p + 1) : null })}
             size={view.size} onSizeChange={(n) => patch({ size: n === 25 ? null : String(n), page: null })}
-            hidden={view.hidden} onHiddenChange={(h) => patch({ hide: h.join(',') })} />
+            hidden={params.has('hide') ? view.hidden : defaultHidden} onHiddenChange={(h) => patch({ hide: h.join(',') })} />
         )}
 
         {sel && (
           <Drawer overlay title={<><Ltr>{sel.name}</Ltr><div className="ui-drawer-sub">{sel.type} · {sel.country}</div></>}
             onClose={() => patch({ sel: null })}
-            footer={<Button to={`/companies/${sel.id}`} state={{ back: location.search }} variant="primary" icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
+            footer={<Button to={`/companies/${sel.id}`} state={{ back: location.search }} variant="primary" icon={<ArrowLeft size={16} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
             <section className="ui-drawer-group">
               <SignalsHeading signals={sel.signals} />
               <div className="signal-list">{sel.signals.map((sg) => <SignalDetail key={sg.kind} signal={sg} />)}</div>
@@ -214,9 +229,9 @@ export default function CompaniesPage() {
               <h3>נתוני מפתח</h3>
               <Facts layout="list" items={[
                 ['מיקום', <>{sel.country}, <Ltr>{sel.city}</Ltr></>],
-                ['גודל צי', <Mono>{sel.fleetSize}</Mono>],
+                ['גודל צי', <Num>{sel.fleetSize}</Num>],
                 ['תפקידים', sel.roleList.join(', ')],
-                ['עדכון אחרון', <Mono>{sel.updated}</Mono>],
+                ['עדכון אחרון', <Num>{sel.updated}</Num>],
               ]} />
             </section>
           </Drawer>

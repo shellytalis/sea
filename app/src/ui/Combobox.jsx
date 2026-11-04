@@ -47,7 +47,7 @@ export default function Combobox({
       {showEmpty && <div className="ui-listbox-empty">{emptyText}</div>}
       {showList && groups.filter((g) => g.items.length).map((g) => (
         <div key={g.id} role="group" aria-label={g.label} className="ui-listbox-group">
-          {g.label && <div className="ui-listbox-label" aria-hidden="true">{g.label}</div>}
+          {g.label && <div className="ui-listbox-label" aria-hidden="true">{g.icon}{g.label}</div>}
           {g.items.map((it) => {
             n += 1;
             const i = n;

@@ -30,7 +30,7 @@ const GROUPED = [
 
 export default function DesignPage() {
   const [name, setName] = useState('');
-  const [range, setRange] = useState([10, 60]);
+  const [range, setRange] = useState([null, null]);
   const [checks, setChecks] = useState(['a']);
   const [types, setTypes] = useState(['מפעיל']);
   const [drawer, setDrawer] = useState(false);

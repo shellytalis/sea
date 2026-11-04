@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, History, Pencil, Search } from 'lucide-react';
-import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, FLEET_MAX, citiesOf, getCompany } from '../data/companies';
+import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, citiesOf, getCompany } from '../data/companies';
 import { searchCompaniesApi } from '../data/api';
 import { hasParams, parseQuery, parseView, queryToParams } from '../data/companyQuery';
 import Button from '../ui/Button';
@@ -13,20 +13,21 @@ import Drawer from '../ui/Drawer';
 import { Facts } from '../ui/Entity';
 import { ErrorState, NoResults, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
-import { SignalPills, SignalRows, SignalsModelIcon, topSignalRank } from '../components/Signals';
+import { SIGNAL_COLUMNS, SignalDetail } from '../components/Signals';
 
+const fleetText = ([lo, hi]) => (lo === null && hi === null ? '' : `גודל צי ${lo ?? ''}–${hi ?? ''}`);
 const describe = (q) => [
   q.name.trim(),
   q.country,
   q.city,
   ...q.types,
-  q.fleet[0] > 0 || q.fleet[1] < FLEET_MAX ? `צי ${q.fleet[0]}–${q.fleet[1]}` : '',
+  fleetText(q.fleet),
 ].filter(Boolean).join(' · ');
 
 /** דמה: חיפושים וחברות שנצפו לאחרונה (אין עדיין שכבת היסטוריית משתמש) */
 const DEMO_RECENT = [
   { ...EMPTY_QUERY, types: ['בעלים רשום'], country: 'יוון' },
-  { ...EMPTY_QUERY, city: 'Hong Kong', country: 'הונג קונג', fleet: [50, FLEET_MAX] },
+  { ...EMPTY_QUERY, city: 'Hong Kong', country: 'הונג קונג', fleet: [50, null] },
   { ...EMPTY_QUERY, types: ['מפעיל'] },
 ];
 const DEMO_VIEWED = ['c4', 'c13', 'c2', 'c10'];
@@ -34,15 +35,16 @@ const DEMO_VIEWED = ['c4', 'c13', 'c2', 'c10'];
 const plural = (n) => (n === 1 ? 'חברה אחת' : `${n} חברות`);
 const NAME_SUGGESTIONS = COMPANIES.map((c) => c.name);
 
+/** weight: משקל רוחב יחסי; שם ועמודות אותות רחבות, עמודות מספריות צרות */
 const COLUMNS = [
-  { id: 'name', label: 'שם', locked: true, sort: (c) => c.name.toLowerCase(), render: (c) => <Ltr className="cell-name">{c.name}</Ltr> },
-  { id: 'country', label: 'מדינה', sort: (c) => c.country, render: (c) => c.country },
-  { id: 'city', label: 'עיר', sort: (c) => c.city, render: (c) => <Ltr>{c.city}</Ltr> },
-  { id: 'type', label: 'סוג', sort: (c) => c.type, render: (c) => c.type },
-  { id: 'fleet', label: 'גודל צי', align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
-  { id: 'roles', label: 'תפקידים', render: (c) => c.roleList.join(', ') },
-  { id: 'signals', label: 'אותות', headerExtra: <SignalsModelIcon />, sort: topSignalRank, render: (c) => <SignalPills signals={c.signals} /> },
-  { id: 'updated', label: 'עדכון אחרון', sort: (c) => c.updated, render: (c) => <Mono>{c.updated}</Mono> },
+  { id: 'name', label: 'שם', locked: true, weight: 17, sort: (c) => c.name.toLowerCase(), render: (c) => <Ltr className="cell-name">{c.name}</Ltr> },
+  { id: 'country', label: 'מדינה', weight: 10, sort: (c) => c.country, render: (c) => c.country },
+  { id: 'city', label: 'עיר', weight: 9, sort: (c) => c.city, render: (c) => <Ltr>{c.city}</Ltr> },
+  { id: 'type', label: 'סוג', weight: 9, sort: (c) => c.type, render: (c) => c.type },
+  { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
+  { id: 'roles', label: 'תפקידים', weight: 12, render: (c) => c.roleList.join(', ') },
+  ...SIGNAL_COLUMNS,
+  { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Mono>{c.updated}</Mono> },
 ];
 
 export default function CompaniesPage() {
@@ -96,7 +98,7 @@ export default function CompaniesPage() {
     if (q.country) out.push({ key: 'country', label: `מדינה: ${q.country}`, next: { ...q, country: '', city: '' } });
     if (q.city) out.push({ key: 'city', label: `עיר: ${q.city}`, next: { ...q, city: '' } });
     q.types.forEach((t) => out.push({ key: `t${t}`, label: `סוג: ${t}`, next: { ...q, types: q.types.filter((x) => x !== t) } }));
-    if (q.fleet[0] > 0 || q.fleet[1] < FLEET_MAX) out.push({ key: 'fleet', label: `גודל צי: ${q.fleet[0]}–${q.fleet[1]}`, next: { ...q, fleet: [0, FLEET_MAX] } });
+    if (q.fleet[0] !== null || q.fleet[1] !== null) out.push({ key: 'fleet', label: fleetText(q.fleet), next: { ...q, fleet: [null, null] } });
     return out;
   }, [applied]);
 
@@ -117,7 +119,7 @@ export default function CompaniesPage() {
               <Select label="עיר" value={draft.city} options={draft.country ? citiesOf(draft.country) : []} disabled={!draft.country}
                 placeholder={draft.country ? 'הכל' : 'בחר מדינה תחילה'} onChange={(e) => setDraft({ ...draft, city: e.target.value })} />
               <MultiSelect label="סוג חברה" options={COMPANY_TYPES} value={draft.types} onChange={(types) => setDraft({ ...draft, types })} />
-              <RangeField label="גודל צי" min={0} max={FLEET_MAX} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
+              <RangeField label="גודל צי" min={0} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
               <div className="cs-actions">
                 <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
                   icon={<Search size={18} aria-hidden="true" />}>חיפוש</Button>
@@ -159,7 +161,7 @@ export default function CompaniesPage() {
             </div>
           </div>
         )}
-        {isApplied && status === 'loading' && <TableSkeleton cols={7} />}
+        {isApplied && status === 'loading' && <TableSkeleton cols={8} />}
         {isApplied && status === 'error' && <ErrorState title="החיפוש נכשל" onRetry={reload}>אירעה שגיאה בטעינת התוצאות. הפרמטרים נשמרו.</ErrorState>}
         {isApplied && status === 'done' && results.length === 0 && <NoResults onClear={reset} />}
         {isApplied && status === 'done' && results.length > 0 && (
@@ -167,7 +169,7 @@ export default function CompaniesPage() {
             selectedKey={view.selected} onRowClick={(c) => patch({ sel: c.id })}
             sort={view.sort} onSortChange={(s) => patch({ sort: s ? `${s.id}.${s.dir}` : null, page: null })}
             page={view.page} onPageChange={(p) => patch({ page: p > 0 ? String(p + 1) : null })}
-            size={view.size} onSizeChange={(n) => patch({ size: n === 10 ? null : String(n), page: null })}
+            size={view.size} onSizeChange={(n) => patch({ size: n === 25 ? null : String(n), page: null })}
             hidden={view.hidden} onHiddenChange={(h) => patch({ hide: h.join(',') })} />
         )}
 
@@ -177,7 +179,7 @@ export default function CompaniesPage() {
             footer={<Button to={`/companies/${sel.id}`} state={backState} variant="primary" icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
             <section className="ui-drawer-group">
               <h3>אותות</h3>
-              <SignalRows signals={sel.signals} />
+              <div className="signal-list">{sel.signals.map((sg) => <SignalDetail key={sg.kind} signal={sg} />)}</div>
             </section>
             <section className="ui-drawer-group">
               <h3>נתוני מפתח</h3>

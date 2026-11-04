@@ -12,13 +12,13 @@ export default function Drawer({ title, onClose, children, footer, side = 'end',
   closeRef.current = onClose;
   useEffect(() => {
     const opener = document.activeElement;
-    ref.current?.querySelector('button')?.focus();
+    ref.current?.focus();
     const key = (e) => { if (e.key === 'Escape') closeRef.current(); };
     document.addEventListener('keydown', key);
     return () => { document.removeEventListener('keydown', key); opener?.focus?.(); };
   }, []);
   return (
-    <aside className={`ui-drawer${overlay ? ' overlay' : ''}`} role="dialog" aria-label={label} data-side={side} ref={ref}>
+    <aside className={`ui-drawer${overlay ? ' overlay' : ''}`} role="dialog" aria-label={label} data-side={side} ref={ref} tabIndex={-1}>
       <header>
         <h2>{title}</h2>
         <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={18} aria-hidden="true" /></Button>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical } from 'lucide-react';
+import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship } from 'lucide-react';
 import { searchEntities } from '../data/api';
 import { useTheme } from '../ui/prefs';
 import Button from '../ui/Button';
 import Combobox from '../ui/Combobox';
 import Drawer from '../ui/Drawer';
+import { Tooltip } from '../ui/Badges';
 import { Ltr, Mono } from '../ui/Ltr';
 
 /** match: מתי הפריט פעיל; דפי כלי שייכים ל"מפה", דפי חברה ל"חברות" */
@@ -25,7 +26,7 @@ function GlobalSearch() {
   const { vessels, companies } = searchEntities(q);
   const groups = [
     {
-      id: 'vessels', label: 'כלי שיט',
+      id: 'vessels', label: 'כלי שיט', icon: <Ship size={12} aria-hidden="true" />,
       items: vessels.map((v) => ({
         key: v.id, text: v.name, to: `/vessels/${v.id}`,
         render: () => (
@@ -38,7 +39,7 @@ function GlobalSearch() {
       })),
     },
     {
-      id: 'companies', label: 'חברות',
+      id: 'companies', label: 'חברות', icon: <Building2 size={12} aria-hidden="true" />,
       items: companies.map((c) => ({
         key: c.id, text: c.name, to: `/companies/${c.id}`,
         render: () => (
@@ -73,20 +74,26 @@ export default function Shell() {
         {NAV.map((n) => {
           const on = n.match(pathname);
           return (
-            <Button key={n.to} as={Link} to={n.to} variant="nav" active={on} aria-current={on ? 'page' : undefined}
-              title={n.label} aria-label={n.label} icon={<n.icon size={20} aria-hidden="true" />} />
+            <Tooltip key={n.to} side text={n.label}>
+              <Button as={Link} to={n.to} variant="nav" active={on} aria-current={on ? 'page' : undefined}
+                aria-label={n.label} icon={<n.icon size={20} aria-hidden="true" />} />
+            </Tooltip>
           );
         })}
         <div className="nav-spacer" />
-        <Button variant="nav" active={alerts} aria-expanded={alerts} aria-haspopup="dialog" title="התראות" aria-label="התראות"
-          onClick={() => setAlerts(!alerts)} icon={<Bell size={20} aria-hidden="true" />} />
+        <Tooltip side text="התראות">
+          <Button variant="nav" active={alerts} aria-expanded={alerts} aria-haspopup="dialog" aria-label="התראות"
+            onClick={() => setAlerts(!alerts)} icon={<Bell size={20} aria-hidden="true" />} />
+        </Tooltip>
       </nav>
       <div className="main">
         <header className="topbar">
           <GlobalSearch />
           <div className="spacer" />
-          <Button variant="icon" onClick={toggle} title={light ? 'מצב כהה' : 'מצב בהיר'} aria-label="החלפת ערכת נושא"
-            icon={light ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />} />
+          <Tooltip text={light ? 'מצב כהה' : 'מצב בהיר'}>
+            <Button variant="icon" onClick={toggle} aria-label="החלפת ערכת נושא"
+              icon={light ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />} />
+          </Tooltip>
         </header>
         <Outlet />
         {alerts && (

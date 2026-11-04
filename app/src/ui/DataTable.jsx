@@ -51,7 +51,7 @@ export default function DataTable({
 }) {
   const [sort, setSort] = useControllable(sortProp, onSortChange, null);
   const [page, setPage] = useControllable(pageProp, onPageChange, 0);
-  const [size, setSize] = useControllable(sizeProp, onSizeChange, PAGE_SIZES[0]);
+  const [size, setSize] = useControllable(sizeProp, onSizeChange, PAGE_SIZES[1]);
   const [hidden, setHidden] = useControllable(hiddenProp, onHiddenChange, columns.filter((c) => c.hidden).map((c) => c.id));
 
   useEffect(() => { if (resetKey !== undefined && pageProp === undefined) setPage(0); }, [resetKey]); // eslint-disable-line react-hooks/exhaustive-deps

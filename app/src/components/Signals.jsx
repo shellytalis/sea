@@ -1,11 +1,13 @@
 import { Cpu } from 'lucide-react';
 import { ModelTag, SeverityBadge, Shape, Tooltip } from '../ui/Badges';
-import { SEVERITY_LABEL, maxSeverity, severityRank } from '../ui/severity';
+import { Mono } from '../ui/Ltr';
+import { SEVERITY_LABEL, severityRank } from '../ui/severity';
 import { SIGNAL_KINDS } from '../data/companies';
 
-const kindOf = (id) => SIGNAL_KINDS.find((k) => k.id === id);
+export const kindOf = (id) => SIGNAL_KINDS.find((k) => k.id === id);
+const signalOf = (c, kind) => c.signals.find((s) => s.kind === kind);
 
-/** אייקון מודל קטן אחד ליד כותרת "אותות", במקום תג בכל כותרת */
+/** אייקון מודל קטן אחד ליד כותרת הקבוצה "אותות", במקום תג בכל כותרת */
 export function SignalsModelIcon() {
   return (
     <Tooltip text="תוצר מודל">
@@ -14,45 +16,53 @@ export function SignalsModelIcon() {
   );
 }
 
-/** חומרה מובילה של החברה (לשימוש במיון בלבד; אין ציון מסכם לחברה) */
-export const topSignalRank = (c) => severityRank(maxSeverity(c.signals.map((s) => s.severity)));
-
 /**
- * חיווי קטן לפי סוג בתא הטבלה (צי / פעילות / קשרים). מציג רק אותות עם חומרה;
- * כשלא הוערך אף אות: "לא הוערך"; כשכולם נקיים: "אין אינדיקטורים".
+ * תא אות בטבלה: תג חומרה (צורה + מילה); ✓ כשאין אינדיקטורים; "לא הוערך" כשחסר מידע.
  */
-export function SignalPills({ signals, kinds = ['fleet', 'activity', 'links'] }) {
-  const own = signals.filter((s) => kinds.includes(s.kind));
-  if (own.every((s) => s.severity === 'unassessed')) return <SeverityBadge severity="unassessed" />;
-  const flagged = own.filter((s) => severityRank(s.severity) > 0);
-  if (flagged.length === 0) return <SeverityBadge severity="none" />;
-  return (
-    <span className="signals">
-      {flagged.map((s) => (
-        <span key={s.kind} className={`signal-pill ui-sev ${s.severity}`}
-          title={`${kindOf(s.kind).label}: ${SEVERITY_LABEL[s.severity]}`}>
-          <Shape risk={s.severity} />
-          <span className="sr-only">{kindOf(s.kind).label}: </span>
-          {kindOf(s.kind).short}
-          <span className="signal-sev">{SEVERITY_LABEL[s.severity]}</span>
-        </span>
-      ))}
-    </span>
-  );
+export function SignalCell({ signal }) {
+  if (!signal) return <SeverityBadge severity="unassessed" />;
+  if (signal.severity === 'none') {
+    return (
+      <span className="ui-sev none">
+        <Shape risk="none" /><span className="sr-only">{SEVERITY_LABEL.none}</span>
+      </span>
+    );
+  }
+  return <SeverityBadge severity={signal.severity} />;
 }
 
-/** שורות אותות קצרות (מגירת תצוגה מהירה) */
-export function SignalRows({ signals }) {
+/** הגדרות שלוש עמודות האותות (הצעה: ללא זהות, לפי הנחיית הטבלה) תחת כותרת-על "אותות" */
+export const SIGNAL_COLUMNS = [
+  { id: 'sig-fleet', kind: 'fleet', label: 'חריגות צי', weight: 9 },
+  { id: 'sig-activity', kind: 'activity', label: 'פעילות', weight: 8 },
+  { id: 'sig-links', kind: 'links', label: 'קשרים', weight: 8 },
+].map((c) => ({
+  ...c,
+  group: 'אותות',
+  groupExtra: <SignalsModelIcon />,
+  // לא הוערך נמוך מ'אין אינדיקטורים' במיון
+  sort: (co) => { const sev = signalOf(co, c.kind)?.severity ?? 'unassessed'; return sev === 'unassessed' ? -1 : severityRank(sev); },
+  render: (co) => <SignalCell signal={signalOf(co, c.kind)} />,
+}));
+
+/** אות מלא: שם, חומרה, תג מודל, 2-3 גורמי "למה", זמן עדכון וגרסת מודל */
+export function SignalDetail({ signal }) {
+  const k = kindOf(signal.kind);
   return (
-    <ul className="signal-rows">
-      {signals.map((s) => (
-        <li key={s.kind}>
-          <span>{kindOf(s.kind).label}</span>
-          <SeverityBadge severity={s.severity} />
-        </li>
-      ))}
-    </ul>
+    <div className="signal-detail">
+      <div className="signal-detail-head">
+        <strong>{k.label}</strong>
+        <SeverityBadge severity={signal.severity} />
+        <ModelTag />
+      </div>
+      {signal.why.length > 0 && (
+        <ul className="plain-list bulleted signal-why" aria-label="למה">
+          {signal.why.map((w) => <li key={w}>{w}</li>)}
+        </ul>
+      )}
+      <div className="signal-meta">
+        עודכן <Mono>{signal.updated}</Mono> · גרסת מודל <Mono>{signal.modelVersion}</Mono>
+      </div>
+    </div>
   );
 }
-
-export { ModelTag };

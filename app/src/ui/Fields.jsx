@@ -80,20 +80,24 @@ export function MultiSelect({ label, options, value, onChange, placeholder = 'ה
   );
 }
 
-/** טווח: שני שדות מספר מסונכרנים (בלי סליידר: הוא לא מוסיף דיוק) */
-export function RangeField({ label, min, max, value, onChange }) {
+/** טווח: שני שדות מספר ריקים כברירת מחדל (null = לא הוגבל); בלי סליידר */
+export function RangeField({ label, min = 0, max, value, onChange, placeholders = ['מ-', 'עד'] }) {
   const id = useId();
   const [lo, hi] = value;
-  const clamp = (n) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
+  const parse = (raw) => {
+    if (raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.min(max ?? Infinity, Math.max(min, Math.round(n))) : null;
+  };
   return (
-    <div className="ui-range" role="group" aria-labelledby={id + "l"}>
-      <span id={id + "l"} className="ui-label">{label}</span>
+    <div className="ui-range" role="group" aria-labelledby={id + 'l'}>
+      <span id={id + 'l'} className="ui-label">{label}</span>
       <div className="ui-range-inputs">
-        <input id={id + 'a'} className="ui-input num" type="number" min={min} max={max} value={lo} aria-label={`${label}, מ-`}
-          onChange={(e) => onChange([Math.min(clamp(+e.target.value), hi), hi])} dir="ltr" />
+        <input id={id + 'a'} className="ui-input num" type="number" min={min} max={max} value={lo ?? ''} placeholder={placeholders[0]}
+          aria-label={`${label}, מינימום`} onChange={(e) => onChange([parse(e.target.value), hi])} dir="ltr" />
         <span className="ui-range-dash" aria-hidden="true">–</span>
-        <input id={id + 'b'} className="ui-input num" type="number" min={min} max={max} value={hi} aria-label={`${label}, עד`}
-          onChange={(e) => onChange([lo, Math.max(clamp(+e.target.value), lo)])} dir="ltr" />
+        <input id={id + 'b'} className="ui-input num" type="number" min={min} max={max} value={hi ?? ''} placeholder={placeholders[1]}
+          aria-label={`${label}, מקסימום`} onChange={(e) => onChange([lo, parse(e.target.value)])} dir="ltr" />
       </div>
     </div>
   );

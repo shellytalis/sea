@@ -478,11 +478,11 @@ export const EMPTY_QUERY = {
   country: "",
   city: "",
   types: [],
-  fleet: [0, FLEET_MAX]
+  fleet: [null, null]
 };
-export const hasParams = (q) => !!(q.name.trim() || q.country || q.city || q.types.length || q.fleet[0] > 0 || q.fleet[1] < FLEET_MAX);
+export const hasParams = (q) => !!(q.name.trim() || q.country || q.city || q.types.length || q.fleet[0] !== null || q.fleet[1] !== null);
 export function searchCompanies(q) {
   const n = q.name.trim().toLowerCase();
-  return COMPANIES.filter((c) => (!n || c.name.toLowerCase().includes(n)) && (!q.country || c.country === q.country) && (!q.city || c.city === q.city) && (!q.types.length || q.types.includes(c.type)) && c.fleetSize >= q.fleet[0] && c.fleetSize <= q.fleet[1]);
+  return COMPANIES.filter((c) => (!n || c.name.toLowerCase().includes(n)) && (!q.country || c.country === q.country) && (!q.city || c.city === q.city) && (!q.types.length || q.types.includes(c.type)) && c.fleetSize >= (q.fleet[0] ?? 0) && c.fleetSize <= (q.fleet[1] ?? Infinity));
 }
 export const getCompany = (id) => COMPANIES.find((c) => c.id === id);

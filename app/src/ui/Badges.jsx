@@ -30,7 +30,8 @@ export function SeverityBadge({ severity, label, className = '' }) {
   );
 }
 
-export function Tooltip({ text, children, focusable }) {
+/** side: הטולטיפ מופיע בצד העוגן (לסרגל ניווט צר) במקום מתחתיו */
+export function Tooltip({ text, children, focusable, side }) {
   const id = useId();
   const [on, setOn] = useState(false);
   return (
@@ -39,7 +40,7 @@ export function Tooltip({ text, children, focusable }) {
       onFocus={() => setOn(true)} onBlur={() => setOn(false)}
       onKeyDown={(e) => { if (e.key === 'Escape') setOn(false); }}>
       {children}
-      {on && <span role="tooltip" id={id} className="ui-tooltip">{text}</span>}
+      {on && <span role="tooltip" id={id} className={`ui-tooltip${side ? ' side' : ''}`}>{text}</span>}
     </span>
   );
 }

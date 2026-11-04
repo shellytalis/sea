@@ -3,32 +3,64 @@ import Button from './Button';
 
 /**
  * ליבת הטבלה המשותפת ל-DataTable ול-StaticTable.
- * columns: { id, label, render(row), align?, sort?(row), badge? }
+ * columns: { id, label, render(row), align?, sort?(row), badge?, headerExtra?, weight?, group? }
+ *   weight: משקל רוחב יחסי (מפעיל פריסה קבועה); group: עמודות סמוכות עם אותו group חולקות כותרת-על
  * sort/onSort: אם onSort קיים, כותרות העמודות הממיינות הן כפתורים.
  * onRowClick: הופך שורות לאינטראקטיביות (מקלדת, בחירה).
  */
 export default function TableCore({ caption, columns, rows, rowKey, sort, onSort, onRowClick, selectedKey, stickyHead = true, className = '' }) {
+  const weighted = columns.some((c) => c.weight);
+  const total = columns.reduce((a, c) => a + (c.weight ?? 1), 0);
+  const grouped = columns.some((c) => c.group);
+
+  const label = (c) => {
+    const dir = sort?.id === c.id ? sort.dir : null;
+    return onSort && c.sort ? (
+      <Button variant="th" onClick={() => onSort(c.id)}>
+        {c.label}{c.headerExtra}{c.badge}
+        {dir === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : dir === 'desc' ? <ArrowDown size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" className="dim" />}
+      </Button>
+    ) : <span className="ui-th">{c.label}{c.headerExtra}{c.badge}</span>;
+  };
+  const ariaSort = (c) => {
+    const dir = sort?.id === c.id ? sort.dir : null;
+    return dir ? (dir === 'asc' ? 'ascending' : 'descending') : onSort && c.sort ? 'none' : undefined;
+  };
+
+  // כותרת דו-שורתית כשיש קבוצות: עמודות בלי קבוצה נמתחות על שתי השורות
+  const topRow = [];
+  if (grouped) {
+    columns.forEach((c, i) => {
+      if (!c.group) { topRow.push(<th key={c.id} scope="col" rowSpan={2} className={c.align === 'end' ? 'end' : ''} aria-sort={ariaSort(c)}>{label(c)}</th>); return; }
+      if (columns[i - 1]?.group === c.group) return;
+      const span = columns.slice(i).findIndex((x) => x.group !== c.group);
+      topRow.push(<th key={`g-${c.group}`} scope="colgroup" colSpan={span === -1 ? columns.length - i : span} className="group">{c.group}{c.groupExtra}</th>);
+    });
+  }
+
   return (
-    <table className={`ui-table ${onRowClick ? 'interactive' : ''} ${stickyHead ? 'sticky' : ''} ${className}`.trim()}>
+    <table className={`ui-table ${onRowClick ? 'interactive' : ''} ${stickyHead ? 'sticky' : ''} ${weighted ? 'fixed' : ''} ${className}`.trim()}>
       <caption className="sr-only">{caption}</caption>
+      {weighted && (
+        <colgroup>
+          {columns.map((c) => <col key={c.id} width={`${(((c.weight ?? 1) / total) * 100).toFixed(2)}%`} />)}
+        </colgroup>
+      )}
       <thead>
-        <tr>
-          {columns.map((c) => {
-            const dir = sort?.id === c.id ? sort.dir : null;
-            return (
-              <th key={c.id} scope="col" className={c.align === 'end' ? 'end' : ''}
-                aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : onSort && c.sort ? 'none' : undefined}>
-                {onSort && c.sort ? (
-                  <Button variant="th" onClick={() => onSort(c.id)}
->
-                    {c.label}{c.headerExtra}{c.badge}
-                    {dir === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : dir === 'desc' ? <ArrowDown size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" className="dim" />}
-                  </Button>
-                ) : <span className="ui-th">{c.label}{c.headerExtra}{c.badge}</span>}
-              </th>
-            );
-          })}
-        </tr>
+        {grouped ? (
+          <>
+            <tr>{topRow}</tr>
+            <tr className="sub-head">
+              {columns.filter((c) => c.group).map((c) => (
+                <th key={c.id} scope="col" className={c.align === 'end' ? 'end' : ''} aria-sort={ariaSort(c)}>{label(c)}</th>
+              ))}
+            </tr>
+          </>
+        ) : (
+          <tr>
+            {columns.map((c) => <th key={c.id} scope="col" className={c.align === 'end' ? 'end' : ''} aria-sort={ariaSort(c)}>{label(c)}</th>)}
+          </tr>
+        )}
       </thead>
       <tbody>
         {rows.map((r) => {

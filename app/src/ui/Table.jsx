@@ -21,10 +21,10 @@ export default function TableCore({ caption, columns, rows, rowKey, sort, onSort
                 {onSort && c.sort ? (
                   <Button variant="th" onClick={() => onSort(c.id)}
 >
-                    {c.label}{c.badge}
+                    {c.label}{c.headerExtra}{c.badge}
                     {dir === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : dir === 'desc' ? <ArrowDown size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" className="dim" />}
                   </Button>
-                ) : <span className="ui-th">{c.label}{c.badge}</span>}
+                ) : <span className="ui-th">{c.label}{c.headerExtra}{c.badge}</span>}
               </th>
             );
           })}

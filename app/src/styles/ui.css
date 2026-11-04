@@ -37,7 +37,7 @@
 
 /* ===== שדות ===== */
 .ui-field { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
-.ui-field > label, .ui-range legend, .ui-checks legend { font: 600 var(--fs-xs)/var(--lh-xs) var(--font); color: var(--text-secondary); padding: 0; }
+.ui-field > label, .ui-label, .ui-checks legend { font: 600 var(--fs-xs)/var(--lh-xs) var(--font); color: var(--text-secondary); padding: 0; }
 .ui-hint { font-size: var(--fs-sm); color: var(--text-tertiary); }
 .ui-input {
   width: 100%; height: var(--control-h); padding: 0 var(--space-3); background: var(--surface); color: var(--text-primary);
@@ -266,3 +266,15 @@
 .sw-sev-critical { --sw: var(--sev-critical); }
 .sw-sev-unassessed { --sw: var(--sev-unassessed); }
 .sw-sev-none { --sw: var(--sev-none); }
+
+/* ===== טופס חיפוש חברות: שדות נוספים ===== */
+.ui-range-inputs .ui-input { flex: 1; min-width: 0; }
+.cs-form .ui-field, .cs-form .ui-range { align-content: end; }
+.ui-model-icon { display: inline-flex; color: var(--text-secondary); }
+.signal-sev { font-weight: 400; color: inherit; }
+.signal-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.signal-rows li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.main > .ui-drawer.overlay { inset-block-start: var(--top-h); }
+.alerts-empty { display: grid; gap: var(--space-1); color: var(--text-secondary); }
+.alerts-empty strong { color: var(--text-primary); font-size: var(--fs-lg); }
+.alerts-empty p { margin: 0; }

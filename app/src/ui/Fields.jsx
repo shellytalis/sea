@@ -86,8 +86,8 @@ export function RangeField({ label, min, max, value, onChange }) {
   const [lo, hi] = value;
   const clamp = (n) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
   return (
-    <fieldset className="ui-range">
-      <legend>{label}</legend>
+    <div className="ui-range" role="group" aria-labelledby={id + "l"}>
+      <span id={id + "l"} className="ui-label">{label}</span>
       <div className="ui-range-inputs">
         <input id={id + 'a'} className="ui-input num" type="number" min={min} max={max} value={lo} aria-label={`${label}, מ-`}
           onChange={(e) => onChange([Math.min(clamp(+e.target.value), hi), hi])} dir="ltr" />
@@ -95,7 +95,7 @@ export function RangeField({ label, min, max, value, onChange }) {
         <input id={id + 'b'} className="ui-input num" type="number" min={min} max={max} value={hi} aria-label={`${label}, עד`}
           onChange={(e) => onChange([lo, Math.max(clamp(+e.target.value), lo)])} dir="ltr" />
       </div>
-    </fieldset>
+    </div>
   );
 }
 

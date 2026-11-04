@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { getCompany } from "../data/companies";
 import { getVessel } from "../data/vessels";
@@ -30,6 +30,7 @@ const SECTIONS = [
 ];
 export default function CompanyPage() {
   const { id } = useParams();
+  const backTo = `/companies${useLocation().state?.back ?? ""}`;
   const c = getCompany(id);
   if (!c) {
     return <EmptyState title="החברה לא נמצאה">
@@ -65,11 +66,9 @@ export default function CompanyPage() {
       render: (v) => v.risk === "none" ? <span className="ui-hint">ללא חיווי</span> : <VesselFlags v={v} withLists={false} />
     }
   ];
-  return <EntityPage resetKey={c.id} sections={SECTIONS} header={<EntityHead back={<Link to="/companies" className="entity-back"><ArrowRight size={14} aria-hidden="true" />חזרה לחיפוש חברות</Link>} title={<Ltr>{c.name}</Ltr>} meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr></>} badges={<><SeverityBadge severity={c.risk} />{c.roleList.map((r) => <Chip key={r}>{r}</Chip>)}</>} />}>
+  return <EntityPage resetKey={c.id} sections={SECTIONS} header={<EntityHead back={<Link to={backTo} className="entity-back"><ArrowRight size={14} aria-hidden="true" />חזרה לחיפוש חברות</Link>} title={<Ltr>{c.name}</Ltr>} meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr></>} badges={<>{c.roleList.map((r) => <Chip key={r}>{r}</Chip>)}</>} />}>
       <Section id="overview" title="סקירה" source={src}>
         <Metrics items={[
-    ["רמת סיכון", <span key="r" className="metric-risk"><SeverityBadge severity={c.risk} />{c.riskScore !== null && <Mono>{c.riskScore}</Mono>}<ModelTag /></span>],
-    ["חריגות פעילות", c.anomalies === null ? <span className="ui-hint">לא הוערך</span> : <Mono>{c.anomalies}</Mono>],
     ["גודל צי", <Mono key="f">{c.fleetSize}</Mono>],
     ["שנת הקמה", <Mono key="y">{c.founded}</Mono>]
   ]} />

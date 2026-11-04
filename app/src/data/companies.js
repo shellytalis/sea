@@ -13,7 +13,25 @@
  * @property {string|null} parent
  * @property {string[]} subsidiaries
  * @property {{source: string, updated: string}} stamp
+ * @property {Signal[]} signals     אותות מודל (הצעה: סוגי האותות ותוכן ה-why הם דמה)
  */
+
+/**
+ * @typedef {Object} Signal
+ * @property {'fleet'|'activity'|'links'|'identity'} kind
+ * @property {import("../ui/severity").Severity} severity
+ * @property {string[]} why         2-3 גורמים
+ * @property {string} updated       YYYY-MM-DD
+ * @property {string} modelVersion
+ */
+
+/** הצעה: סוגי האותות לפי BRAIN §5. מה המודלים מפיקים בפועל לא הוגדר. */
+export const SIGNAL_KINDS = [
+  { id: "fleet", label: "חריגות בצי", short: "צי" },
+  { id: "activity", label: "שינוי בדפוס פעילות", short: "פעילות" },
+  { id: "links", label: "קשרים חריגים בין חברות", short: "קשרים" },
+  { id: "identity", label: "שינויי זהות בצי", short: "זהות" }
+];
 
 export const COMPANY_TYPES = [
   "בעלים רשום",
@@ -385,8 +403,49 @@ const EXTRA = {
     }]
   }
 };
+const WHY = {
+  fleet: {
+    low: ["סטייה קלה ממספר הכלים הצפוי בסוג", "כלי אחד ללא קליטת AIS ממושכת"],
+    medium: ["שני כלים עם הפסקות שידור חוזרות", "גידול בצי מעל הממוצע בסוג"],
+    high: ["ריכוז הפסקות שידור בכמה כלים במקביל", "כלים שהוחלפו בהם שם ודגל בתוך חצי שנה", "פער בין הצי המדווח לצי הנצפה"],
+    critical: ["הפסקות שידור בכל הצי באותו אזור", "מפגשי ship-to-ship חוזרים", "כלים ברשימת מעקב"]
+  },
+  activity: {
+    low: ["שינוי קל בתדירות ביקורים בנמלים"],
+    medium: ["מעבר לנמלי יעד חדשים", "הארכת זמני שהייה בנמל"],
+    high: ["שינוי חד באזור הפעילות", "מסלולים חדשים דרך אזורי סיכון"],
+    critical: ["שינוי חד באזור הפעילות", "שיטוט חשוד בים הפתוח", "ביקורים בנמלים ברשימת מעקב"]
+  },
+  links: {
+    low: ["בעלות משותפת עם חברה אחת נוספת"],
+    medium: ["כתובת רישום משותפת למספר חברות", "מנהל משותף עם חברה שהוקמה לאחרונה"],
+    high: ["שרשרת בעלות דרך שלוש מדינות", "קשר לחברה בעלת אינדיקטורים קודמים"],
+    critical: ["קשר ישיר לחברה ברשימת מעקב", "בעלות מוטב לא מזוהה"]
+  },
+  identity: {
+    low: ["שינוי שם אחד בצי בשנה האחרונה"],
+    medium: ["שינוי דגל של כלי אחד", "החלפת מנהל טכני"],
+    high: ["שינויי שם ודגל בכמה כלים", "החלפת בעלים רשום"],
+    critical: ["שינויי זהות סדרתיים בצי", "החלפת בעלים ודגל בתוך חודשיים"]
+  }
+};
+const PATTERN = {
+  low: ["none", "none", "none", "none"],
+  medium: ["medium", "low", "none", "low"],
+  high: ["high", "high", "medium", "low"],
+  unassessed: ["unassessed", "unassessed", "unassessed", "unassessed"]
+};
+/** אותות דמה לפי דפוס, לא מחושבים מנתונים אמיתיים @returns {Signal[]} */
+const makeSignals = (pattern, i, updated) => SIGNAL_KINDS.map((k, n) => {
+  let severity = PATTERN[pattern][n];
+  if (pattern === "low" && n === 0 && i % 3 === 0) severity = "low";
+  if (pattern === "high" && n === 0 && i % 2 === 0) severity = "critical";
+  const why = severity === "unassessed" ? ["אין מספיק נתוני פעילות בחלון הניתוח"] : severity === "none" ? [] : WHY[k.id][severity];
+  return { kind: k.id, severity, why, updated, modelVersion: "0.3" };
+});
+
 /** @type {Company[]} */
-export const COMPANIES = ROWS.map(([name, type, country, city, fleetSize, risk, riskScore, anomalies, roleList, updated], i) => ({
+export const COMPANIES = ROWS.map(([name, type, country, city, fleetSize, pattern, , , roleList, updated], i) => ({
   id: `c${i + 1}`,
   name,
   type,
@@ -394,10 +453,8 @@ export const COMPANIES = ROWS.map(([name, type, country, city, fleetSize, risk, 
   country,
   city,
   fleetSize,
-  risk,
-  riskScore,
-  anomalies,
   updated,
+  signals: makeSignals(pattern, i, updated),
   address: city,
   founded: 1990 + i * 7 % 30,
   dnb: String(3e7 + i * 1357913).padStart(9, "0"),
@@ -421,12 +478,11 @@ export const EMPTY_QUERY = {
   country: "",
   city: "",
   types: [],
-  fleet: [0, FLEET_MAX],
-  risks: []
+  fleet: [0, FLEET_MAX]
 };
-export const hasParams = (q) => !!(q.name.trim() || q.country || q.city || q.types.length || q.risks.length || q.fleet[0] > 0 || q.fleet[1] < FLEET_MAX);
+export const hasParams = (q) => !!(q.name.trim() || q.country || q.city || q.types.length || q.fleet[0] > 0 || q.fleet[1] < FLEET_MAX);
 export function searchCompanies(q) {
   const n = q.name.trim().toLowerCase();
-  return COMPANIES.filter((c) => (!n || c.name.toLowerCase().includes(n)) && (!q.country || c.country === q.country) && (!q.city || c.city === q.city) && (!q.types.length || q.types.includes(c.type)) && c.fleetSize >= q.fleet[0] && c.fleetSize <= q.fleet[1] && (!q.risks.length || q.risks.includes(c.risk)));
+  return COMPANIES.filter((c) => (!n || c.name.toLowerCase().includes(n)) && (!q.country || c.country === q.country) && (!q.city || c.city === q.city) && (!q.types.length || q.types.includes(c.type)) && c.fleetSize >= q.fleet[0] && c.fleetSize <= q.fleet[1]);
 }
 export const getCompany = (id) => COMPANIES.find((c) => c.id === id);

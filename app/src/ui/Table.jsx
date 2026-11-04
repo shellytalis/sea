@@ -20,7 +20,7 @@ export default function TableCore({ caption, columns, rows, rowKey, sort, onSort
         {c.label}{c.headerExtra}{c.badge}
         {dir === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : dir === 'desc' ? <ArrowDown size={14} aria-hidden="true" /> : <ChevronsUpDown size={14} aria-hidden="true" className="dim" />}
       </Button>
-    ) : <span className="ui-th">{c.label}{c.headerExtra}{c.badge}</span>;
+    ) : <span className="ui-th">{c.srLabel ? <span className="sr-only">{c.srLabel}</span> : c.label}{c.headerExtra}{c.badge}</span>;
   };
   const ariaSort = (c) => {
     const dir = sort?.id === c.id ? sort.dir : null;
@@ -34,7 +34,7 @@ export default function TableCore({ caption, columns, rows, rowKey, sort, onSort
       if (!c.group) { topRow.push(<th key={c.id} scope="col" rowSpan={2} className={c.align === 'end' ? 'end' : ''} aria-sort={ariaSort(c)}>{label(c)}</th>); return; }
       if (columns[i - 1]?.group === c.group) return;
       const span = columns.slice(i).findIndex((x) => x.group !== c.group);
-      topRow.push(<th key={`g-${c.group}`} scope="colgroup" colSpan={span === -1 ? columns.length - i : span} className="group">{c.group}{c.groupExtra}</th>);
+      topRow.push(<th key={`g-${c.group}`} scope="colgroup" colSpan={span === -1 ? columns.length - i : span} className="group" title={c.groupTitle}>{c.group}</th>);
     });
   }
 

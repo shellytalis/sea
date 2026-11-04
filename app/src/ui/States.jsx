@@ -1,34 +1,37 @@
-import { SearchX, TriangleAlert, Lock, Inbox } from 'lucide-react';
+import { SearchX, TriangleAlert, Lock } from 'lucide-react';
 import Button from './Button';
 
-function Box({ icon, title, children, role = 'status', compact }) {
+/**
+ * מצב ריק/שגיאה: טקסט בלבד, מיושר להתחלה. שורה ראשונה 14px/500 משני, שנייה 13px מעומעם.
+ * icon (אופציונלי, בלי עיגול) רק במצבי שגיאה/אין הרשאה/אין תוצאות, שבהם הוא נושא משמעות.
+ */
+function Box({ icon, title, children, role = 'status' }) {
   return (
-    <div className={`ui-state${compact ? ' compact' : ''}`} role={role}>
-      <span className="ui-state-icon" aria-hidden="true">{icon}</span>
-      <strong>{title}</strong>
+    <div className="ui-state" role={role}>
+      <strong>{icon && <span className="ui-state-icon" aria-hidden="true">{icon}</span>}{title}</strong>
       {children}
     </div>
   );
 }
 
-export const EmptyState = ({ title, children, compact }) => <Box icon={<Inbox size={20} />} title={title} compact={compact}>{children}</Box>;
+export const EmptyState = ({ title, children }) => <Box title={title}>{children}</Box>;
 
 export const NoResults = ({ onClear, title = 'לא נמצאו חברות', clearLabel = 'נקה את כל המסננים' }) => (
-  <Box icon={<SearchX size={20} />} title={title}>
+  <Box icon={<SearchX size={16} />} title={title}>
     <span>נסה להסיר מסנן או לשנות את הפרמטרים.</span>
     {onClear && <Button onClick={onClear}>{clearLabel}</Button>}
   </Box>
 );
 
 export const ErrorState = ({ onRetry, title = 'הטעינה נכשלה', children }) => (
-  <Box icon={<TriangleAlert size={20} />} title={title} role="alert">
+  <Box icon={<TriangleAlert size={16} />} title={title} role="alert">
     <span>{children ?? 'אירעה שגיאה בטעינת הנתונים. המצב שלך נשמר.'}</span>
     {onRetry && <Button variant="primary" onClick={onRetry}>נסה שוב</Button>}
   </Box>
 );
 
 export const ForbiddenState = ({ title = 'אין הרשאה לצפייה בנתוני חברות', children }) => (
-  <Box icon={<Lock size={20} />} title={title}>
+  <Box icon={<Lock size={16} />} title={title}>
     <span>{children ?? 'פנה למנהל המערכת כדי לקבל הרשאה.'}</span>
   </Box>
 );

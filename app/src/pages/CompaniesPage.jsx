@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Clock, History, Pencil, Search } from 'lucide-react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Clock, History, PanelLeftOpen, Pencil, Search } from 'lucide-react';
 import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, citiesOf, getCompany } from '../data/companies';
 import { searchCompaniesApi } from '../data/api';
 import { hasParams, parseQuery, parseView, queryToParams } from '../data/companyQuery';
+import { Tooltip } from '../ui/Badges';
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import { Ltr, Mono } from '../ui/Ltr';
@@ -13,16 +14,10 @@ import Drawer from '../ui/Drawer';
 import { Facts } from '../ui/Entity';
 import { ErrorState, NoResults, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
-import { SIGNAL_COLUMNS, SignalDetail } from '../components/Signals';
+import { SIGNAL_COLUMNS, SignalDetail, SignalsHeading } from '../components/Signals';
 
 const fleetText = ([lo, hi]) => (lo === null && hi === null ? '' : `גודל צי ${lo ?? ''}–${hi ?? ''}`);
-const describe = (q) => [
-  q.name.trim(),
-  q.country,
-  q.city,
-  ...q.types,
-  fleetText(q.fleet),
-].filter(Boolean).join(' · ');
+const describe = (q) => [q.name.trim(), q.country, q.city, ...q.types, fleetText(q.fleet)].filter(Boolean).join(' · ');
 
 /** דמה: חיפושים וחברות שנצפו לאחרונה (אין עדיין שכבת היסטוריית משתמש) */
 const DEMO_RECENT = [
@@ -34,18 +29,16 @@ const DEMO_VIEWED = ['c4', 'c13', 'c2', 'c10'];
 
 const plural = (n) => (n === 1 ? 'חברה אחת' : `${n} חברות`);
 const NAME_SUGGESTIONS = COMPANIES.map((c) => c.name);
+const SCROLL_KEY = 'sea-cs-scroll';
+const scroller = () => document.querySelector('.cs-body .ui-table-scroll');
 
-/** weight: משקל רוחב יחסי; שם ועמודות אותות רחבות, עמודות מספריות צרות */
-const COLUMNS = [
-  { id: 'name', label: 'שם', locked: true, weight: 17, sort: (c) => c.name.toLowerCase(), render: (c) => <Ltr className="cell-name">{c.name}</Ltr> },
-  { id: 'country', label: 'מדינה', weight: 10, sort: (c) => c.country, render: (c) => c.country },
-  { id: 'city', label: 'עיר', weight: 9, sort: (c) => c.city, render: (c) => <Ltr>{c.city}</Ltr> },
-  { id: 'type', label: 'סוג', weight: 9, sort: (c) => c.type, render: (c) => c.type },
-  { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
-  { id: 'roles', label: 'תפקידים', weight: 12, render: (c) => c.roleList.join(', ') },
-  ...SIGNAL_COLUMNS,
-  { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Mono>{c.updated}</Mono> },
-];
+/** תפקידים: עד שניים + "+N" */
+const Roles = ({ list }) => (
+  <span className="roles">
+    {list.slice(0, 2).join(', ')}
+    {list.length > 2 && <span className="roles-more" title={list.slice(2).join(', ')}><Ltr>+{list.length - 2}</Ltr></span>}
+  </span>
+);
 
 export default function CompaniesPage() {
   const location = useLocation();
@@ -67,6 +60,19 @@ export default function CompaniesPage() {
     [filterKey, isApplied],
   );
   const results = data ?? [];
+
+  /** חזרה מהפרופיל: משחזר את מיקום הגלילה של הטבלה כפי שהיה (ה-URL כבר משחזר את החיפוש) */
+  useEffect(() => {
+    if (status !== 'done') return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? 'null');
+      if (saved && saved.search === location.search && scroller()) { scroller().scrollTop = saved.top; }
+      sessionStorage.removeItem(SCROLL_KEY);
+    } catch { /* אין sessionStorage */ }
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rememberScroll = () => {
+    try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify({ search: location.search, top: scroller()?.scrollTop ?? 0 })); } catch { /* אין sessionStorage */ }
+  };
 
   /** עדכון פרמטרי תצוגה (מיון/עימוד/עמודות/בחירה) בלי להוסיף רשומת היסטוריה */
   const patch = (changes) => setParams((prev) => {
@@ -102,38 +108,63 @@ export default function CompaniesPage() {
     return out;
   }, [applied]);
 
+  /** weight: משקל רוחב יחסי; שם ועמודות אותות רחבות, עמודות מספריות צרות */
+  const columns = useMemo(() => [
+    {
+      id: 'name', label: 'שם', locked: true, weight: 17, sort: (c) => c.name.toLowerCase(),
+      render: (c) => <Link to={`/companies/${c.id}`} state={{ back: location.search }} className="cell-link" onClick={rememberScroll}><Ltr>{c.name}</Ltr></Link>,
+    },
+    { id: 'country', label: 'מדינה', weight: 10, sort: (c) => c.country, render: (c) => c.country },
+    { id: 'city', label: 'עיר', weight: 9, sort: (c) => c.city, render: (c) => <Ltr>{c.city}</Ltr> },
+    { id: 'type', label: 'סוג', weight: 9, sort: (c) => c.type, render: (c) => c.type },
+    { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Mono>{c.fleetSize}</Mono> },
+    { id: 'roles', label: 'תפקידים', weight: 12, render: (c) => <Roles list={c.roleList} /> },
+    ...SIGNAL_COLUMNS,
+    { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Mono>{c.updated}</Mono> },
+    {
+      id: 'actions', label: '', srLabel: 'תצוגה מהירה', noManage: true, weight: 4, align: 'end',
+      render: (c) => (
+        <Tooltip text="תצוגה מהירה">
+          <Button variant="icon" size="sm" className="row-action" aria-label={`תצוגה מהירה: ${c.name}`}
+            icon={<PanelLeftOpen size={16} aria-hidden="true" />} onClick={() => patch({ sel: c.id })} />
+        </Tooltip>
+      ),
+    },
+  ], [location.search]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const sel = view.selected ? getCompany(view.selected) : null;
   const showForm = !isApplied || editing;
-  const backState = { back: location.search };
 
   return (
     <div className="cs">
       <header className="cs-head">
-        <div className="cs-title"><h1>חיפוש חברות</h1></div>
+        <div className="cs-title-row">
+          <h1>חיפוש חברות</h1>
+          {isApplied && !editing && <span className="cs-count" aria-live="polite">{status === 'done' ? plural(results.length) : 'מחפש…'}</span>}
+          {isApplied && !editing && (
+            <Button className="cs-edit" icon={<Pencil size={16} aria-hidden="true" />} onClick={() => setEditing(true)}>ערוך חיפוש</Button>
+          )}
+        </div>
         {showForm ? (
-          <>
-            <form className="cs-form" onSubmit={submit} aria-label="חיפוש חברות">
-              <Autocomplete label="שם חברה" value={draft.name} onChange={(name) => setDraft({ ...draft, name })}
-                suggestions={NAME_SUGGESTIONS} placeholder="הקלד שם או חלק משם" onEnter={() => submit({ preventDefault() {} })} />
-              <Select label="מדינה" value={draft.country} options={COMPANY_COUNTRIES} onChange={(e) => setDraft({ ...draft, country: e.target.value, city: '' })} />
-              <Select label="עיר" value={draft.city} options={draft.country ? citiesOf(draft.country) : []} disabled={!draft.country}
-                placeholder={draft.country ? 'הכל' : 'בחר מדינה תחילה'} onChange={(e) => setDraft({ ...draft, city: e.target.value })} />
-              <MultiSelect label="סוג חברה" options={COMPANY_TYPES} value={draft.types} onChange={(types) => setDraft({ ...draft, types })} />
-              <RangeField label="גודל צי" min={0} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
-              <div className="cs-actions">
-                <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
-                  icon={<Search size={18} aria-hidden="true" />}>חיפוש</Button>
-                <Button variant="text" onClick={reset} disabled={!draftHasParams && !isApplied}>נקה</Button>
-              </div>
-            </form>
+          <form className="cs-form" onSubmit={submit} aria-label="חיפוש חברות">
+            <Autocomplete className="span-4" label="שם חברה" value={draft.name} onChange={(name) => setDraft({ ...draft, name })}
+              suggestions={NAME_SUGGESTIONS} placeholder="הקלד שם או חלק משם" onEnter={() => submit({ preventDefault() {} })} />
+            <Select className="span-2" label="מדינה" value={draft.country} options={COMPANY_COUNTRIES} onChange={(e) => setDraft({ ...draft, country: e.target.value, city: '' })} />
+            <Select className="span-2" label="עיר" value={draft.city} options={draft.country ? citiesOf(draft.country) : []} disabled={!draft.country}
+              placeholder={draft.country ? 'הכל' : 'בחר מדינה'} onChange={(e) => setDraft({ ...draft, city: e.target.value })} />
+            <MultiSelect className="span-4" label="סוג חברה" options={COMPANY_TYPES} value={draft.types} onChange={(types) => setDraft({ ...draft, types })} />
+            <RangeField className="span-4" label="גודל צי" min={0} value={draft.fleet} onChange={(fleet) => setDraft({ ...draft, fleet })} />
             {!draftHasParams && <p className="cs-help">הזן פרמטר אחד לפחות</p>}
-          </>
+            <div className="cs-actions">
+              <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
+                icon={<Search size={18} aria-hidden="true" />}>חיפוש</Button>
+              <Button onClick={reset} disabled={!draftHasParams && !isApplied}>נקה</Button>
+            </div>
+          </form>
         ) : (
-          <div className="cs-summary" aria-label="סיכום החיפוש">
-            <span className="cs-summary-count" aria-live="polite">{status === 'done' ? plural(results.length) : 'מחפש…'}</span>
+          <div className="cs-summary" aria-label="מסננים פעילים">
             {chips.map((c) => <Chip key={c.key} label={c.label} removeLabel={`הסר ${c.label}`} onRemove={() => apply(c.next)} />)}
-            <Button variant="text" onClick={reset}>נקה הכול</Button>
-            <Button icon={<Pencil size={16} aria-hidden="true" />} onClick={() => setEditing(true)}>ערוך חיפוש</Button>
+            <Button variant="text" className="cs-clear" onClick={reset}>נקה הכול</Button>
           </div>
         )}
       </header>
@@ -154,7 +185,7 @@ export default function CompaniesPage() {
                 <h2><Clock size={16} aria-hidden="true" />חברות שנצפו לאחרונה</h2>
                 <ul className="cs-list">
                   {DEMO_VIEWED.map(getCompany).map((c) => c && (
-                    <li key={c.id}><button type="button" onClick={() => patch({ sel: c.id })}><Ltr>{c.name}</Ltr><span className="sub">{c.country}</span></button></li>
+                    <li key={c.id}><Link to={`/companies/${c.id}`} state={{ back: location.search }}><Ltr>{c.name}</Ltr><span className="sub">{c.country}</span></Link></li>
                   ))}
                 </ul>
               </section>
@@ -165,8 +196,8 @@ export default function CompaniesPage() {
         {isApplied && status === 'error' && <ErrorState title="החיפוש נכשל" onRetry={reload}>אירעה שגיאה בטעינת התוצאות. הפרמטרים נשמרו.</ErrorState>}
         {isApplied && status === 'done' && results.length === 0 && <NoResults onClear={reset} />}
         {isApplied && status === 'done' && results.length > 0 && (
-          <DataTable rows={results} columns={COLUMNS} rowKey={(c) => c.id} caption="תוצאות חיפוש חברות"
-            selectedKey={view.selected} onRowClick={(c) => patch({ sel: c.id })}
+          <DataTable rows={results} columns={columns} rowKey={(c) => c.id} caption="תוצאות חיפוש חברות"
+            selectedKey={view.selected}
             sort={view.sort} onSortChange={(s) => patch({ sort: s ? `${s.id}.${s.dir}` : null, page: null })}
             page={view.page} onPageChange={(p) => patch({ page: p > 0 ? String(p + 1) : null })}
             size={view.size} onSizeChange={(n) => patch({ size: n === 25 ? null : String(n), page: null })}
@@ -176,9 +207,9 @@ export default function CompaniesPage() {
         {sel && (
           <Drawer overlay title={<><Ltr>{sel.name}</Ltr><div className="ui-drawer-sub">{sel.type} · {sel.country}</div></>}
             onClose={() => patch({ sel: null })}
-            footer={<Button to={`/companies/${sel.id}`} state={backState} variant="primary" icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
+            footer={<Button to={`/companies/${sel.id}`} state={{ back: location.search }} variant="primary" icon={<ArrowLeft size={18} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
             <section className="ui-drawer-group">
-              <h3>אותות</h3>
+              <SignalsHeading signals={sel.signals} />
               <div className="signal-list">{sel.signals.map((sg) => <SignalDetail key={sg.kind} signal={sg} />)}</div>
             </section>
             <section className="ui-drawer-group">

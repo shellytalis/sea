@@ -32,8 +32,15 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
   useEffect(() => {
     const root = scroller.current;
     if (!root || !head.current) return undefined;
-    const ro = new ResizeObserver(() => root.style.setProperty('--head-h', `${head.current.offsetHeight}px`));
+    // --sbw: רוחב פס הגלילה. הוא יושב בתוך השוליים (32px משני הצדדים, מדידה עד קצה המסך)
+    const sync = () => {
+      root.style.setProperty('--head-h', `${head.current.offsetHeight}px`);
+      root.style.setProperty('--sbw', `${root.offsetWidth - root.clientWidth}px`);
+    };
+    const ro = new ResizeObserver(sync);
     ro.observe(head.current);
+    ro.observe(root);
+    ro.observe(root.lastElementChild);
     return () => ro.disconnect();
   }, [resetKey]);
 
@@ -116,13 +123,13 @@ export function Source({ source, updated }) {
   return <span className="entity-src">{source} · עודכן <Mono>{updated}</Mono></span>;
 }
 
-/** מקטע: 32px בין מקטעים ו-12px בין הכותרת לגוף (ב-CSS); בלוקים בתוך הגוף מרווחים ב-24px */
+/** מקטע: רצועת כותרת 40px (שם המקטע וחותמת המקור), 48px בין מקטעים, והתוכן ישירות על רקע הדף */
 export function Section({ id, title, source, children }) {
   return (
     <section id={id} className="entity-section" aria-labelledby={`${id}-h`}>
       <div className="entity-section-head">
         <h2 id={`${id}-h`}>{title}</h2>
-        {source && <Source {...source} />}
+        {source && <><span className="entity-sep" aria-hidden="true">·</span><Source {...source} /></>}
       </div>
       <div className="entity-section-body">{children}</div>
     </section>
@@ -130,9 +137,16 @@ export function Section({ id, title, source, children }) {
 }
 
 /** שדה-ערך: דפוס יחיד. layout="grid" (תווית מעל הערך, בדפי ישות) או "list" (תווית וערך בשורה, במגירות) */
+/** עמודות קבועות: עד 5 שדות בשורה אחת; מעל זה המחלק הגדול ביותר של הכמות עד 4 (בלי שדה יתום) */
+const columnsFor = (n) => {
+  if (n <= 5) return Math.max(n, 1);
+  for (const c of [4, 3, 2]) if (n % c === 0) return c;
+  return 4;
+};
+
 export function Facts({ items, layout = 'grid' }) {
   return (
-    <dl className={`ui-facts ${layout}`}>
+    <dl className={`ui-facts ${layout}${layout === 'grid' ? ` cols-${columnsFor(items.length)}` : ''}`}>
       {items.map(([k, v]) => <div key={k} className="ui-fact"><dt>{k}</dt><dd>{v}</dd></div>)}
     </dl>
   );

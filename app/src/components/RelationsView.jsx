@@ -45,6 +45,13 @@ export default function RelationsView({ companyId }) {
   return (
     <div className="rel">
       <div className="rel-graph">
+        <ul className="rel-legend" aria-label="מקרא סוגי קשר">
+          {Object.entries(SHORT).map(([k, label]) => (
+            <li key={k}><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" className={`rel-key type-${k}`} /></svg>{label}</li>
+          ))}
+          <li><Shape risk="high" />חריג</li>
+        </ul>
+
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`גרף קשרים של ${center.name}`} className="rel-svg">
           {rels.map((r, i) => {
             const p = nodePos(i, rels.length);
@@ -78,12 +85,6 @@ export default function RelationsView({ companyId }) {
             <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" direction="ltr">{center.name}</text>
           </g>
         </svg>
-        <ul className="rel-legend" aria-label="מקרא סוגי קשר">
-          {Object.entries(RELATION_TYPES).map(([k, label]) => (
-            <li key={k}><svg width="28" height="8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" className={`rel-key type-${k}`} /></svg>{label}</li>
-          ))}
-          <li><Shape risk="high" />קשר חריג</li>
-        </ul>
       </div>
       <div className="rel-side">
         <div className="rel-table ui-table-scroll bordered">

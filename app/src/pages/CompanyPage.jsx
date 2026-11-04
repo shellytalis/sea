@@ -11,7 +11,7 @@ import { Ltr, Mono } from '../ui/Ltr';
 import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
 import useAsync from '../ui/useAsync';
-import { SignalDetail } from '../components/Signals';
+import { SignalCard, SignalsHeading } from '../components/Signals';
 import RelationsView from '../components/RelationsView';
 import CompanyRef from '../components/CompanyRef';
 import { VesselFlags } from '../components/VesselFlags';
@@ -45,13 +45,20 @@ export default function CompanyPage() {
   const fleet = c.vesselIds.map(getVessel).filter(Boolean);
   const src = c.stamp;
   const allUnassessed = c.signals.every((s) => s.severity === 'unassessed');
-  const mapIcon = <Map size={16} aria-hidden="true" />;
   const columns = [
     { id: 'name', label: 'שם', render: (v) => <Link to={`/vessels/${v.id}`} className="link cell-name"><Ltr>{v.name}</Ltr></Link> },
     { id: 'imo', label: 'IMO', render: (v) => <Mono>{v.imo}</Mono> },
     { id: 'type', label: 'סוג', render: (v) => v.type },
     { id: 'role', label: 'תפקיד החברה', render: (v) => c.roles.find((r) => r.vessel === v.id)?.role ?? '—' },
     { id: 'flags', label: 'אינדיקטורים', render: (v) => <VesselFlags v={v} withLists={false} /> },
+    {
+      id: 'map', label: '', srLabel: 'הצג על המפה', align: 'end',
+      render: (v) => (
+        <Tooltip text="הצג על המפה">
+          <Button to={`/?v=${v.id}`} variant="icon" size="sm" aria-label={`הצג את ${v.name} על המפה`} icon={<Map size={16} aria-hidden="true" />} />
+        </Tooltip>
+      ),
+    },
   ];
   const historyCols = [
     { id: 'date', label: 'תאריך', render: (r) => <Mono>{r.date}</Mono> },
@@ -66,10 +73,7 @@ export default function CompanyPage() {
       header={
         <EntityHead back={back} title={<Ltr>{c.name}</Ltr>}
           meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Mono>{c.fleetSize}</Mono> · עדכון אחרון <Mono>{c.updated}</Mono></>}
-          badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)}
-          actions={fleet.length > 0
-            ? <Button to={`/?v=${fleet[0].id}`} icon={mapIcon}>הצג על המפה</Button>
-            : <Tooltip text="אין כלי משויך במערכת" focusable><Button disabled icon={mapIcon}>הצג על המפה</Button></Tooltip>} />
+          badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)} />
       }
       summary={
         allUnassessed ? (
@@ -78,13 +82,13 @@ export default function CompanyPage() {
             <span className="sub">אין מספיק נתוני פעילות בחלון הניתוח</span>
           </section>
         ) : (
-          <section aria-label="אותות" className="signals-strip">
-            {c.signals.map((s) => (
-              <a key={s.kind} className="signal-card" href={`#${SIGNAL_TARGET[s.kind]}`}
-                onClick={(e) => { e.preventDefault(); goSection(SIGNAL_TARGET[s.kind]); }}>
-                <SignalDetail signal={s} />
-              </a>
-            ))}
+          <section aria-label="אותות">
+            <SignalsHeading signals={c.signals} />
+            <div className="signals-strip">
+              {c.signals.map((s) => (
+                <SignalCard key={s.kind} signal={s} href={`#${SIGNAL_TARGET[s.kind]}`} onGo={() => goSection(SIGNAL_TARGET[s.kind])} />
+              ))}
+            </div>
           </section>
         )
       }>

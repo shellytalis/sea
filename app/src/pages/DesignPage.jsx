@@ -16,7 +16,7 @@ import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
-import { SignalDetail } from '../components/Signals';
+import { SignalCard, SignalsHeading } from '../components/Signals';
 import RelationsView from '../components/RelationsView';
 import Tabs from '../ui/Tabs';
 
@@ -157,9 +157,10 @@ export default function DesignPage() {
 
         <section>
           <h2>אותות מודל<SpecNote tag>הצעה</SpecNote></h2>
-          <p className="entity-note">אות: שם, חומרה (טקסט, צורה, צבע), תג מודל, 2-3 גורמי "למה", זמן עדכון וגרסת מודל. אין ציון מסכם לחברה.</p>
+          <p className="entity-note">כותרת אחת לרצועה (מקור, עדכון, גרסה); כל כרטיס: שם, חומרה בשורה קבועה, סיבה אחת עם +N. אין ציון מסכם לחברה. הכרטיס כולו לחיץ.</p>
+          <SignalsHeading signals={COMPANIES[12].signals} />
           <div className="signals-strip">
-            {COMPANIES[12].signals.slice(0, 3).map((s) => <div key={s.kind} className="signal-card"><SignalDetail signal={s} /></div>)}
+            {COMPANIES[12].signals.map((s) => <SignalCard key={s.kind} signal={s} href="#" onGo={() => {}} />)}
           </div>
         </section>
 

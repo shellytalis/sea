@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import Chip from './Chip';
 import Combobox from './Combobox';
 import Popover from './Popover';
-import { Mono } from './Ltr';
+import { Ltr, Mono } from './Ltr';
 
 export function Field({ label, id, children, hint, className = '' }) {
   return (
@@ -52,16 +52,17 @@ export function Autocomplete({ label, value, onChange, suggestions, placeholder,
 }
 
 /** בחירה מרובה כ-dropdown: הנבחרים מוצגים כצ'יפים בתוך השדה */
-export function MultiSelect({ label, options, value, onChange, placeholder = 'הכל' }) {
+export function MultiSelect({ label, options, value, onChange, placeholder = 'הכל', className, maxChips = 2 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const toggle = (o) => onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
   return (
-    <Field label={label} id={id}>
+    <Field label={label} id={id} className={className}>
       <Popover open={open} onClose={() => setOpen(false)} fit panelProps={{ role: 'group', 'aria-label': label }}
         anchor={
           <div className="ui-input ui-multi">
-            {value.map((v) => <Chip key={v} label={v} removeLabel={`הסר ${v}`} onRemove={() => toggle(v)} />)}
+            {value.slice(0, maxChips).map((v) => <Chip key={v} label={v} removeLabel={`הסר ${v}`} onRemove={() => toggle(v)} />)}
+            {value.length > maxChips && <span className="ui-chip more" title={value.slice(maxChips).join(', ')}><Ltr>+{value.length - maxChips}</Ltr></span>}
             <button type="button" id={id} className="ui-multi-toggle" aria-expanded={open} aria-haspopup="true"
               onClick={() => setOpen(!open)}>
               {value.length === 0 && <span className="ui-multi-ph">{placeholder}</span>}
@@ -81,7 +82,7 @@ export function MultiSelect({ label, options, value, onChange, placeholder = 'ה
 }
 
 /** טווח: שני שדות מספר ריקים כברירת מחדל (null = לא הוגבל); בלי סליידר */
-export function RangeField({ label, min = 0, max, value, onChange, placeholders = ['מ-', 'עד'] }) {
+export function RangeField({ label, min = 0, max, value, onChange, placeholders = ['מ-', 'עד'], className = '' }) {
   const id = useId();
   const [lo, hi] = value;
   const parse = (raw) => {
@@ -90,7 +91,7 @@ export function RangeField({ label, min = 0, max, value, onChange, placeholders 
     return Number.isFinite(n) ? Math.min(max ?? Infinity, Math.max(min, Math.round(n))) : null;
   };
   return (
-    <div className="ui-range" role="group" aria-labelledby={id + 'l'}>
+    <div className={`ui-range ${className}`.trim()} role="group" aria-labelledby={id + 'l'}>
       <span id={id + 'l'} className="ui-label">{label}</span>
       <div className="ui-range-inputs">
         <input id={id + 'a'} className="ui-input num" type="number" min={min} max={max} value={lo ?? ''} placeholder={placeholders[0]}

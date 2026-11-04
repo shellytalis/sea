@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ListPlus, Map, Upload } from 'lucide-react';
 import { getVesselApi } from '../data/api';
 import { VISITS_B, VISITS_C, activityA } from '../data/vessels';
+import { mergeHistory } from '../data/companies';
 import { EntityHead, EntityPage, EntityStatus, Facts, FactGroup, Section, StaticTable, goSection } from '../ui/Entity';
 import { SeverityBadge } from '../ui/Badges';
 import Button from '../ui/Button';
@@ -141,7 +142,7 @@ export default function VesselPage() {
             <h3 className="entity-sub">היסטוריית שינויים</h3>
             {v.history.length === 0
               ? <EmptyState compact title="לא נרשמו שינויים"><span>מוצגים רק שינויים שנרשמו בפרטי הישות.</span></EmptyState>
-              : <StaticTable caption="היסטוריית שינויי זהות" rowKey={(r) => r.date + r.field} columns={historyCols} rows={v.history} />}
+              : <StaticTable caption="היסטוריית שינויי זהות" rowKey={(r) => r.date + r.field} columns={historyCols} rows={mergeHistory(v.history)} />}
           </div>
         </Section>
 

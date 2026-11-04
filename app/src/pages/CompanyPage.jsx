@@ -69,7 +69,7 @@ export default function CompanyPage() {
           badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)}
           actions={fleet.length > 0
             ? <Button to={`/?v=${fleet[0].id}`} icon={mapIcon}>הצג על המפה</Button>
-            : <Tooltip text="אין כלים משויכים במערכת" focusable><Button disabled icon={mapIcon}>הצג על המפה</Button></Tooltip>} />
+            : <Tooltip text="אין כלי משויך במערכת" focusable><Button disabled icon={mapIcon}>הצג על המפה</Button></Tooltip>} />
       }
       summary={
         allUnassessed ? (

@@ -532,9 +532,23 @@ export const RELATIONS = [
 /** @param {string} id @returns {Relation[]} */
 export const relationsOf = (id) => RELATIONS.filter((r) => r.from === id || r.to === id);
 
+/**
+ * איחוד היסטוריית שינויים: שינויים רצופים באותו שדה הופכים לשורה אחת (ערך קודם ← ערך חדש),
+ * ושינוי שלא שינה דבר (קודם = חדש) נשמט.
+ * @param {{date: string, field: string, from: string, to: string, source: string}[]} rows
+ */
+export function mergeHistory(rows) {
+  const byField = new Map();
+  for (const r of [...rows].sort((a, b) => a.date.localeCompare(b.date))) {
+    const prev = byField.get(r.field);
+    byField.set(r.field, prev ? { ...r, from: prev.from, source: prev.source === r.source ? r.source : `${prev.source}, ${r.source}` } : r);
+  }
+  return [...byField.values()].filter((r) => r.from !== r.to).sort((a, b) => b.date.localeCompare(a.date));
+}
+
 /** היסטוריית שינויים (דמה, קבועה לפי החברה) */
-export const historyOf = (c) => [
+export const historyOf = (c) => mergeHistory([
   { date: c.updated, field: "גודל צי", from: String(Math.max(0, c.fleetSize - 1)), to: String(c.fleetSize), source: "מקור א" },
-  { date: "2026-03-14", field: "כתובת רישום", from: `${c.city} (כתובת קודמת)`, to: c.address, source: "מקור ב" },
+  { date: "2026-03-14", field: "כתובת רישום", from: `Port Rd 12, ${c.city}`, to: c.address, source: "מקור ב" },
   ...(c.parent ? [{ date: "2025-09-02", field: "חברת אם", from: "—", to: c.parent, source: "מקור ב" }] : [])
-];
+]);

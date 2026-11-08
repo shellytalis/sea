@@ -1,0 +1,98 @@
+/* ===== כלי מפה =====
+   שורת overlay אחת (חיפוש ב-start, הנחיה באמצע, שמורה לזום ב-end), סרגל כלים כלליים אנכי בקצה ה-end
+   (מ-96px מלמעלה, מתחת לזום), פאנל 320px לידו, וסרגל כלי שיט בתחתית, בצד הנגדי למקרא. */
+.map-col { container-type: inline-size; container-name: mapcol; }
+
+.mt-row { position: absolute; z-index: var(--z-popover); inset-block-start: var(--space-4); inset-inline: var(--space-4) 56px; display: flex; align-items: center; gap: var(--space-4); pointer-events: none; }
+.mt-hint { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.mt-hint > span { display: inline-flex; align-items: center; max-width: 100%; height: var(--control-h-sm); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-pop); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-hint-short { display: none !important; }
+@container mapcol (max-width: 1150px) {
+  .mt-hint-long { display: none !important; }
+  .mt-hint-short { display: inline-flex !important; }
+}
+
+.mt-stack { position: absolute; z-index: var(--z-map-ui); inset-block: 96px var(--space-4); inset-inline-end: var(--space-4); display: flex; align-items: flex-start; gap: var(--space-2); pointer-events: none; }
+.mt-stack.with-vbar { inset-block-end: 96px; }
+
+/* סרגל כלים כלליים */
+.mt-bar { pointer-events: auto; width: 56px; flex: none; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); overflow: hidden; }
+.mt-tool { width: 100%; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-2) 0; background: none; border: 0; border-inline-start: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
+.mt-tool + .mt-tool { border-top: 1px solid var(--border); }
+.mt-tool:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }
+.mt-tool.active { background: var(--surface-raised); color: var(--text-primary); border-inline-start-color: var(--accent); }
+.mt-tool:disabled { opacity: 0.5; cursor: not-allowed; }
+.mt-tool:focus-visible, .mt-vtool:focus-visible { outline-offset: -2px; }
+.mt-tool-soon { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
+.mt-clear { border-top: 1px solid var(--border-strong) !important; }
+
+/* פאנל משותף */
+.mt-panel { pointer-events: auto; width: 320px; flex: none; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-pop); }
+.mt-panel .panel-head { flex: none; }
+.mt-panel .panel-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: var(--space-4); }
+.mt-seg { display: grid; grid-template-columns: repeat(4, 1fr); height: var(--control-h-sm); border: 1px solid var(--border-strong); border-radius: var(--radius-md); overflow: hidden; }
+.mt-seg button { background: none; border: 0; padding: 0 var(--space-1); font-size: var(--fs-xs); color: var(--text-secondary); white-space: nowrap; }
+.mt-seg button + button { border-inline-start: 1px solid var(--border); }
+.mt-seg button:hover { background: var(--surface-raised); color: var(--text-primary); }
+.mt-seg button.active { background: var(--surface-raised); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
+.mt-seg button:focus-visible { outline-offset: -2px; }
+.mt-readouts, .mt-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.mt-readout { display: grid; gap: 0; min-width: 0; }
+.mt-field-row label { display: grid; gap: var(--space-1); }
+.mt-readout-label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.mt-readout-value { display: flex; align-items: baseline; gap: var(--space-1); }
+.mt-readout-value .num { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; color: var(--text-primary); }
+.mt-readout-unit { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.mt-readout-coord { font-size: var(--fs-xs); line-height: var(--lh-sm); color: var(--text-primary); white-space: nowrap; }
+.mt-field { width: 100%; }
+.mt-empty { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-secondary); }
+.mt-actions { display: flex; gap: var(--space-2); }
+.mt-saved h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.mt-saved ul, .mt-circles, .mt-range-list { list-style: none; margin: 0; padding: 0; }
+.mt-saved li { display: flex; align-items: center; height: var(--row-h); border-top: 1px solid var(--border-subtle); border-inline-start: 2px solid transparent; }
+.mt-saved li.selected { background: var(--surface-raised); border-inline-start-color: var(--accent); }
+.mt-saved-main { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-2); background: none; border: 0; text-align: start; color: var(--text-primary); font-size: var(--fs-md); }
+.mt-saved-val { color: var(--text-secondary); }
+
+/* מעגלי קרבה */
+.mt-circles > li { border-top: 1px solid var(--border-subtle); padding-block: var(--space-2); }
+.mt-circles > li:first-child { border-top: 0; padding-top: 0; }
+.mt-circle-head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-h-sm); }
+.mt-circle-name { flex: 1; font-size: var(--fs-md); font-weight: 500; color: var(--text-primary); }
+.mt-circle-head .mt-field { width: 88px; }
+.mt-range { width: 100%; height: var(--control-h-sm); display: flex; align-items: center; gap: var(--space-2); padding: 0; background: none; border: 0; text-align: start; color: var(--text-secondary); }
+.mt-range .num { margin-inline-start: auto; color: var(--text-primary); font-weight: 600; }
+.mt-range:disabled { cursor: default; }
+.mt-range:not(:disabled):hover .mt-readout-label { color: var(--text-primary); }
+.mt-range svg { transition: transform 120ms; }
+.mt-range svg.flip { transform: rotate(180deg); }
+.mt-range-list li button { width: 100%; height: var(--row-h); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-2); background: none; border: 0; border-radius: var(--radius-sm); color: var(--text-primary); font-size: var(--fs-md); text-align: start; }
+.mt-range-list li button:hover { background: var(--surface-raised); }
+
+/* סרגל כלי שיט */
+.mt-vbar { position: absolute; z-index: var(--z-map-ui); inset-block-end: var(--space-5); inset-inline-end: var(--space-4); height: 56px; display: flex; align-items: center; gap: var(--space-3); padding-inline: var(--space-4) var(--space-2); background: var(--surface); border: 1px solid var(--border-strong); border-top: 2px solid var(--map-vessel); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
+.mt-vctx { display: flex; align-items: center; gap: var(--space-3); min-width: 0; white-space: nowrap; }
+.mt-vname { font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 600; color: var(--text-primary); }
+.mt-vimo { font-size: var(--fs-sm); color: var(--text-secondary); }
+.mt-vlink { font-size: var(--fs-sm); color: var(--accent-text); }
+.mt-vlink:hover { text-decoration: underline; }
+.mt-vsep { width: 1px; height: var(--space-5); background: var(--border); flex: none; }
+.mt-vtools { display: flex; gap: var(--space-1); }
+.mt-vtool { height: 40px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); background: none; border: 0; border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--fs-sm); line-height: var(--lh-xs); white-space: nowrap; }
+.mt-vtool:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }
+.mt-vtool.active { background: var(--surface-raised); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--map-vessel); }
+.mt-vtool:disabled { opacity: 0.5; cursor: not-allowed; }
+.mt-vtool-text { display: grid; justify-items: start; }
+.mt-vclose { width: var(--control-h-sm); height: var(--control-h-sm); display: grid; place-items: center; background: none; border: 0; border-radius: var(--radius-md); color: var(--text-secondary); }
+.mt-vclose:hover { background: var(--surface-raised); color: var(--text-primary); }
+@container mapcol (max-width: 1000px) {
+  .mt-vimo, .mt-vlink, .mt-vsep { display: none; }
+}
+
+/* תוויות וידיות על המפה (סמנים: בלי transform משלנו, MapLibre מציב אותם) */
+.map-chip { padding: 2px var(--space-2); background: var(--surface); border: 1px solid var(--map-draw); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--fs-xs); line-height: var(--lh-xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.map-chip.vessel { border-color: var(--map-vessel); }
+.map-chip.strong { font-weight: 600; }
+.map-handle { width: var(--space-4); height: var(--space-4); display: grid; place-items: center; cursor: grab; }
+.map-handle::before { content: ''; width: var(--space-2); height: var(--space-2); background: var(--map-handle); box-shadow: 0 0 0 2px var(--accent-text); }
+.map-handle:active { cursor: grabbing; }

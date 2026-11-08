@@ -9,6 +9,7 @@ import "./styles/tokens.css";
 import "./styles/global.css";
 import "./styles/ui.css";
 import "./styles/entity.css";
+import "./styles/map-tools.css";
 import App from "./App";
 createRoot(document.getElementById("root")).render(<StrictMode>
     <BrowserRouter>

@@ -82,3 +82,6 @@ Heebo לממשק, IBM Plex Mono למזהים. מספרים בטבלאות `tabul
 
 ## 6. מפה
 מוקפאת. כל התאמה בין הסולם האחיד לסמלי המפה נעשית ב-`pages/Home.jsx` (`mapRisk`), לא בתוכה.
+
+## 6.1 כלי מפה
+שתי משפחות: כלליים (מרחק, רדיוס חופשי, שטח; גובה, חקירת שטח, חישוב זמנים "בקרוב") וכלי שיט (מעגלי קרבה; מסלול והגעה "בקרוב"). מצב יחיד `{ family, id, vesselId? }`, פאנל 320px אחד. טוקנים: `--map-draw`, `--map-vessel`, `--map-halo`, `--map-handle` (Light: TODO). קוד: `app/src/map/` (geodesy, units, scene, layers, useMarkers) ו-`components/map-tools/`. הדגמה ב-`/design`.

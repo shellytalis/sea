@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, ForbiddenState, TableSkeleton } from '../ui/Sta
 import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
+import { Hexagon, Mountain, Route, Ruler, Target } from 'lucide-react';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
 import { SignalsPanel } from '../components/Signals';
 import Panel from '../ui/Panel';
@@ -202,6 +203,30 @@ export default function DesignPage() {
             <div className="ds-panel" data-testid="ds-entity-forbidden"><EntityStatus status="forbidden" /></div>
             <div className="ds-panel"><ForbiddenState title="אין הרשאה לצפייה בשרטוטים">נדרשת הרשאה ייעודית. פנה למנהל המערכת.</ForbiddenState></div>
           </div>
+        </section>
+
+        <section>
+          <h2>כלי מפה<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="ds-note">שתי משפחות, מצב יחיד <bdi dir="ltr">{'{ family, id, vesselId? }'}</bdi> ופאנל אחד בכל רגע. סרגל כללי אנכי בקצה ה-end (56px, מ-96px מלמעלה), סרגל כלי שיט רק כשכלי נבחר, בצד הנגדי למקרא. תוויות גלויות, בלי tooltip.</p>
+          <div className="ds-row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
+            <nav className="mt-bar" aria-label="כלי מפה (דוגמה)">
+              <button type="button" className="mt-tool active"><Ruler size={20} aria-hidden="true" /><span className="mt-tool-label">מרחק</span></button>
+              <button type="button" className="mt-tool"><Hexagon size={20} aria-hidden="true" /><span className="mt-tool-label">שטח</span></button>
+              <button type="button" className="mt-tool" disabled><Mountain size={20} aria-hidden="true" /><span className="mt-tool-label">גובה</span><span className="mt-tool-soon">בקרוב</span></button>
+            </nav>
+            <section className="mt-vbar" style={{ position: 'static' }} aria-label="סרגל כלי שיט (דוגמה)">
+              <div className="mt-vctx"><bdi dir="ltr" className="mt-vname">SEA FALCON</bdi><span className="mt-vimo"><bdi dir="ltr" className="mono">IMO 9198364</bdi></span><span className="mt-vlink">פתח דף כלי</span></div>
+              <span className="mt-vsep" aria-hidden="true" />
+              <div className="mt-vtools">
+                <button type="button" className="mt-vtool active"><Target size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מעגלי קרבה</span></span></button>
+                <button type="button" className="mt-vtool" disabled><Route size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מסלול</span><span className="mt-tool-soon">בקרוב</span></span></button>
+              </div>
+            </section>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className="map-chip">12.4 NM</span><span className="map-chip strong">30,171.16 NM²</span><span className="map-chip vessel">20 NM</span><span className="map-handle" />
+            </div>
+          </div>
+          <p className="ds-note">צבעים (Dark): <bdi dir="ltr">--map-draw #4dd3ff</bdi>, <bdi dir="ltr">--map-vessel #cf8fff</bdi>, הילה <bdi dir="ltr">--map-halo</bdi> 3px, ידית 8px לבנה עם טבעת accent. ניגודיות מול היבשה #13263f והמים #0a1a30: 8.8 ו-10.0 (draw), 6.6 ו-7.5 (vessel). Light: TODO.</p>
         </section>
 
         <section>

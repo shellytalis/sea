@@ -1,0 +1,45 @@
+import { useCallback, useState } from 'react';
+
+// יחידות מרחק: מייל ימי (ברירת מחדל), ק"מ, מטר, רגל. קשר = מייל ימי לשעה (לשלבים הבאים).
+export const NM = 1852;
+export const UNITS = {
+  nm: { label: 'מייל ימי', short: 'NM', m: NM, area: 'NM²', decimals: 2 },
+  km: { label: 'ק"מ', short: 'ק"מ', m: 1000, area: 'קמ"ר', decimals: 2 },
+  m: { label: 'מטר', short: 'מ׳', m: 1, area: 'מ"ר', decimals: 0 },
+  ft: { label: 'רגל', short: 'ft', m: 0.3048, area: 'ft²', decimals: 0 },
+};
+export const KNOT_MS = NM / 3600;
+
+export const toUnit = (meters, unit) => meters / UNITS[unit].m;
+export const fromUnit = (value, unit) => value * UNITS[unit].m;
+export const areaToUnit = (m2, unit) => m2 / UNITS[unit].m ** 2;
+
+/** מספר באנגלית (tabular), עם הפרדת אלפים ומספר ספרות לפי היחידה */
+export const fmt = (n, decimals = 2) => n.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+export const formatDistance = (m, unit) => ({ value: fmt(toUnit(m, unit), UNITS[unit].decimals), unit: UNITS[unit].short });
+export const formatArea = (m2, unit) => ({ value: fmt(areaToUnit(m2, unit), UNITS[unit].decimals), unit: UNITS[unit].area });
+export const formatBearing = (d) => `${Math.round(d)}°`;
+
+const KEY = 'sea-map-unit';
+const read = () => {
+  try {
+    const v = localStorage.getItem(KEY);
+    return v in UNITS ? v : 'nm';
+  } catch {
+    return 'nm';
+  }
+};
+
+/** בורר יחידות, נשמר ב-localStorage */
+export function useUnit() {
+  const [unit, set] = useState(read);
+  const setUnit = useCallback((u) => {
+    set(u);
+    try {
+      localStorage.setItem(KEY, u);
+    } catch {
+      /* אין localStorage */
+    }
+  }, []);
+  return [unit, setUnit];
+}

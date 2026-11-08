@@ -67,6 +67,13 @@
   --on-accent: #ffffff;
   --focus: #6ba4ff;
 
+  /* כלי מפה: ציור ומדידה. טוקנים לפי ערכה, הבסיס הכהה של המפה לא משתנה.
+     draw: כחול בהיר (שונה מהסמלים #6ba4ff ומסולם החומרה); vessel: אינדיגו בהיר לכלי שיט; halo: הילה כהה 3px */
+  --map-draw: #4dd3ff;
+  --map-vessel: #cf8fff;
+  --map-halo: #0b1220;
+  --map-handle: #ffffff;
+
   /* חומרה: נמוך / בינוני / גבוה / קריטי, ושני מצבים שאינם חומרה */
   --sev-low: #34c38f;
   --sev-medium: #f0a93b;
@@ -100,6 +107,8 @@
   --accent-bg: rgba(29, 95, 209, 0.1);
   --on-accent: #ffffff;
   --focus: #1d5fd1;
+
+  /* TODO (Light מושהית): --map-draw, --map-vessel, --map-halo, --map-handle לא הוגדרו, כרגע יורשים את ערכי ה-Dark */
 
   --sev-low: #0f7b53;
   --sev-medium: #8a5a00;

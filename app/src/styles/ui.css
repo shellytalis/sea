@@ -303,3 +303,18 @@
 .ui-table .w-48 { width: 48px; min-width: 48px; max-width: 48px; }
 .ui-table .w-120 { width: 120px; min-width: 120px; max-width: 120px; }
 .ui-tooltip.side { inset-inline: auto; margin-inline: 0; inset-inline-start: calc(100% + var(--space-2)); }
+
+/* מצב אפס תוצאות */
+.cs-noresults { margin: 0; }
+.cs-noresults .panel-body { padding: var(--space-5); gap: 0; }
+.cs-nr-title { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 600; color: var(--text-primary); }
+.cs-nr-sub, .cs-nr-hint { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-secondary); }
+.cs-relax { margin-top: var(--space-5); }
+.cs-relax h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.cs-relax-list { list-style: none; margin: 0; padding: 0; margin-inline: calc(-1 * var(--space-3)); }
+.cs-relax-list li + li { border-top: 1px solid var(--border-subtle); }
+.cs-relax-list button { width: 100%; height: var(--row-h); display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3); background: none; border: 0; text-align: start; color: var(--text-primary); font-size: var(--fs-md); border-radius: var(--radius-sm); }
+.cs-relax-list button:hover { background: var(--surface-raised); }
+.cs-relax-list svg { color: var(--text-secondary); flex: none; }
+.cs-relax-list li { height: var(--row-h); }
+.cs-relax-list li > button { height: 100%; }

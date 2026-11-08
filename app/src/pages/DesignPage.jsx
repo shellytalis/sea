@@ -11,7 +11,7 @@ import { SEVERITIES } from '../ui/severity';
 import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
 import { Facts, StaticTable } from '../ui/Entity';
-import { EmptyState, ErrorState, ForbiddenState, NoResults, TableSkeleton } from '../ui/States';
+import { EmptyState, ErrorState, ForbiddenState, TableSkeleton } from '../ui/States';
 import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
@@ -208,7 +208,7 @@ export default function DesignPage() {
           <h2>מצבי מערכת</h2>
           <div className="ds-states">
             <div className="ds-panel"><EmptyState title="אין נתונים להצגה"><span>הנתונים יופיעו כאן לאחר ההוספה.</span></EmptyState></div>
-            <div className="ds-panel"><NoResults onClear={() => {}} /></div>
+            <div className="ds-panel cs-noresults"><Panel><p className="cs-nr-title">לא נמצאו חברות</p><p className="cs-nr-sub">אף חברה לא עונה על כל התנאים</p></Panel></div>
             <div className="ds-panel"><ErrorState onRetry={() => {}} /></div>
             <div className="ds-panel"><ForbiddenState /></div>
             <div className="ds-panel pad"><TableSkeleton rows={4} cols={4} /></div>

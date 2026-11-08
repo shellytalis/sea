@@ -17,5 +17,7 @@ const fmt = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { timeZone: 'Asia/Jerus
 export function hebrewDate(date = new Date()) {
   const p = Object.fromEntries(fmt.formatToParts(date).map((x) => [x.type, x.value]));
   const year = Number(p.year);
-  return `${gematria(Number(p.day))} ב${p.month} ${gematria(Math.floor(year / 1000))}${gematria(year % 1000)}`;
+  const text = `${gematria(Number(p.day))} ב${p.month} ${gematria(Math.floor(year / 1000))}${gematria(year % 1000)}`;
+  // גרשיים וגרש עבריים במקום ASCII (גם בשמות חודשים כמו "אדר ב'")
+  return text.replace(/"/g, '״').replace(/'/g, '׳');
 }

@@ -1,4 +1,4 @@
-import { SearchX, TriangleAlert, Lock } from 'lucide-react';
+import { TriangleAlert, Lock } from 'lucide-react';
 import Button from './Button';
 
 /**
@@ -15,13 +15,6 @@ function Box({ icon, title, children, role = 'status' }) {
 }
 
 export const EmptyState = ({ title, children }) => <Box title={title}>{children}</Box>;
-
-export const NoResults = ({ onClear, title = 'לא נמצאו חברות', clearLabel = 'נקה את כל המסננים' }) => (
-  <Box icon={<SearchX size={16} />} title={title}>
-    <span>נסה להסיר מסנן או לשנות את הפרמטרים.</span>
-    {onClear && <Button onClick={onClear}>{clearLabel}</Button>}
-  </Box>
-);
 
 export const ErrorState = ({ onRetry, title = 'הטעינה נכשלה', children }) => (
   <Box icon={<TriangleAlert size={16} />} title={title} role="alert">

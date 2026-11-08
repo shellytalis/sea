@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock, History, PanelLeftOpen, Pencil, Search } from 'lucide-react';
-import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, citiesOf, getCompany } from '../data/companies';
+import { COMPANIES, COMPANY_COUNTRIES, COMPANY_TYPES, EMPTY_QUERY, citiesOf, getCompany, searchCompanies } from '../data/companies';
 import { searchCompaniesApi } from '../data/api';
 import { hasParams, parseQuery, parseView, queryToParams } from '../data/companyQuery';
 import { Tooltip } from '../ui/Badges';
@@ -13,7 +13,7 @@ import Panel from '../ui/Panel';
 import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
 import { Facts } from '../ui/Entity';
-import { EmptyState, ErrorState, NoResults, TableSkeleton } from '../ui/States';
+import { EmptyState, ErrorState, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
 import useScrollbarGap from '../ui/useScrollbarGap';
 import { SIGNAL_COLUMNS, SignalDetail, SignalsHeading } from '../components/Signals';
@@ -52,6 +52,8 @@ export default function CompaniesPage() {
 
   const [draft, setDraft] = useState(applied);
   const [editing, setEditing] = useState(false);
+  // אחרי שליחה מהטופס הוא נשאר על המסך עד שמגיעות תוצאות (והפוקוס נשאר בכפתור "חיפוש")
+  const [pending, setPending] = useState(false);
   const [recent, setRecent] = useState(DEMO_RECENT);
   const page = useRef(null);
   useScrollbarGap(page);
@@ -97,6 +99,7 @@ export default function CompaniesPage() {
     e.preventDefault();
     if (!draftHasParams) return;
     setRecent((r) => [draft, ...r.filter((x) => describe(x) !== describe(draft))].slice(0, 4));
+    setPending(true);
     apply(draft);
   };
   const reset = () => { setDraft(EMPTY_QUERY); setParams(new URLSearchParams()); setEditing(false); };
@@ -139,11 +142,18 @@ export default function CompaniesPage() {
   // ברירת מחדל: מתחת ל-1500px עמודת התפקידים מוסתרת (ניתנת להחזרה ב"ניהול עמודות"), כדי שהטבלה תיכנס בלי גלילה אופקית
   const defaultHidden = typeof window !== 'undefined' && window.innerWidth < 1500 ? ['roles'] : [];
   const sel = view.selected ? getCompany(view.selected) : null;
-  const showForm = !isApplied || editing;
+  const noResults = isApplied && status === 'done' && results.length === 0;
+  useEffect(() => { if (status === 'done' && results.length > 0) setPending(false); }, [status, results.length]);
+  // אפס תוצאות: הטופס נשאר פתוח עם הערכים שהוזנו, בלי שורת סיכום וצ'יפים
+  const showForm = !isApplied || editing || pending || noResults;
+  // לכל תנאי: כמה תוצאות היו אם הוא בלבד היה מוסר (מחושב בצד הלקוח מנתוני הדמה)
+  const relax = useMemo(() => (noResults && chips.length >= 2
+    ? chips.map((c) => ({ ...c, count: searchCompanies(c.next).length })).filter((c) => c.count > 0).sort((a, b) => b.count - a.count)
+    : []), [noResults, chips]);
 
   const hintId = 'cs-search-hint';
   const searchButton = (
-    <Button type="submit" variant="primary" disabled={!draftHasParams} loading={status === 'loading' && isApplied}
+    <Button type="submit" variant="primary" disabled={!draftHasParams} aria-busy={status === 'loading' && isApplied ? true : undefined}
       aria-describedby={hintId} icon={<Search size={16} aria-hidden="true" />}>חיפוש</Button>
   );
 
@@ -207,7 +217,31 @@ export default function CompaniesPage() {
         )}
         {isApplied && status === 'loading' && <TableSkeleton cols={8} />}
         {isApplied && status === 'error' && <ErrorState title="החיפוש נכשל" onRetry={reload}>אירעה שגיאה בטעינת התוצאות. הפרמטרים נשמרו.</ErrorState>}
-        {isApplied && status === 'done' && results.length === 0 && <NoResults onClear={reset} />}
+        {noResults && (
+          <div role="status" aria-live="polite" className="cs-noresults">
+            <Panel>
+              <p className="cs-nr-title">לא נמצאו חברות</p>
+              <p className="cs-nr-sub">אף חברה לא עונה על כל התנאים</p>
+              {chips.length === 1 && chips[0].key === 'name' && <p className="cs-nr-hint">בדוק איות, או נסה חלק קצר מהשם</p>}
+              {relax.length > 0 && (
+                <div className="cs-relax">
+                  <h3>הסרת אחד התנאים תרחיב את התוצאות</h3>
+                  <ul className="cs-relax-list">
+                    {relax.map((c) => (
+                      <li key={c.key}>
+                        <button type="button" onClick={() => { setPending(true); apply(c.next); }}>
+                          <span className="cs-list-main">{c.label}</span>
+                          <span className="cs-list-detail">{plural(c.count)}</span>
+                          <ArrowLeft size={16} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Panel>
+          </div>
+        )}
         {isApplied && status === 'done' && results.length > 0 && (
           <DataTable rows={results} columns={columns} rowKey={(c) => c.id} caption="תוצאות חיפוש חברות"
             selectedKey={view.selected}

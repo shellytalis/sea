@@ -63,9 +63,10 @@ const toGeo = (vs) => ({
     }
   }))
 });
-export default function MapView({ vessels, selectedId, onSelect }) {
+export default function MapView({ vessels, selectedId, onSelect, onMapReady }) {
   const el = useRef(null);
   const map = useRef(null);
+  const ready = useRef(onMapReady); ready.current = onMapReady;
   const cb = useRef(onSelect);
   cb.current = onSelect;
   const live = useRef({
@@ -189,7 +190,9 @@ export default function MapView({ vessels, selectedId, onSelect }) {
       attributes: true,
       attributeFilter: ["data-theme"]
     });
+    ready.current?.(m);
     return () => {
+      ready.current?.(null);
       mo.disconnect();
       m.remove();
     };

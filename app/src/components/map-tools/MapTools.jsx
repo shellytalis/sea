@@ -3,7 +3,7 @@ import { bearing, circlePolygon, distance } from '../../map/geodesy';
 import { demoTrack, trackStats } from '../../map/route';
 import { PORTS } from '../../data/ports';
 import { addToolLayers, setToolData } from '../../map/layers';
-import { DEFAULT_KNOTS, DEFAULT_RADII_NM, buildScene, metrics, withCursor } from '../../map/scene';
+import { DEFAULT_KNOTS, DEFAULT_RADII_NM, buildScene, isCircle, metrics, withCursor, within } from '../../map/scene';
 import { NM, travelHours, useUnit } from '../../map/units';
 import useMarkers from '../../map/useMarkers';
 import { GeneralToolbar, VesselBar } from './Toolbars';
@@ -11,7 +11,7 @@ import { ArrivalPanel, GeneralPanel, ProximityPanel, RoutePanel } from './ToolPa
 
 const MAX_SAVED = 5;
 const MAX_CIRCLES = 3;
-const DRAW = ['distance', 'radius', 'area', 'time'];
+const DRAW = ['distance', 'radius', 'area', 'time', 'height', 'terrain'];
 let seq = 0;
 const uid = () => `m${++seq}`;
 const defaultProx = () => ({ on: true, visible: true, radii: DEFAULT_RADII_NM.map((n) => n * NM) });
@@ -22,13 +22,15 @@ const defaultArrival = () => ({ on: true, dest: null, destName: '', speed: null 
 function hintFor(tool, draft, items) {
   if (tool?.family === 'vessel' && tool.id === 'arrival') return ['לחיצה על המפה: בחירת יעד (או חיפוש נמל בפאנל) · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: יעד · Esc: סגירה'];
   if (!tool || tool.family !== 'general' || !DRAW.includes(tool.id)) return null;
-  if (tool.id === 'radius') {
+  if (isCircle(tool.id)) {
     if (draft) return ['לחיצה נוספת: קביעת הרדיוס (או הקלדה בלוח) · Esc: ביטול', 'לחיצה: רדיוס · Esc: ביטול'];
+    if (tool.id === 'terrain') return ['לחיצה על המפה: מרכז אזור החקירה, ואז לחיצה לרדיוס · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מרכז · Esc: סגירה'];
     if (items.filter((i) => i.kind === 'radius').length >= MAX_CIRCLES) return ['עד 3 מעגלים: מחק מעגל כדי להוסיף · Esc: סגירת הכלי', 'עד 3 מעגלים · Esc: סגירה'];
     return ['לחיצה על המפה: בחירת מרכז · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מרכז · Esc: סגירה'];
   }
   if (draft) return ['לחיצה: הוספת נקודה · לחיצה כפולה או Enter: סיום · Backspace: מחיקת נקודה · Esc: ביטול', 'לחיצה: נקודה · Enter: סיום · Esc: ביטול'];
   if (items.length >= MAX_SAVED) return ['הגעת ל-5 מדידות: מחק אחת כדי להמשיך · Esc: סגירת הכלי', 'עד 5 מדידות · Esc: סגירה'];
+  if (tool.id === 'height') return ['לחיצה על המפה: נקודה לקריאת גובה, ושתי נקודות ויותר לפרופיל · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: נקודה · Esc: סגירה'];
   if (tool.id === 'time') return ['לחיצה על המפה: בחירת מוצא, ואז ביניים ויעד · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מוצא · Esc: סגירה'];
   return ['לחיצה על המפה: תחילת מדידה · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: תחילת מדידה · Esc: סגירה'];
 }
@@ -48,6 +50,8 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   const [route, setRoute] = useState({});
   const [arrival, setArrival] = useState({});
   const [timeSpeed, setTimeSpeed] = useState(DEFAULT_KNOTS);
+  const [watch, setWatch] = useState({});
+  const [hoverLL, setHoverLL] = useState(null);
   const [unit, setUnit] = useUnit();
   const st = useRef({});
   st.current = { tool, items, draft, selId, timeSpeed };
@@ -66,7 +70,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   }, []);
   const finish = useCallback(() => {
     const d = st.current.draft;
-    if (!d || d.kind === 'radius') return;
+    if (!d || isCircle(d.kind)) return;
     if (d.points.length < (d.kind === 'area' ? 3 : 2)) return;
     commit({ kind: d.kind, points: d.points, ...(d.kind === 'time' ? { speed: st.current.timeSpeed } : {}) });
   }, [commit]);
@@ -134,15 +138,15 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       if (!isDrawing()) return;
       const { tool: t, draft: d, items: list } = st.current;
       const ll = [e.lngLat.lng, e.lngLat.lat];
-      if (t.id === 'radius') {
+      if (isCircle(t.id)) {
         if (!d) {
-          if (list.length >= MAX_SAVED || list.filter((i) => i.kind === 'radius').length >= MAX_CIRCLES) return;
+          if (list.length >= MAX_SAVED || (t.id === 'radius' && list.filter((i) => i.kind === 'radius').length >= MAX_CIRCLES)) return;
           setSelId(null);
-          setDraft({ kind: 'radius', center: ll, radius: null });
+          setDraft({ kind: t.id, center: ll, radius: null });
           return;
         }
         const r = distance(d.center, ll);
-        if (r >= 1) commit({ kind: 'radius', center: d.center, radius: r });
+        if (r >= 1) commit({ kind: d.kind, center: d.center, radius: r });
         return;
       }
       if (!d) {
@@ -155,7 +159,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       if (Math.hypot(a.x - e.point.x, a.y - e.point.y) < 4) return; // הלחיצה השנייה של לחיצה כפולה
       setDraft({ ...d, points: [...d.points, ll] });
     };
-    const onDbl = () => { if (isDrawing() && st.current.tool.id !== 'radius') finish(); };
+    const onDbl = () => { if (isDrawing() && !isCircle(st.current.tool.id)) finish(); };
     let raf = 0;
     const onMove = (e) => {
       if (isArrival()) { map.getCanvas().style.cursor = 'crosshair'; return; }
@@ -203,7 +207,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       } else if (e.key === 'Enter' && d && tag !== 'BUTTON' && tag !== 'A') {
         e.preventDefault();
         finish();
-      } else if (e.key === 'Backspace' && d && d.kind !== 'radius') {
+      } else if (e.key === 'Backspace' && d && !isCircle(d.kind)) {
         e.preventDefault();
         setDraft((x) => (x.points.length <= 1 ? null : { ...x, points: x.points.slice(0, -1) }));
       }
@@ -233,7 +237,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
 
   const moveHandle = useCallback((h, ll) => {
     const upd = (g) => {
-      if (g.kind === 'radius') return h.idx === 'c' ? { ...g, center: ll } : { ...g, radius: Math.max(1, distance(g.center, ll)) };
+      if (isCircle(g.kind)) return h.idx === 'c' ? { ...g, center: ll } : { ...g, radius: Math.max(1, distance(g.center, ll)) };
       const pts = g.points.slice();
       pts[h.idx] = ll;
       return { ...g, points: pts };
@@ -246,24 +250,28 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
     if (h.id === 'draft') setDraft((d) => (d ? upd(d) : d));
     else setItems((l) => l.map((x) => (x.id === h.id ? upd(x) : x)));
   }, []);
+  const rawLive = draft ? withCursor(draft, cursor) : selected;
+  const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
+  const m = metrics(live);
+  const hits = live?.kind === 'terrain' && live.radius > 0 ? within(live.center, live.radius, vessels) : [];
   useMarkers(map, [
     ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.strong ? ' strong' : ''}` })),
     ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: 'map-arrow' })),
+    ...hits.map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
+    ...(hoverLL ? [{ key: 'hover', lngLat: hoverLL, className: 'map-ring small' }] : []),
     ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: 'map-handle', draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined })),
   ]);
 
   // ===== פאנל =====
-  const rawLive = draft ? withCursor(draft, cursor) : selected;
-  const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
-  const m = metrics(live);
   const patchSel = (fn) => setItems((l) => l.map((x) => (x.id === selId ? fn(x) : x)));
-  const closeTool = () => { setTool(null); setDraft(null); setCursor(null); setSelId(null); };
+  const closeTool = () => { setHoverLL(null); setTool(null); setDraft(null); setCursor(null); setSelId(null); };
   const hint = hintFor(tool, draft, items);
 
   let panel = null;
   if (drawing) {
     panel = (
-      <GeneralPanel tool={tool.id} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
+      <GeneralPanel tool={tool.id} hits={hits} onPickVessel={onSelectVessel} onHover={setHoverLL} watch={watch}
+        onAddToList={(list, ids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...ids])] }))} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
         onSelect={(id) => {
           const it = items.find((x) => x.id === id);
           setDraft(null); setCursor(null); setSelId(id);
@@ -274,7 +282,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
         onDelete={(id) => { setItems((l) => l.filter((x) => x.id !== id)); if (selId === id) setSelId(null); }}
         onClose={closeTool}
         onClearCurrent={() => { if (draft) { setDraft(null); setCursor(null); } else if (selId) { setItems((l) => l.filter((x) => x.id !== selId)); setSelId(null); } }}
-        onRadius={(r) => { if (draft?.kind === 'radius' && draft.center) commit({ kind: 'radius', center: draft.center, radius: r }); else if (selected) patchSel((x) => ({ ...x, radius: r })); }} />
+        onRadius={(r) => { if (isCircle(draft?.kind) && draft.center) commit({ kind: draft.kind, center: draft.center, radius: r }); else if (selected) patchSel((x) => ({ ...x, radius: r })); }} />
     );
   } else if (tool?.family === 'vessel' && vessel && proxState) {
     const setP = (patch) => setProx((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));

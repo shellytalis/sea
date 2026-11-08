@@ -7,9 +7,11 @@ import Panel from '../../ui/Panel';
 import Button from '../../ui/Button';
 import { Ltr, Mono, Num } from '../../ui/Ltr';
 import { COMPARE_KNOTS, KIND_LABEL, inRange, metrics } from '../../map/scene';
+import { elevationAt } from '../../map/elevation';
+import { LISTS } from '../../data/vessels';
 import { UNITS, formatArea, formatBearing, formatDistance, formatDuration, formatEta, fromUnit, toUnit, travelHours } from '../../map/units';
 
-const NAMES = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', prox: 'מעגלי קרבה', route: 'מסלול', arrival: 'חישוב הגעה' };
+const NAMES = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה ופרופיל', terrain: 'חקירת שטח', prox: 'מעגלי קרבה', route: 'מסלול', arrival: 'חישוב הגעה' };
 
 /** מדד: תווית 12 משנית, ערך 16/600 tabular, יחידה 12 */
 function Readout({ label, value, unit, wide }) {
@@ -74,6 +76,8 @@ function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
     if (it.kind === 'distance') val = Object.values(fd(mm.total, unit)).join(' ');
     if (it.kind === 'radius') val = Object.values(fd(it.radius, unit)).join(' ');
     if (it.kind === 'time') val = formatDuration(mm.hours);
+    if (it.kind === 'height') val = Object.values(fd(mm.total, unit)).join(' ');
+    if (it.kind === 'terrain') val = Object.values(fd(it.radius, unit)).join(' ');
     if (it.kind === 'area') { const a = formatArea(mm.area, unit); val = `${a.value} ${a.unit}`; }
     return { text: `${KIND_LABEL[it.kind]} ${n}`, val, i };
   };
@@ -103,7 +107,7 @@ function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
 }
 
 /** פאנל יחיד (320px) לכלים הכלליים */
-export function GeneralPanel({ tool, onSpeed, live, m, unit, setUnit, items, selId, max, onSelect, onToggle, onDelete, onClose, onClearCurrent, onRadius }) {
+export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch, onAddToList, live, m, unit, setUnit, items, selId, max, onSelect, onToggle, onDelete, onClose, onClearCurrent, onRadius }) {
   const rows = [];
   const copy = [];
   if (m) {
@@ -115,6 +119,22 @@ export function GeneralPanel({ tool, onSpeed, live, m, unit, setUnit, items, sel
       const t = fd(m.total, unit);
       rows.push(['מרחק כולל', t.value, t.unit], ['משך', formatDuration(m.hours)], ['שעת הגעה (יציאה עכשיו)', formatEta(Date.now() + m.hours * 36e5)]);
       copy.push(`מרחק כולל: ${t.value} ${t.unit}`, `מהירות: ${m.knots} קשר`, `משך: ${formatDuration(m.hours)}`, `שעת הגעה: ${formatEta(Date.now() + m.hours * 36e5)}`);
+    } else if (tool === 'height') {
+      const conv = (v) => String(unit === 'ft' ? Math.round(v / 0.3048) : Math.round(v));
+      const hu = unit === 'ft' ? 'ft' : 'm';
+      const t = fd(m.total, unit);
+      if (m.points < 2) {
+        rows.push(['גובה/עומק בנקודה', conv(m.stats.max.h), hu]);
+        copy.push(`גובה/עומק בנקודה: ${conv(m.stats.max.h)} ${hu}`);
+      } else {
+        rows.push(['מרחק קו', t.value, t.unit], ['נקודה גבוהה', conv(m.stats.max.h), hu], ['נקודה נמוכה', conv(m.stats.min.h), hu], ['עלייה מצטברת', conv(m.stats.ascent), hu]);
+        copy.push(`מרחק קו: ${t.value} ${t.unit}`, `נקודה גבוהה: ${conv(m.stats.max.h)} ${hu}`, `נקודה נמוכה: ${conv(m.stats.min.h)} ${hu}`, `עלייה מצטברת: ${conv(m.stats.ascent)} ${hu}`);
+      }
+    } else if (tool === 'terrain') {
+      const el = elevationAt(m.center[0], m.center[1]);
+      const hu = unit === 'ft' ? 'ft' : 'm';
+      rows.push(['גובה/עומק במרכז', String(unit === 'ft' ? Math.round(el / 0.3048) : el), hu], ['כלים באזור', String(hits.length)]);
+      copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `כלים באזור: ${hits.length}`);
     } else if (tool === 'area') {
       const a = formatArea(m.area, unit);
       const p = fd(m.perimeter, unit);
@@ -137,7 +157,7 @@ export function GeneralPanel({ tool, onSpeed, live, m, unit, setUnit, items, sel
           <KnotField value={m?.knots ?? 10} label="מהירות בקשרים" onValue={onSpeed} />
         </label>
       )}
-      {tool === 'radius' && (
+      {(tool === 'radius' || tool === 'terrain') && (
         <div className="mt-field-row">
           <label>
             <span className="mt-readout-label">רדיוס ({UNITS[unit].short})</span>
@@ -152,9 +172,11 @@ export function GeneralPanel({ tool, onSpeed, live, m, unit, setUnit, items, sel
       {m ? (
         <div className="mt-readouts">{rows.map(([l, v, u]) => <Readout key={l} label={l} value={v} unit={u} wide={l.startsWith('שעת')} />)}</div>
       ) : (
-        <p className="mt-empty">{tool === 'radius' ? 'לחץ על המפה כדי לבחור מרכז.' : tool === 'time' ? 'לחץ על המפה: מוצא, נקודות ביניים ויעד.' : 'לחץ על המפה כדי להתחיל במדידה.'}</p>
+        <p className="mt-empty">{tool === 'radius' || tool === 'terrain' ? 'לחץ על המפה כדי לבחור מרכז.' : tool === 'height' ? 'לחץ על המפה: נקודה לקריאת גובה, שתי נקודות ויותר לפרופיל.' : tool === 'time' ? 'לחץ על המפה: מוצא, נקודות ביניים ויעד.' : 'לחץ על המפה כדי להתחיל במדידה.'}</p>
       )}
       {tool === 'time' && m && <CompareTable total={m.total} />}
+      {tool === 'height' && m && m.points >= 2 && <ProfileChart samples={m.samples} stats={m.stats} unit={unit} onHover={onHover} />}
+      {tool === 'terrain' && m && m.radius > 0 && <TerrainResults hits={hits} unit={unit} watch={watch} onAddToList={onAddToList} onPickVessel={onPickVessel} />}
       <div className="mt-actions">
         <CopyButton lines={copy.filter(Boolean)} />
         <Button size="sm" disabled={!live} onClick={onClearCurrent}>נקה</Button>
@@ -341,5 +363,100 @@ export function ArrivalPanel({ vessel, dest, destName, knots, usedFallback, metr
         <Button size="sm" disabled={!dest} onClick={onClear}>נקה</Button>
       </div>
     </Panel>
+  );
+}
+
+/** פרופיל גובה/עומק לאורך הקו (SVG). ריחוף מציג קריאה ומסמן את הנקודה על המפה. נתוני דמה */
+function ProfileChart({ samples, stats, unit, onHover }) {
+  const [idx, setIdx] = useState(null);
+  const W = 288;
+  const H = 96;
+  const PAD = 8;
+  const conv = (v) => (unit === 'ft' ? Math.round(v / 0.3048) : Math.round(v));
+  const hu = unit === 'ft' ? 'ft' : 'm';
+  const lo = stats.min.h;
+  const hi = stats.max.h;
+  const span = hi - lo || 1;
+  const total = stats.length || 1;
+  const x = (d) => (d / total) * W;
+  const y = (h) => PAD + (1 - (h - lo) / span) * (H - 2 * PAD);
+  const line = samples.map((s, i) => `${i ? 'L' : 'M'}${x(s.d).toFixed(1)} ${y(s.h).toFixed(1)}`).join(' ');
+  const base = lo <= 0 && hi >= 0 ? y(0) : H - PAD;
+  const area = `${line} L${x(samples[samples.length - 1].d).toFixed(1)} ${base.toFixed(1)} L0 ${base.toFixed(1)} Z`;
+  const cur = idx == null ? null : samples[idx];
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const i = Math.max(0, Math.min(samples.length - 1, Math.round(((e.clientX - r.left) / r.width) * (samples.length - 1))));
+    setIdx(i);
+    onHover?.(samples[i].ll);
+  };
+  const leave = () => { setIdx(null); onHover?.(null); };
+  return (
+    <div className="mt-chart">
+      <h3>פרופיל לאורך הקו</h3>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`פרופיל גובה, מ-${conv(lo)} עד ${conv(hi)} ${hu}`} onMouseMove={move} onMouseLeave={leave}>
+        {lo <= 0 && hi >= 0 && <line x1="0" x2={W} y1={y(0)} y2={y(0)} className="mt-chart-zero" />}
+        <path d={area} className="mt-chart-fill" />
+        <path d={line} className="mt-chart-line" />
+        {cur && <><line x1={x(cur.d)} x2={x(cur.d)} y1="0" y2={H} className="mt-chart-cursor" /><circle cx={x(cur.d)} cy={y(cur.h)} r="3" className="mt-chart-dot" /></>}
+      </svg>
+      <div className="mt-chart-read">
+        {cur ? <><Num>{`${fd(cur.d, unit).value} ${fd(cur.d, unit).unit} · ${conv(cur.h)} ${hu}`}</Num>{cur.h < 0 ? ' (עומק)' : ''}</> : <span className="mt-note">העבר עכבר על הגרף. גובה חיובי, עומק שלילי. נתוני דמה.</span>}
+      </div>
+    </div>
+  );
+}
+
+/** תוצאות חקירת שטח: כלים באזור (מודגשים על המפה), הוספה לרשימת מעקב וייצוא CSV */
+function TerrainResults({ hits, unit, watch, onAddToList, onPickVessel }) {
+  const [list, setList] = useState(LISTS[0]);
+  const [note, setNote] = useState('');
+  useEffect(() => setNote(''), [hits.length]);
+  const add = () => {
+    const ids = hits.map((h) => h.v.id);
+    const have = new Set([...(watch[list] ?? []), ...hits.filter((h) => h.v.lists?.includes(list)).map((h) => h.v.id)]);
+    const fresh = ids.filter((id) => !have.has(id));
+    onAddToList(list, fresh);
+    setNote(`נוספו ${fresh.length} כלים לרשימה "${list}"${ids.length - fresh.length ? `, ${ids.length - fresh.length} כבר ברשימה` : ''}.`);
+  };
+  const exportCsv = () => {
+    const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const head = ['שם', 'IMO', 'MMSI', 'סוג', 'דגל', 'קו רוחב', 'קו אורך', `מרחק מהמרכז (${UNITS[unit].short})`];
+    const rows = hits.map(({ v, d }) => [v.name, v.imo, v.mmsi, v.type, v.flag, v.lat, v.lon, toUnit(d, unit).toFixed(UNITS[unit].decimals + 1)]);
+    const csv = '﻿' + [head, ...rows].map((r) => r.map(q).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'terrain-inspection.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <div className="mt-terrain">
+      <h3>כלים באזור <Num>{hits.length}</Num></h3>
+      {hits.length === 0 ? <p className="mt-empty">אין כלי שיט באזור. הגדל את הרדיוס או הזז את המרכז.</p> : (
+        <ul className="mt-range-list">
+          {hits.map(({ v, d }) => (
+            <li key={v.id}>
+              <button type="button" onClick={() => onPickVessel(v.id)}>
+                <span className="mt-hit"><Ltr className="cell-name">{v.name}</Ltr><span className="mt-note">{v.type}</span></span>
+                <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-list-row">
+        <label className="mt-list-pick">
+          <span className="mt-readout-label">רשימת מעקב</span>
+          <select className="ui-input sm" value={list} onChange={(e) => setList(e.target.value)} aria-label="רשימת מעקב">
+            {LISTS.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </label>
+        <Button size="sm" disabled={!hits.length} onClick={add}>הוסף לרשימה</Button>
+        <Button size="sm" disabled={!hits.length} onClick={exportCsv}>ייצוא CSV</Button>
+      </div>
+      {note && <p className="mt-note" role="status">{note}</p>}
+    </div>
   );
 }

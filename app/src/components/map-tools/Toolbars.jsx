@@ -8,8 +8,8 @@ export const GENERAL_TOOLS = [
   { id: 'distance', label: 'מרחק', icon: Ruler },
   { id: 'radius', label: 'רדיוס חופשי', icon: Radius },
   { id: 'area', label: 'שטח', icon: Hexagon },
-  { id: 'height', label: 'גובה', icon: Mountain, soon: true },
-  { id: 'terrain', label: 'חקירת שטח', icon: ScanSearch, soon: true },
+  { id: 'height', label: 'גובה', icon: Mountain },
+  { id: 'terrain', label: 'חקירת שטח', icon: ScanSearch },
   { id: 'time', label: 'חישוב זמנים', icon: Timer },
 ];
 

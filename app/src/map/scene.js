@@ -2,8 +2,11 @@
 import { bearing, centroid, circleArea, circleCircumference, circlePolygon, destination, distance, greatCircle, pathLength, polygonArea, polygonPerimeter } from './geodesy';
 import { formatArea, formatDistance, travelHours } from './units';
 import { markStep } from './route';
+import { profileSamples, profileStats } from './elevation';
 
-export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים' };
+export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה', terrain: 'חקירת שטח' };
+/** כלים שמוגדרים במרכז ורדיוס (רדיוס חופשי וחקירת שטח) */
+export const isCircle = (kind) => kind === 'radius' || kind === 'terrain';
 export const DEFAULT_KNOTS = 10;
 export const COMPARE_KNOTS = [8, 10, 12, 14];
 export const DEFAULT_RADII_NM = [5, 10, 20];
@@ -30,7 +33,7 @@ export function lineThrough(points) {
 /** גרסה "חיה" של טיוטה: מצרפת את מיקום העכבר (נקודה אחרונה, או רדיוס) */
 export function withCursor(g, cursor) {
   if (!g || !cursor) return g;
-  if (g.kind === 'radius') return g.center && g.radius == null ? { ...g, radius: distance(g.center, cursor) } : g;
+  if (isCircle(g.kind)) return g.center && g.radius == null ? { ...g, radius: distance(g.center, cursor) } : g;
   return { ...g, points: [...g.points, cursor] };
 }
 
@@ -42,12 +45,24 @@ export function metrics(g) {
     const total = pathLength(g.points);
     return { total, segments: Math.max(0, n - 1), bearing: n >= 2 ? bearing(g.points[n - 2], g.points[n - 1]) : null, points: n, knots: g.speed ?? DEFAULT_KNOTS, hours: travelHours(total, g.speed ?? DEFAULT_KNOTS) };
   }
+  if (g.kind === 'height') {
+    const samples = profileSamples(g.points, 64);
+    return { total: pathLength(g.points), points: g.points.length, samples, stats: profileStats(samples) };
+  }
   if (g.kind === 'area') {
     const n = g.points.length;
     return { area: n >= 3 ? polygonArea(g.points) : 0, perimeter: n >= 2 ? polygonPerimeter(g.points) : 0, points: n };
   }
   const r = g.radius ?? 0;
   return { center: g.center, radius: r, circumference: circleCircumference(r), area: circleArea(r) };
+}
+
+/** כלים בתוך עיגול (מרכז ורדיוס), ממוינים לפי מרחק מהמרכז */
+export function within(center, radiusM, all) {
+  return all
+    .map((v) => ({ v, d: distance(center, [v.lon, v.lat]) }))
+    .filter((x) => x.d <= radiusM)
+    .sort((a, b) => a.d - b.d);
 }
 
 /** כלים בטווח מכלי נתון (מנתוני הדמה), ממוינים לפי מרחק */
@@ -72,7 +87,7 @@ export function buildScene({ items, draft, cursor, edit, prox, route, arrival, u
   const arrows = [];
 
   const addObj = (g, key) => {
-    if (g.kind === 'distance' || g.kind === 'time') {
+    if (g.kind === 'distance' || g.kind === 'time' || g.kind === 'height') {
       const pts = g.points;
       if (pts.length >= 2) features.push(feat({ type: 'LineString', coordinates: lineThrough(pts) }, {}));
       for (let i = 1; i < pts.length; i++) {
@@ -89,7 +104,7 @@ export function buildScene({ items, draft, cursor, edit, prox, route, arrival, u
         const a = formatArea(polygonArea(pts), unit);
         chips.push({ key: `${key}-a`, lngLat: centroid(pts), text: `${a.value} ${a.unit}`, color: 'draw', strong: true, anchor: 'center', offset: [0, 0] });
       } else if (pts.length === 2) features.push(feat({ type: 'LineString', coordinates: pts }, {}));
-    } else if (g.kind === 'radius' && g.radius > 0) {
+    } else if (isCircle(g.kind) && g.radius > 0) {
       features.push(feat({ type: 'Polygon', coordinates: [circlePolygon(g.center, g.radius)] }, { fill: true }));
       chips.push({ key: `${key}-r`, lngLat: destination(g.center, 90, g.radius), text: dist(g.radius, unit), color: 'draw', anchor: 'left', offset: [10, 0] });
     }
@@ -101,7 +116,7 @@ export function buildScene({ items, draft, cursor, edit, prox, route, arrival, u
 
   const target = edit?.g;
   if (target) {
-    if (target.kind === 'radius') {
+    if (isCircle(target.kind)) {
       if (target.center) handles.push({ key: 'hc', lngLat: target.center, idx: 'c', id: edit.id });
       if (target.radius > 0 && edit.id !== 'draft') handles.push({ key: 'he', lngLat: destination(target.center, 90, target.radius), idx: 'e', id: edit.id });
     } else {

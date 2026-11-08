@@ -36,7 +36,8 @@
 .mt-seg button:hover { background: var(--surface-raised); color: var(--text-primary); }
 .mt-seg button.active { background: var(--surface-raised); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
 .mt-seg button:focus-visible { outline-offset: -2px; }
-.mt-readouts, .mt-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.mt-readouts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.mt-field-row { display: grid; grid-template-columns: 112px 1fr; gap: var(--space-4); }
 .mt-readout { display: grid; gap: 0; min-width: 0; }
 .mt-field-row label { display: grid; gap: var(--space-1); }
 .mt-readout-label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
@@ -110,3 +111,18 @@
 .mt-compare thead th { height: var(--space-5); border-top: 0; font-size: var(--fs-xs); color: var(--text-secondary); }
 .mt-compare tbody th { color: var(--text-primary); }
 .mt-compare .mt-note { margin-top: var(--space-2); }
+/* גובה ופרופיל, חקירת שטח */
+.map-ring { width: 28px; height: 28px; border: 2px solid var(--map-draw); border-radius: 50%; box-shadow: 0 0 0 1.5px var(--map-halo); }
+.map-ring.small { width: 12px; height: 12px; background: var(--map-draw); }
+.mt-chart h3, .mt-terrain h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.mt-chart svg { width: 100%; height: 96px; display: block; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.mt-chart-line { fill: none; stroke: var(--map-draw); stroke-width: 2; stroke-linejoin: round; }
+.mt-chart-fill { fill: var(--map-draw); fill-opacity: 0.12; stroke: none; }
+.mt-chart-zero { stroke: var(--border-strong); stroke-dasharray: 3 3; }
+.mt-chart-cursor { stroke: var(--text-secondary); stroke-width: 1; }
+.mt-chart-dot { fill: var(--map-handle); stroke: var(--map-draw); stroke-width: 2; }
+.mt-chart-read { min-height: var(--lh-sm); margin-top: var(--space-1); font-size: var(--fs-sm); color: var(--text-primary); }
+.mt-hit { display: grid; justify-items: start; }
+.mt-list-row { display: grid; grid-template-columns: 1fr auto auto; align-items: end; gap: var(--space-2); margin-top: var(--space-3); }
+.mt-list-pick { display: grid; gap: var(--space-1); min-width: 0; }
+.mt-list-pick select { width: 100%; }

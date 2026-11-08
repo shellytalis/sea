@@ -15,7 +15,7 @@ import { EmptyState, ErrorState, ForbiddenState, TableSkeleton } from '../ui/Sta
 import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
-import { Hexagon, Mountain, Route, Ruler, Target } from 'lucide-react';
+import { ChevronDown, Hexagon, Mountain, Route, Ruler, Target } from 'lucide-react';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
 import { SignalsPanel } from '../components/Signals';
 import Panel from '../ui/Panel';
@@ -207,26 +207,34 @@ export default function DesignPage() {
 
         <section>
           <h2>כלי מפה<SpecNote tag>הצעה</SpecNote></h2>
-          <p className="ds-note">שתי משפחות, מצב יחיד <bdi dir="ltr">{'{ family, id, vesselId? }'}</bdi> ופאנל אחד בכל רגע. סרגל כללי אנכי בקצה ה-end (56px, מ-96px מלמעלה), סרגל כלי שיט רק כשכלי נבחר, בצד הנגדי למקרא. תוויות גלויות, בלי tooltip.</p>
+          <p className="ds-note">שתי משפחות, מצב יחיד <bdi dir="ltr">{'{ family, id, vesselId? }'}</bdi> ופאנל אחד בכל רגע. זום וסרגל הכלים הכללי על אותו ציר (קצה 16px, רוחב 56px), סרגל הכלים מ-96px מלמעלה, פריט 64px קבוע. סרגל כלי שיט רק כשכלי נבחר, בצד הנגדי למקרא. פאנל 320px: גובה מרבי עד 88px מתחתית המפה (פנוי לסרגל כלי שיט), גוף עם גלילה פנימית ושורת פעולות דביקה.</p>
           <div className="ds-row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
             <nav className="mt-bar" aria-label="כלי מפה (דוגמה)">
               <button type="button" className="mt-tool active"><Ruler size={20} aria-hidden="true" /><span className="mt-tool-label">מרחק</span></button>
-              <button type="button" className="mt-tool"><Hexagon size={20} aria-hidden="true" /><span className="mt-tool-label">שטח</span></button>
-              <button type="button" className="mt-tool" disabled><Mountain size={20} aria-hidden="true" /><span className="mt-tool-label">גובה</span><span className="mt-tool-soon">בקרוב</span></button>
+              <button type="button" className="mt-tool"><Hexagon size={20} aria-hidden="true" /><span className="mt-tool-label">רדיוס חופשי</span></button>
+              <button type="button" className="mt-tool"><Mountain size={20} aria-hidden="true" /><span className="mt-tool-label">גובה</span></button>
             </nav>
             <section className="mt-vbar" style={{ position: 'static' }} aria-label="סרגל כלי שיט (דוגמה)">
-              <div className="mt-vctx"><bdi dir="ltr" className="mt-vname">SEA FALCON</bdi><span className="mt-vimo"><bdi dir="ltr" className="mono">IMO 9198364</bdi></span><span className="mt-vlink">פתח דף כלי</span></div>
+              <div className="mt-vctx"><bdi dir="ltr" className="mt-vname">SEA FALCON</bdi><span className="mt-vimo"><bdi dir="ltr" className="mono">IMO 9198364</bdi></span></div>
               <span className="mt-vsep" aria-hidden="true" />
               <div className="mt-vtools">
                 <button type="button" className="mt-vtool active"><Target size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מעגלי קרבה</span></span></button>
-                <button type="button" className="mt-vtool" disabled><Route size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מסלול</span><span className="mt-tool-soon">בקרוב</span></span></button>
+                <button type="button" className="mt-vtool"><Route size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מסלול</span></span></button>
               </div>
             </section>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span className="map-chip">12.4 NM</span><span className="map-chip strong">30,171.16 NM²</span><span className="map-chip vessel">20 NM</span><span className="map-handle" />
+              <span className="map-chip">12.4 NM</span><span className="map-chip strong">30,171.16 NM²</span><span className="map-chip vessel">−4 ש׳</span><span className="map-handle" />
             </div>
           </div>
-          <p className="ds-note">צבעים (Dark): <bdi dir="ltr">--map-draw #4dd3ff</bdi>, <bdi dir="ltr">--map-vessel #cf8fff</bdi>, הילה <bdi dir="ltr">--map-halo</bdi> 3px, ידית 8px לבנה עם טבעת accent. ניגודיות מול היבשה #13263f והמים #0a1a30: 8.8 ו-10.0 (draw), 6.6 ו-7.5 (vessel). Light: TODO.</p>
+          <div className="ds-row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap', marginTop: 16 }}>
+            <div className="mt-readout"><span className="mt-readout-label">מרחק כולל</span><span className="mt-readout-value"><bdi dir="ltr" className="mt-val"><span className="num mt-num">716.92</span><span className="mt-readout-unit">NM</span></bdi></span></div>
+            <div className="mt-readout"><span className="mt-readout-label">מהירות</span><span className="mt-readout-value"><bdi dir="ltr" className="mt-val"><span className="num mt-num">11.2</span><span className="mt-readout-unit">קשר</span></bdi></span></div>
+            <div className="mt-readout"><span className="mt-readout-label">משך</span><span className="mt-readout-value"><bdi className="num mt-num">1 יום, 14 שעות</bdi></span></div>
+            <span className="mt-unit"><select className="ui-input sm" aria-label="יחידת מידה (דוגמה)" defaultValue="nm"><option value="nm">מייל ימי</option><option value="km">ק"מ</option></select><ChevronDown size={16} aria-hidden="true" /></span>
+            <label className="ui-check"><input type="checkbox" defaultChecked /><span>סימוני זמן</span></label>
+            <span className="ui-chip tag">נתוני דמה</span>
+          </div>
+          <p className="ds-note">קריאה: ערך 16/600 ואחריו יחידה 12 משנית, בתוך bdi ltr ("716.92 NM"); משך בעברית בלי אפסים. בקרת יחידות אחת (select 32px) בכותרת הפאנל. תיבת סימון של מערכת העיצוב (16px, מסגרת 2px). צבעים (Dark): <bdi dir="ltr">--map-draw #4dd3ff</bdi>, <bdi dir="ltr">--map-vessel #cf8fff</bdi>, הילה <bdi dir="ltr">--map-halo</bdi> 3px, ידית 8px לבנה עם טבעת accent. ניגודיות מול היבשה #13263f והמים #0a1a30: 8.8 ו-10.0 (draw), 6.6 ו-7.5 (vessel). Light: TODO.</p>
         </section>
 
         <section>

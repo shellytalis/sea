@@ -3,7 +3,7 @@
    (מ-96px מלמעלה, מתחת לזום), פאנל 320px לידו, וסרגל כלי שיט בתחתית, בצד הנגדי למקרא. */
 .map-col { container-type: inline-size; container-name: mapcol; }
 
-.mt-row { position: absolute; z-index: var(--z-popover); inset-block-start: var(--space-4); inset-inline: var(--space-4) 56px; display: flex; align-items: center; gap: var(--space-4); pointer-events: none; }
+.mt-row { position: absolute; z-index: var(--z-popover); inset-block-start: var(--space-4); inset-inline: var(--space-4) 88px; display: flex; align-items: center; gap: var(--space-4); pointer-events: none; }
 .mt-hint { flex: 1; min-width: 0; display: flex; justify-content: center; }
 .mt-hint > span { display: inline-flex; align-items: center; max-width: 100%; height: var(--control-h-sm); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-pop); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mt-hint-short { display: none !important; }
@@ -12,12 +12,12 @@
   .mt-hint-short { display: inline-flex !important; }
 }
 
-.mt-stack { position: absolute; z-index: var(--z-map-ui); inset-block: 96px var(--space-4); inset-inline-end: var(--space-4); display: flex; align-items: flex-start; gap: var(--space-2); pointer-events: none; }
-.mt-stack.with-vbar { inset-block-end: 96px; }
+.mt-stack { position: absolute; z-index: var(--z-map-ui); inset-block: 96px 88px; inset-inline-end: var(--space-4); display: flex; align-items: flex-start; gap: var(--space-2); pointer-events: none; }
+.mt-stack.with-vbar { inset-block-end: 88px; }
 
 /* סרגל כלים כלליים */
 .mt-bar { pointer-events: auto; width: 56px; flex: none; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); overflow: hidden; }
-.mt-tool { width: 100%; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-2) 0; background: none; border: 0; border-inline-start: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
+.mt-tool { width: 100%; height: 64px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-1) 0; background: none; border: 0; border-inline-start: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
 .mt-tool + .mt-tool { border-top: 1px solid var(--border); }
 .mt-tool:hover:not(:disabled) { background: var(--surface-raised); color: var(--text-primary); }
 .mt-tool.active { background: var(--surface-raised); color: var(--text-primary); border-inline-start-color: var(--accent); }
@@ -41,13 +41,13 @@
 .mt-readout { display: grid; gap: 0; min-width: 0; }
 .mt-field-row label { display: grid; gap: var(--space-1); }
 .mt-readout-label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
-.mt-readout-value { display: flex; align-items: baseline; gap: var(--space-1); }
+.mt-readout-value { display: flex; align-items: baseline; }
 .mt-readout-value .num { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; color: var(--text-primary); }
 .mt-readout-unit { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
 .mt-readout-coord { font-size: var(--fs-xs); line-height: var(--lh-sm); color: var(--text-primary); white-space: nowrap; }
 .mt-field { width: 100%; }
 .mt-empty { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-secondary); }
-.mt-actions { display: flex; gap: var(--space-2); }
+.mt-actions { display: flex; align-items: center; gap: var(--space-2); }
 .mt-saved h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
 .mt-saved ul, .mt-circles, .mt-range-list { list-style: none; margin: 0; padding: 0; }
 .mt-saved li { display: flex; align-items: center; height: var(--row-h); border-top: 1px solid var(--border-subtle); border-inline-start: 2px solid transparent; }
@@ -114,8 +114,8 @@
 /* גובה ופרופיל, חקירת שטח */
 .map-ring { width: 28px; height: 28px; border: 2px solid var(--map-draw); border-radius: 50%; box-shadow: 0 0 0 1.5px var(--map-halo); }
 .map-ring.small { width: 12px; height: 12px; background: var(--map-draw); }
-.mt-chart h3, .mt-terrain h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
-.mt-chart svg { width: 100%; height: 96px; display: block; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.mt-chart h3, .mt-terrain h3 { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.mt-chart svg { width: 100%; height: 104px; display: block; direction: ltr; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-md); }
 .mt-chart-line { fill: none; stroke: var(--map-draw); stroke-width: 2; stroke-linejoin: round; }
 .mt-chart-fill { fill: var(--map-draw); fill-opacity: 0.12; stroke: none; }
 .mt-chart-zero { stroke: var(--border-strong); stroke-dasharray: 3 3; }
@@ -123,6 +123,37 @@
 .mt-chart-dot { fill: var(--map-handle); stroke: var(--map-draw); stroke-width: 2; }
 .mt-chart-read { min-height: var(--lh-sm); margin-top: var(--space-1); font-size: var(--fs-sm); color: var(--text-primary); }
 .mt-hit { display: grid; justify-items: start; }
-.mt-list-row { display: grid; grid-template-columns: 1fr auto auto; align-items: end; gap: var(--space-2); margin-top: var(--space-3); }
+.mt-list-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .mt-list-pick { display: grid; gap: var(--space-1); min-width: 0; }
 .mt-list-pick select { width: 100%; }
+
+/* ===== תיקוני סבב 5 ===== */
+/* זום וסרגל הכלים על אותו ציר: קצה אחד (16px מקצה המפה) ואותו רוחב (56px). זה CSS על בקרת הזום של MapLibre מבחוץ, בלי נגיעה בקוד המפה. */
+.map-col .maplibregl-ctrl-top-left .maplibregl-ctrl { margin: var(--space-4) 0 0 var(--space-4); }
+.map-col .maplibregl-ctrl-top-left .maplibregl-ctrl-group { width: 56px; }
+.map-col .maplibregl-ctrl-top-left .maplibregl-ctrl-group button { width: 100%; }
+.mt-panel .panel-foot { flex: none; display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); }
+.mt-unit { position: relative; display: inline-flex; }
+.mt-unit select { appearance: none; min-width: 104px; padding-inline: var(--space-2) var(--space-6); cursor: pointer; }
+.mt-unit svg { position: absolute; inset-inline-end: var(--space-2); top: var(--space-2); pointer-events: none; color: var(--text-secondary); }
+.mt-val { display: inline-flex; align-items: baseline; gap: var(--space-1); }
+.mt-radius { display: grid; gap: var(--space-1); }
+.mt-radius .mt-field { width: 128px; }
+.mt-clear-link { margin-inline-start: auto; }
+.mt-label-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-1); }
+.mt-terrain-list { max-height: 176px; overflow-y: auto; scrollbar-width: thin; }
+.mt-terrain-actions { display: grid; gap: var(--space-2); }
+.mt-list-row select { grid-column: 1 / -1; min-width: 0; width: 100%; }
+.mt-field-error { margin: var(--space-1) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--sev-critical); }
+.mt-field[aria-invalid='true'] { border-color: var(--sev-critical); }
+.mt-chart-axis { font-size: var(--fs-xs); fill: var(--text-secondary); font-family: var(--font); font-variant-numeric: tabular-nums; }
+.mt-chart-axis.zero { fill: var(--text-primary); }
+.mt-chart-axisline { stroke: var(--border-strong); }
+.mt-compare th, .mt-compare td { white-space: normal; }
+
+/* כותרת פאנל: שם הכלי ומתחתיו שם כלי השיט (12px), כך שהשם לא נחתך ליד בקרת היחידות */
+.mt-panel .panel-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-2); align-content: center; padding-block: 0; }
+.mt-panel .panel-head h2 { grid-column: 1; grid-row: 1; }
+.mt-panel .panel-head .panel-sep { display: none; }
+.mt-panel .panel-head .panel-meta { grid-column: 1; grid-row: 2; line-height: var(--lh-xs); }
+.mt-panel .panel-head .panel-actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }

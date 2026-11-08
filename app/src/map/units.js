@@ -23,16 +23,17 @@ export const formatBearing = (d) => `${Math.round(d)}°`;
 /** שעות הפלגה במרחק נתון (מטרים) ובמהירות נתונה (קשר = מייל ימי לשעה) */
 export const travelHours = (m, knots) => (knots > 0 ? m / (knots * NM) : Infinity);
 
-/** משך בעברית: "2 י׳ 4 ש׳" / "5 ש׳ 12 ד׳" / "40 ד׳" */
+/** משך בעברית בלי אפסים מיותרים: "1 יום, 14 שעות", "5 שעות, 12 דקות", "40 דקות" */
 export function formatDuration(hours) {
   if (!Number.isFinite(hours)) return '—';
   const t = Math.round(hours * 60);
   const d = Math.floor(t / 1440);
   const h = Math.floor((t % 1440) / 60);
   const m = t % 60;
-  if (d) return `${d} י׳ ${h} ש׳`;
-  if (h) return `${h} ש׳ ${m} ד׳`;
-  return `${m} ד׳`;
+  const part = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const parts = d ? [part(d, 'יום', 'ימים'), h && part(h, 'שעה', 'שעות')] : [h && part(h, 'שעה', 'שעות'), m && part(m, 'דקה', 'דקות')];
+  const out = parts.filter(Boolean);
+  return out.length ? out.join(', ') : '0 דקות';
 }
 
 /** שעת הגעה: dd.mm.yyyy HH:mm (שעון מקומי) */

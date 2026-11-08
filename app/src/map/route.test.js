@@ -13,9 +13,13 @@ test('travelHours: 100 NM ב-10 קשר = 10 שעות; מהירות 0 = אינס�
 });
 
 test('formatDuration', () => {
-  assert.equal(formatDuration(0.5), '30 ד׳');
-  assert.equal(formatDuration(5.2), '5 ש׳ 12 ד׳');
-  assert.equal(formatDuration(52.25), '2 י׳ 4 ש׳');
+  assert.equal(formatDuration(0.5), '30 דקות');
+  assert.equal(formatDuration(5.2), '5 שעות, 12 דקות');
+  assert.equal(formatDuration(5), '5 שעות');
+  assert.equal(formatDuration(1), '1 שעה');
+  assert.equal(formatDuration(38), '1 יום, 14 שעות');
+  assert.equal(formatDuration(48), '2 ימים');
+  assert.equal(formatDuration(52.25), '2 ימים, 4 שעות');
   assert.equal(formatDuration(Infinity), '—');
 });
 

@@ -139,7 +139,7 @@ export function buildScene({ items, draft, cursor, edit, prox, route, arrival, u
     for (let h = step; h <= route.hours + 1e-9; h += step) {
       if (route.marks === false) break;
       const i = Math.round(h / 0.25);
-      if (route.track[i]) chips.push({ key: `rt${h}`, lngLat: route.track[i].ll, text: `-${h}h`, color: 'vessel', anchor: 'top', offset: [0, 6] });
+      if (route.track[i]) chips.push({ key: `rt${h}`, lngLat: route.track[i].ll, text: `−${h} ש׳`, color: 'vessel', anchor: 'top', offset: [0, 6] });
       // חצי חץ כיוון באמצע כל קטע בין סימונים, מופנה בכיוון התנועה (מהישן לחדש)
       const mid = Math.round((h - step / 2) / 0.25);
       if (route.track[mid] && route.track[mid - 1]) arrows.push({ key: `ra${h}`, lngLat: route.track[mid].ll, rotation: bearing(route.track[mid].ll, route.track[mid - 1].ll) });

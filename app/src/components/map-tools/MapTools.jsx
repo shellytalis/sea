@@ -284,7 +284,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
         onClearCurrent={() => { if (draft) { setDraft(null); setCursor(null); } else if (selId) { setItems((l) => l.filter((x) => x.id !== selId)); setSelId(null); } }}
         onRadius={(r) => { if (isCircle(draft?.kind) && draft.center) commit({ kind: draft.kind, center: draft.center, radius: r }); else if (selected) patchSel((x) => ({ ...x, radius: r })); }} />
     );
-  } else if (tool?.family === 'vessel' && vessel && proxState) {
+  } else if (tool?.family === 'vessel' && tool.id === 'prox' && vessel && proxState) {
     const setP = (patch) => setProx((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
     panel = (
       <ProximityPanel vessel={vessel} vessels={vessels} radii={proxState.radii} visible={proxState.visible} unit={unit} setUnit={setUnit}

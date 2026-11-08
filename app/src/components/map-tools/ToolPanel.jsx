@@ -12,39 +12,51 @@ import { LISTS } from '../../data/vessels';
 import { UNITS, formatArea, formatBearing, formatDistance, formatDuration, formatEta, fromUnit, toUnit, travelHours } from '../../map/units';
 
 const NAMES = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה ופרופיל', terrain: 'חקירת שטח', prox: 'מעגלי קרבה', route: 'מסלול', arrival: 'חישוב הגעה' };
+const HEB = /[א-ת]/;
 
-/** מדד: תווית 12 משנית, ערך 16/600 tabular, יחידה 12 */
+/** מדד: תווית 12 משנית; ערך 16/600 ואחריו יחידה 12 משנית, הכול בתוך bdi ltr ("716.92 NM"). משך בעברית נשאר RTL. */
 function Readout({ label, value, unit, wide }) {
   return (
     <div className={`mt-readout${wide ? ' wide' : ''}`}>
       <span className="mt-readout-label">{label}</span>
       <span className="mt-readout-value">
-        {/[א-ת]/.test(value) ? <bdi className="num mt-num">{value}</bdi> : <Num className="mt-num">{value}</Num>}
-        {unit && <span className="mt-readout-unit">{unit}</span>}
+        {HEB.test(value)
+          ? <bdi className="num mt-num">{value}</bdi>
+          : <bdi dir="ltr" className="mt-val"><span className="num mt-num">{value}</span>{unit && <span className="mt-readout-unit">{unit}</span>}</bdi>}
       </span>
     </div>
   );
 }
 
-function UnitSelect({ unit, onChange }) {
+/** בקרת יחידות אחת בכותרת הפאנל: select 32px */
+function UnitDropdown({ unit, onChange }) {
   return (
-    <div className="mt-seg" role="radiogroup" aria-label="יחידת מידה">
-      {Object.entries(UNITS).map(([id, u]) => (
-        <button key={id} type="button" role="radio" aria-checked={unit === id} className={unit === id ? 'active' : ''} onClick={() => onChange(id)}>
-          {u.label}
-        </button>
-      ))}
-    </div>
+    <span className="mt-unit">
+      <select className="ui-input sm" aria-label="יחידת מידה" value={unit} onChange={(e) => onChange(e.target.value)}>
+        {Object.entries(UNITS).map(([id, u]) => <option key={id} value={id}>{u.label}</option>)}
+      </select>
+      <ChevronDown size={16} aria-hidden="true" />
+    </span>
+  );
+}
+
+function HeaderActions({ unit, setUnit, onClose }) {
+  return (
+    <>
+      <UnitDropdown unit={unit} onChange={setUnit} />
+      <Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />
+    </>
   );
 }
 
 /** שדה מספר ביחידה הנוכחית. מחזיר מטרים דרך onValue. */
-function NumberField({ meters, unit, onValue, label, disabled }) {
+function NumberField({ meters, unit, onValue, label, disabled, invalid }) {
   const shown = meters > 0 ? String(+toUnit(meters, unit).toFixed(UNITS[unit].decimals + 1)) : '';
   const [text, setText] = useState(shown);
   useEffect(() => setText(shown), [shown]);
   return (
     <input className="ui-input sm mt-field" type="text" inputMode="decimal" dir="ltr" aria-label={label} value={text} disabled={disabled}
+      aria-invalid={invalid || undefined}
       onChange={(e) => {
         setText(e.target.value);
         const n = Number(e.target.value);
@@ -64,35 +76,44 @@ function CopyButton({ lines }) {
   );
 }
 
+/** שורת פעולות דביקה בתחתית הפאנל: "העתק", פעולות נוספות, ו"נקה" כקישור טקסטואלי בקצה */
+function Actions({ copy, onClear, clearDisabled, children }) {
+  return (
+    <div className="mt-actions">
+      <CopyButton lines={copy.filter(Boolean)} />
+      {children}
+      <Button variant="text" size="sm" className="mt-clear-link" disabled={clearDisabled} onClick={onClear}>נקה</Button>
+    </div>
+  );
+}
+
 const fd = (m, unit) => formatDistance(m, unit);
 const coord = (c) => `${Math.abs(c[1]).toFixed(4)}°${c[1] >= 0 ? 'N' : 'S'} ${Math.abs(c[0]).toFixed(4)}°${c[0] >= 0 ? 'E' : 'W'}`;
+const DemoTag = () => <span className="ui-chip tag">נתוני דמה</span>;
 
 function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
-  const label = (it, i) => {
-    const same = items.filter((x) => x.kind === it.kind);
-    const n = same.indexOf(it) + 1;
+  const label = (it) => {
+    const n = items.filter((x) => x.kind === it.kind).indexOf(it) + 1;
     const mm = metrics(it);
     let val = '';
-    if (it.kind === 'distance') val = Object.values(fd(mm.total, unit)).join(' ');
-    if (it.kind === 'radius') val = Object.values(fd(it.radius, unit)).join(' ');
+    if (it.kind === 'distance' || it.kind === 'height') val = Object.values(fd(mm.total, unit)).join(' ');
+    if (it.kind === 'radius' || it.kind === 'terrain') val = Object.values(fd(it.radius, unit)).join(' ');
     if (it.kind === 'time') val = formatDuration(mm.hours);
-    if (it.kind === 'height') val = Object.values(fd(mm.total, unit)).join(' ');
-    if (it.kind === 'terrain') val = Object.values(fd(it.radius, unit)).join(' ');
     if (it.kind === 'area') { const a = formatArea(mm.area, unit); val = `${a.value} ${a.unit}`; }
-    return { text: `${KIND_LABEL[it.kind]} ${n}`, val, i };
+    return { text: `${KIND_LABEL[it.kind]} ${n}`, val };
   };
   return (
     <div className="mt-saved">
       <h3>מדידות שמורות <Num>{items.length}/{max}</Num></h3>
       {items.length === 0 ? <p className="mt-empty">מדידה שהושלמה נשמרת כאן.</p> : (
         <ul>
-          {items.map((it, i) => {
-            const l = label(it, i);
+          {items.map((it) => {
+            const l = label(it);
             return (
               <li key={it.id} className={it.id === selId ? 'selected' : ''}>
                 <button type="button" className="mt-saved-main" onClick={() => onSelect(it.id)} aria-pressed={it.id === selId}>
                   <span className="mt-saved-name">{l.text}</span>
-                  {/[א-ת]/.test(l.val) ? <bdi className="num mt-saved-val">{l.val}</bdi> : <Num className="mt-saved-val">{l.val}</Num>}
+                  {HEB.test(l.val) ? <bdi className="num mt-saved-val">{l.val}</bdi> : <Num className="mt-saved-val">{l.val}</Num>}
                 </button>
                 <Button variant="icon" size="sm" aria-label={it.visible ? `הסתר ${l.text}` : `הצג ${l.text}`} onClick={() => onToggle(it.id)}
                   icon={it.visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
@@ -106,6 +127,8 @@ function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
   );
 }
 
+const circleAreaOf = (r) => Math.PI * r * r;
+
 /** פאנל יחיד (320px) לכלים הכלליים */
 export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch, onAddToList, live, m, unit, setUnit, items, selId, max, onSelect, onToggle, onDelete, onClose, onClearCurrent, onRadius }) {
   const rows = [];
@@ -117,8 +140,9 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
       copy.push(`מרחק כולל: ${t.value} ${t.unit}`, `קטעים: ${m.segments}`, m.bearing == null ? '' : `כיוון: ${formatBearing(m.bearing)}`);
     } else if (tool === 'time') {
       const t = fd(m.total, unit);
-      rows.push(['מרחק כולל', t.value, t.unit], ['משך', formatDuration(m.hours)], ['שעת הגעה (יציאה עכשיו)', formatEta(Date.now() + m.hours * 36e5)]);
-      copy.push(`מרחק כולל: ${t.value} ${t.unit}`, `מהירות: ${m.knots} קשר`, `משך: ${formatDuration(m.hours)}`, `שעת הגעה: ${formatEta(Date.now() + m.hours * 36e5)}`);
+      const eta = formatEta(Date.now() + m.hours * 36e5);
+      rows.push(['מרחק כולל', t.value, t.unit], ['משך', formatDuration(m.hours)], ['שעת הגעה (יציאה עכשיו)', eta]);
+      copy.push(`מרחק כולל: ${t.value} ${t.unit}`, `מהירות: ${m.knots} קשר`, `משך: ${formatDuration(m.hours)}`, `שעת הגעה: ${eta}`);
     } else if (tool === 'height') {
       const conv = (v) => String(unit === 'ft' ? Math.round(v / 0.3048) : Math.round(v));
       const hu = unit === 'ft' ? 'ft' : 'm';
@@ -132,9 +156,8 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
       }
     } else if (tool === 'terrain') {
       const el = elevationAt(m.center[0], m.center[1]);
-      const hu = unit === 'ft' ? 'ft' : 'm';
-      rows.push(['גובה/עומק במרכז', String(unit === 'ft' ? Math.round(el / 0.3048) : el), hu], ['כלים באזור', String(hits.length)]);
-      copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `כלים באזור: ${hits.length}`);
+      rows.push(['גובה/עומק במרכז', String(unit === 'ft' ? Math.round(el / 0.3048) : el), unit === 'ft' ? 'ft' : 'm'], ['כלים באזור', String(hits.length)]);
+      copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `כלים באזור: ${hits.length}`, ...hits.map((h) => `${h.v.name} (${fd(h.d, unit).value} ${fd(h.d, unit).unit})`));
     } else if (tool === 'area') {
       const a = formatArea(m.area, unit);
       const p = fd(m.perimeter, unit);
@@ -147,19 +170,24 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
       copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `היקף: ${c.value} ${c.unit}`, `שטח: ${a.value} ${a.unit}`);
     }
   }
+  const circleTool = tool === 'radius' || tool === 'terrain';
   return (
-    <Panel id="mt-panel" title={NAMES[tool]} className="mt-panel"
-      actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />}>
-      <UnitSelect unit={unit} onChange={setUnit} />
+    <Panel id="mt-panel" title={NAMES[tool]} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+      footer={(
+        <>
+          {tool === 'terrain' && m && m.radius > 0 && <TerrainControls hits={hits} unit={unit} watch={watch} onAddToList={onAddToList} />}
+          <Actions copy={copy} clearDisabled={!live} onClear={onClearCurrent} />
+        </>
+      )}>
       {tool === 'time' && (
         <label className="mt-knots">
           <span className="mt-readout-label">מהירות (קשר)</span>
           <KnotField value={m?.knots ?? 10} label="מהירות בקשרים" onValue={onSpeed} />
         </label>
       )}
-      {(tool === 'radius' || tool === 'terrain') && (
-        <div className="mt-field-row">
-          <label>
+      {circleTool && (
+        <>
+          <label className="mt-radius">
             <span className="mt-readout-label">רדיוס ({UNITS[unit].short})</span>
             <NumberField meters={m?.radius ?? 0} unit={unit} label="רדיוס" disabled={!m || !m.center} onValue={onRadius} />
           </label>
@@ -167,35 +195,45 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
             <span className="mt-readout-label">מרכז</span>
             <span className="mt-readout-coord">{m?.center ? <Mono>{coord(m.center)}</Mono> : '—'}</span>
           </div>
-        </div>
+        </>
       )}
       {m ? (
         <div className="mt-readouts">{rows.map(([l, v, u]) => <Readout key={l} label={l} value={v} unit={u} wide={l.startsWith('שעת')} />)}</div>
       ) : (
-        <p className="mt-empty">{tool === 'radius' || tool === 'terrain' ? 'לחץ על המפה כדי לבחור מרכז.' : tool === 'height' ? 'לחץ על המפה: נקודה לקריאת גובה, שתי נקודות ויותר לפרופיל.' : tool === 'time' ? 'לחץ על המפה: מוצא, נקודות ביניים ויעד.' : 'לחץ על המפה כדי להתחיל במדידה.'}</p>
+        <p className="mt-empty">{circleTool ? 'לחץ על המפה כדי לבחור מרכז.' : tool === 'height' ? 'לחץ על המפה: נקודה לקריאת גובה, שתי נקודות ויותר לפרופיל.' : tool === 'time' ? 'לחץ על המפה: מוצא, נקודות ביניים ויעד.' : 'לחץ על המפה כדי להתחיל במדידה.'}</p>
       )}
       {tool === 'time' && m && <CompareTable total={m.total} />}
       {tool === 'height' && m && m.points >= 2 && <ProfileChart samples={m.samples} stats={m.stats} unit={unit} onHover={onHover} />}
-      {tool === 'terrain' && m && m.radius > 0 && <TerrainResults hits={hits} unit={unit} watch={watch} onAddToList={onAddToList} onPickVessel={onPickVessel} />}
-      <div className="mt-actions">
-        <CopyButton lines={copy.filter(Boolean)} />
-        <Button size="sm" disabled={!live} onClick={onClearCurrent}>נקה</Button>
-      </div>
+      {tool === 'terrain' && m && m.radius > 0 && <TerrainList hits={hits} unit={unit} onPickVessel={onPickVessel} />}
       <SavedList items={items} selId={selId} unit={unit} max={max} onSelect={onSelect} onToggle={onToggle} onDelete={onDelete} />
     </Panel>
   );
 }
 
-const circleAreaOf = (r) => Math.PI * r * r;
-
-/** פאנל מעגלי קרבה: שם הכלי בכותרת, עד שלושה מעגלים עם ספירת כלים בטווח */
+/** פאנל מעגלי קרבה: עד שלושה מעגלים בסדר עולה (ring1 < ring2 < ring3), עם ספירת כלים בטווח */
 export function ProximityPanel({ vessel, vessels, radii, visible, unit, setUnit, onRadii, onToggle, onClear, onClose, onPickVessel }) {
   const [open, setOpen] = useState(null);
+  const [bad, setBad] = useState(null);
+  useEffect(() => setBad(null), [unit, radii.length]);
   const copy = radii.map((r, i) => `מעגל ${i + 1}: ${fd(r, unit).value} ${fd(r, unit).unit} · ${inRange(vessel, r, vessels).length} כלים בטווח`);
+  const short = UNITS[unit].short;
+  const fmtR = (m) => `${fd(m, unit).value} ${short}`;
+  const L = (m) => <Ltr>{fmtR(m)}</Ltr>;
+  const rule = (i) => (i === 0 ? <>קטן מ-{L(radii[1])}</> : i === radii.length - 1 ? <>גדול מ-{L(radii[i - 1])}</> : <>בין {L(radii[i - 1])} ל-{L(radii[i + 1])}</>);
+  const change = (i, m) => {
+    const ok = (i === 0 || m > radii[i - 1]) && (i === radii.length - 1 || m < radii[i + 1]);
+    if (!ok) { setBad(i); return; }
+    setBad(null);
+    onRadii(radii.map((x, j) => (j === i ? m : x)));
+  };
   return (
-    <Panel id="mt-panel" title={NAMES.prox} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel"
-      actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />}>
-      <UnitSelect unit={unit} onChange={setUnit} />
+    <Panel id="mt-panel" title={NAMES.prox} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+      footer={(
+        <Actions copy={copy} onClear={onClear}>
+          <Button variant="icon" size="sm" aria-pressed={!visible} aria-label={visible ? 'הסתר מעגלים' : 'הצג מעגלים'} onClick={onToggle}
+            icon={visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
+        </Actions>
+      )}>
       <ul className="mt-circles">
         {radii.map((r, i) => {
           const found = inRange(vessel, r, vessels);
@@ -204,9 +242,10 @@ export function ProximityPanel({ vessel, vessels, radii, visible, unit, setUnit,
             <li key={i}>
               <div className="mt-circle-head">
                 <span className="mt-circle-name">מעגל {i + 1}</span>
-                <NumberField meters={r} unit={unit} label={`רדיוס מעגל ${i + 1}`} onValue={(m) => onRadii(radii.map((x, j) => (j === i ? m : x)))} />
-                <span className="mt-readout-unit">{UNITS[unit].short}</span>
+                <NumberField meters={r} unit={unit} label={`רדיוס מעגל ${i + 1}`} invalid={bad === i} onValue={(m) => change(i, m)} />
+                <span className="mt-readout-unit">{short}</span>
               </div>
+              {bad === i && <p className="mt-field-error" role="alert">הרדיוס חייב להיות {rule(i)}</p>}
               <button type="button" className="mt-range" aria-expanded={isOpen} disabled={found.length === 0} onClick={() => setOpen(isOpen ? null : i)}>
                 <span className="mt-readout-label">כלים בטווח</span>
                 <Num className="mt-num">{found.length}</Num>
@@ -228,11 +267,6 @@ export function ProximityPanel({ vessel, vessels, radii, visible, unit, setUnit,
           );
         })}
       </ul>
-      <div className="mt-actions">
-        <CopyButton lines={copy} />
-        <Button size="sm" onClick={onToggle}>{visible ? 'הסתר' : 'הצג'}</Button>
-        <Button size="sm" onClick={onClear}>נקה</Button>
-      </div>
     </Panel>
   );
 }
@@ -264,7 +298,7 @@ function CompareTable({ total }) {
             const h = travelHours(total, k);
             return (
               <tr key={k}>
-                <th scope="row"><Num>{k}</Num> קשר</th>
+                <th scope="row"><bdi dir="ltr"><span className="num">{k}</span> <span className="mt-readout-unit">קשר</span></bdi></th>
                 <td>{formatDuration(h)}</td>
                 <td><Num>{formatEta(now + h * 36e5)}</Num></td>
               </tr>
@@ -282,11 +316,15 @@ export function RoutePanel({ vessel, hours, marks, visible, stats, unit, setUnit
   const d = fd(stats.distance, unit);
   const copy = [`מסלול ${vessel.name}, ${hours} שעות אחרונות`, `מרחק שנעבר: ${d.value} ${d.unit}`, `מהירות ממוצעת: ${stats.avgKnots.toFixed(1)} קשר`];
   return (
-    <Panel id="mt-panel" title={NAMES.route} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel"
-      actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />}>
-      <UnitSelect unit={unit} onChange={setUnit} />
+    <Panel id="mt-panel" title={NAMES.route} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+      footer={(
+        <Actions copy={copy} onClear={onClear}>
+          <Button variant="icon" size="sm" aria-pressed={!visible} aria-label={visible ? 'הסתר מסלול' : 'הצג מסלול'} onClick={onToggle}
+            icon={visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
+        </Actions>
+      )}>
       <div>
-        <span className="mt-readout-label">חלון זמן</span>
+        <div className="mt-label-row"><span className="mt-readout-label">חלון זמן</span><DemoTag /></div>
         <div className="mt-seg" role="radiogroup" aria-label="חלון זמן">
           {ROUTE_WINDOWS.map((h) => (
             <button key={h} type="button" role="radio" aria-checked={hours === h} className={hours === h ? 'active' : ''} onClick={() => onHours(h)}>
@@ -305,12 +343,7 @@ export function RoutePanel({ vessel, hours, marks, visible, stats, unit, setUnit
         <Readout label="כיוון נוכחי" value={formatBearing(vessel.course ?? 0)} />
         <Readout label="מהירות נוכחית" value={String(vessel.speed ?? 0)} unit="קשר" />
       </div>
-      <p className="mt-note">נתוני דמה: המסלול מחושב לאחור מהמיקום, המהירות והכיוון האחרונים. החצים מראים את כיוון התנועה.</p>
-      <div className="mt-actions">
-        <CopyButton lines={copy} />
-        <Button size="sm" onClick={onToggle}>{visible ? 'הסתר' : 'הצג'}</Button>
-        <Button size="sm" onClick={onClear}>נקה</Button>
-      </div>
+      <p className="mt-note">המסלול מחושב לאחור מהמיקום, המהירות והכיוון האחרונים. החצים מראים את כיוון התנועה.</p>
     </Panel>
   );
 }
@@ -328,9 +361,8 @@ export function ArrivalPanel({ vessel, dest, destName, knots, usedFallback, metr
   const eta = m ? formatEta(Date.now() + m.hours * 36e5) : null;
   const copy = m ? [`מוצא: ${vessel.name}`, `יעד: ${destName}`, `מרחק: ${d.value} ${d.unit}`, `כיוון: ${formatBearing(m.bearing)}`, `מהירות: ${knots} קשר`, `משך: ${formatDuration(m.hours)}`, `שעת הגעה: ${eta}`] : [];
   return (
-    <Panel id="mt-panel" title={NAMES.arrival} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel"
-      actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />}>
-      <UnitSelect unit={unit} onChange={setUnit} />
+    <Panel id="mt-panel" title={NAMES.arrival} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+      footer={<Actions copy={copy} clearDisabled={!dest} onClear={onClear} />}>
       <div className="mt-readout">
         <span className="mt-readout-label">מוצא</span>
         <span className="mt-origin"><Ltr className="cell-name">{vessel.name}</Ltr> · מיקום נוכחי</span>
@@ -358,57 +390,83 @@ export function ArrivalPanel({ vessel, dest, destName, knots, usedFallback, metr
         </div>
       ) : <p className="mt-empty">בחר יעד: לחיצה על המפה או חיפוש נמל.</p>}
       {m && <p className="mt-note">קו ישר, בלי יבשה, נתיבי שיט או מזג אוויר.</p>}
-      <div className="mt-actions">
-        <CopyButton lines={copy} />
-        <Button size="sm" disabled={!dest} onClick={onClear}>נקה</Button>
-      </div>
     </Panel>
   );
 }
 
-/** פרופיל גובה/עומק לאורך הקו (SVG). ריחוף מציג קריאה ומסמן את הנקודה על המפה. נתוני דמה */
+/** פרופיל גובה/עומק לאורך הקו (SVG): ציר Y עם min/max ושורת אפס. ריחוף מסמן את הנקודה על המפה. נתוני דמה */
 function ProfileChart({ samples, stats, unit, onHover }) {
   const [idx, setIdx] = useState(null);
   const W = 288;
-  const H = 96;
-  const PAD = 8;
+  const H = 104;
+  const L = 44;
+  const PAD = 10;
   const conv = (v) => (unit === 'ft' ? Math.round(v / 0.3048) : Math.round(v));
   const hu = unit === 'ft' ? 'ft' : 'm';
   const lo = stats.min.h;
   const hi = stats.max.h;
   const span = hi - lo || 1;
   const total = stats.length || 1;
-  const x = (d) => (d / total) * W;
+  const x = (d) => L + (d / total) * (W - L - 4);
   const y = (h) => PAD + (1 - (h - lo) / span) * (H - 2 * PAD);
   const line = samples.map((s, i) => `${i ? 'L' : 'M'}${x(s.d).toFixed(1)} ${y(s.h).toFixed(1)}`).join(' ');
-  const base = lo <= 0 && hi >= 0 ? y(0) : H - PAD;
-  const area = `${line} L${x(samples[samples.length - 1].d).toFixed(1)} ${base.toFixed(1)} L0 ${base.toFixed(1)} Z`;
+  const hasZero = lo < 0 && hi > 0;
+  const base = hasZero ? y(0) : H - PAD;
+  const area = `${line} L${x(samples[samples.length - 1].d).toFixed(1)} ${base.toFixed(1)} L${L} ${base.toFixed(1)} Z`;
   const cur = idx == null ? null : samples[idx];
   const move = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
-    const i = Math.max(0, Math.min(samples.length - 1, Math.round(((e.clientX - r.left) / r.width) * (samples.length - 1))));
+    const px = ((e.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(samples.length - 1, Math.round(((px - L) / (W - L - 4)) * (samples.length - 1))));
     setIdx(i);
     onHover?.(samples[i].ll);
   };
   const leave = () => { setIdx(null); onHover?.(null); };
+  const zeroLabel = `0 ${unit === 'ft' ? 'ft' : 'מ׳'}`;
+  const showZeroLabel = hasZero && Math.abs(y(0) - y(hi)) > 14 && Math.abs(y(0) - y(lo)) > 14;
   return (
     <div className="mt-chart">
-      <h3>פרופיל לאורך הקו</h3>
+      <div className="mt-label-row"><h3>פרופיל לאורך הקו</h3><DemoTag /></div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`פרופיל גובה, מ-${conv(lo)} עד ${conv(hi)} ${hu}`} onMouseMove={move} onMouseLeave={leave}>
-        {lo <= 0 && hi >= 0 && <line x1="0" x2={W} y1={y(0)} y2={y(0)} className="mt-chart-zero" />}
+        <line x1={L} x2={L} y1={PAD} y2={H - PAD} className="mt-chart-axisline" />
+        {hasZero && <line x1={L} x2={W} y1={y(0)} y2={y(0)} className="mt-chart-zero" />}
         <path d={area} className="mt-chart-fill" />
         <path d={line} className="mt-chart-line" />
+        <text x={L - 6} y={y(hi) + 4} textAnchor="end" className="mt-chart-axis">{conv(hi)}</text>
+        <text x={L - 6} y={y(lo) + 4} textAnchor="end" className="mt-chart-axis">{conv(lo)}</text>
+        {showZeroLabel && <text x={L - 6} y={y(0) + 4} textAnchor="end" className="mt-chart-axis zero">{zeroLabel}</text>}
         {cur && <><line x1={x(cur.d)} x2={x(cur.d)} y1="0" y2={H} className="mt-chart-cursor" /><circle cx={x(cur.d)} cy={y(cur.h)} r="3" className="mt-chart-dot" /></>}
       </svg>
       <div className="mt-chart-read">
-        {cur ? <><Num>{`${fd(cur.d, unit).value} ${fd(cur.d, unit).unit} · ${conv(cur.h)} ${hu}`}</Num>{cur.h < 0 ? ' (עומק)' : ''}</> : <span className="mt-note">העבר עכבר על הגרף. גובה חיובי, עומק שלילי. נתוני דמה.</span>}
+        {cur ? <><Num>{`${fd(cur.d, unit).value} ${fd(cur.d, unit).unit} · ${conv(cur.h)} ${hu}`}</Num>{cur.h < 0 ? ' (עומק)' : ''}</> : <span className="mt-note">העבר עכבר על הגרף. גובה חיובי, עומק שלילי.</span>}
       </div>
     </div>
   );
 }
 
-/** תוצאות חקירת שטח: כלים באזור (מודגשים על המפה), הוספה לרשימת מעקב וייצוא CSV */
-function TerrainResults({ hits, unit, watch, onAddToList, onPickVessel }) {
+/** רשימת הכלים באזור (גוף הפאנל): max-height וגלילה פנימית */
+function TerrainList({ hits, unit, onPickVessel }) {
+  return (
+    <div className="mt-terrain">
+      <h3>כלים באזור <Num>{hits.length}</Num></h3>
+      {hits.length === 0 ? <p className="mt-empty">אין כלי שיט באזור. הגדל את הרדיוס או הזז את המרכז.</p> : (
+        <ul className="mt-range-list mt-terrain-list">
+          {hits.map(({ v, d }) => (
+            <li key={v.id}>
+              <button type="button" onClick={() => onPickVessel(v.id)}>
+                <span className="mt-hit"><Ltr className="cell-name">{v.name}</Ltr><span className="mt-note">{v.type}</span></span>
+                <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** פעולות חקירת שטח, דביקות בתחתית הפאנל: הוספה לרשימת מעקב וייצוא CSV */
+function TerrainControls({ hits, unit, watch, onAddToList }) {
   const [list, setList] = useState(LISTS[0]);
   const [note, setNote] = useState('');
   useEffect(() => setNote(''), [hits.length]);
@@ -432,27 +490,11 @@ function TerrainResults({ hits, unit, watch, onAddToList, onPickVessel }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
-    <div className="mt-terrain">
-      <h3>כלים באזור <Num>{hits.length}</Num></h3>
-      {hits.length === 0 ? <p className="mt-empty">אין כלי שיט באזור. הגדל את הרדיוס או הזז את המרכז.</p> : (
-        <ul className="mt-range-list">
-          {hits.map(({ v, d }) => (
-            <li key={v.id}>
-              <button type="button" onClick={() => onPickVessel(v.id)}>
-                <span className="mt-hit"><Ltr className="cell-name">{v.name}</Ltr><span className="mt-note">{v.type}</span></span>
-                <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="mt-terrain-actions">
       <div className="mt-list-row">
-        <label className="mt-list-pick">
-          <span className="mt-readout-label">רשימת מעקב</span>
-          <select className="ui-input sm" value={list} onChange={(e) => setList(e.target.value)} aria-label="רשימת מעקב">
-            {LISTS.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </label>
+        <select className="ui-input sm" value={list} onChange={(e) => setList(e.target.value)} aria-label="רשימת מעקב">
+          {LISTS.map((l) => <option key={l} value={l}>{l}</option>)}
+        </select>
         <Button size="sm" disabled={!hits.length} onClick={add}>הוסף לרשימה</Button>
         <Button size="sm" disabled={!hits.length} onClick={exportCsv}>ייצוא CSV</Button>
       </div>

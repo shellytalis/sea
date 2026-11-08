@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Hexagon, Mountain, Navigation, Radius, Route, Ruler, ScanSearch, Target, Timer, X } from 'lucide-react';
 import { Mono } from '../../ui/Ltr';
 import { Ltr } from '../../ui/Ltr';
@@ -53,7 +52,6 @@ export function VesselBar({ vessel, active, onPick, onClose }) {
       <div className="mt-vctx">
         <Ltr className="mt-vname">{vessel.name}</Ltr>
         <span className="mt-vimo"><Mono>IMO {vessel.imo}</Mono></span>
-        <Link className="mt-vlink" to={`/vessels/${vessel.id}`}>פתח דף כלי</Link>
       </div>
       <span className="mt-vsep" aria-hidden="true" />
       <div className="mt-vtools">

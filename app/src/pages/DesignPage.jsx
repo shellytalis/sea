@@ -96,7 +96,7 @@ export default function DesignPage() {
 
         <section>
           <h2>מעטפת<SpecNote tag>הצעה</SpecNote></h2>
-          <p className="entity-note">סרגל עליון 56px: SEA · שם הדף/breadcrumb · חיפוש · תאריך ושעה | ספר טלפונים, צ'אט, התראות, ערכה | משתמש | לוגו. כפתורי אייקון 32px (אייקון 20), קבוצות 16px עם מפריד, אייקונים בקבוצה 4px. סרגל ניווט 72px, פריט 64px.</p>
+          <p className="entity-note">סרגל עליון 56px: תא מותג 72px · breadcrumb · בלוק שעה (לועזי + עברי) · אייקונים (32px, אייקון 20) | שלום, שם | לוגו. מפרידים: אחרי המותג, לפני "שלום", לפני הלוגו. החיפוש הוא כלי מפה בפינת ה-start של המפה. סרגל ניווט 72px, פריט 64px.</p>
         </section>
 
         <section>

@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView';
+import MapSearch from '../components/MapSearch';
 import VesselDrawer from '../components/VesselDrawer';
 import { VESSELS, getVessel } from '../data/vessels';
 import { mapRisk } from '../ui/severity';
@@ -11,11 +12,15 @@ export default function Home() {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get('v') ?? undefined;
   const v = getVessel(selectedId);
-  // העמודה הראשונה היא בצד ההתחלה (ימין ב-RTL): מגירה מימין, מפה משמאל
+  // העמודה הראשונה היא בצד ההתחלה (ימין ב-RTL): מגירה מימין, מפה משמאל.
+  // החיפוש הוא רכיב אחי מעל המפה (בפינת ה-start שלה), לא חלק מקוד המפה.
   return (
     <div className={`workspace${v ? ' with-drawer' : ''}`}>
       {v && <VesselDrawer v={v} onClose={() => setParams({})} />}
-      <MapView vessels={MAP_VESSELS} selectedId={selectedId} onSelect={(id) => setParams({ v: id })} />
+      <div className="map-col">
+        <MapView vessels={MAP_VESSELS} selectedId={selectedId} onSelect={(id) => setParams({ v: id })} />
+        <MapSearch onPickVessel={(id) => setParams({ v: id })} />
+      </div>
     </div>
   );
 }

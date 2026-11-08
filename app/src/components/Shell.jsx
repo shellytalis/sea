@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
-import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship, BookUser, MessageSquare, ChevronDown, ChevronLeft, LogOut } from 'lucide-react';
-import { searchEntities } from '../data/api';
+import { Link, Outlet, useLocation, useMatch } from 'react-router-dom';
+import { Map, Building2, ListChecks, Route, Bell, Sun, Moon, Anchor, FlaskConical, BookUser, MessageSquare, ChevronLeft } from 'lucide-react';
 import { getCompany } from '../data/companies';
 import { getVessel } from '../data/vessels';
 import { useTheme } from '../ui/prefs';
@@ -9,11 +8,9 @@ import { Tooltip } from '../ui/Badges';
 import Brand from '../ui/Brand';
 import Button from '../ui/Button';
 import Clock from '../ui/Clock';
-import Combobox from '../ui/Combobox';
-import CompanyLogo, { initials } from '../ui/CompanyLogo';
+import CompanyLogo from '../ui/CompanyLogo';
 import Drawer from '../ui/Drawer';
-import Popover from '../ui/Popover';
-import { Ltr, Mono } from '../ui/Ltr';
+import { Ltr } from '../ui/Ltr';
 import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
 
@@ -30,8 +27,8 @@ const NAV = [
 /** שמות דפים בסרגל העליון (לדפים ללא ישות) */
 const TITLES = { '/': 'מפה', '/companies': 'חברות', '/tracking': 'אוניות למעקב', '/od': 'ניתוח מקור–יעד', '/models': 'מודלים', '/ports': 'נמלים', '/design': 'מערכת עיצוב' };
 
-/** משתמש לדוגמה (נתוני דמה) */
-const USER = { name: 'דנה כהן', role: 'אנליסטית ימית' };
+/** משתמש לדוגמה (נתוני דמה): טקסט סטטי בסרגל העליון */
+const USER_NAME = 'דנה כהן';
 
 /** פאנלים צדדיים שטרם הוגדרו (הצעה): מצב ריק מכוון */
 const PANELS = {
@@ -66,70 +63,6 @@ function PageTitle() {
   return <h1 className="page-title">{TITLES[pathname] ?? 'מסך בפיתוח'}</h1>;
 }
 
-/** חיפוש גלובלי: כלים (שם, IMO, MMSI) וחברות (שם), מקובצים, בלי עמוד תוצאות */
-function GlobalSearch() {
-  const [q, setQ] = useState('');
-  const nav = useNavigate();
-  const { vessels, companies } = searchEntities(q);
-  const groups = [
-    {
-      id: 'vessels', label: 'כלי שיט', icon: <Ship size={16} aria-hidden="true" />,
-      items: vessels.map((v) => ({
-        key: v.id, text: v.name, to: `/vessels/${v.id}`,
-        render: () => (
-          <span className="search-hit">
-            <Ltr className="cell-name">{v.name}</Ltr>
-            <span className="sub"><Mono>IMO {v.imo}</Mono></span>
-            <span className="sub grow">{v.type}</span>
-          </span>
-        ),
-      })),
-    },
-    {
-      id: 'companies', label: 'חברות', icon: <Building2 size={16} aria-hidden="true" />,
-      items: companies.map((c) => ({
-        key: c.id, text: c.name, to: `/companies/${c.id}`,
-        render: () => (
-          <span className="search-hit">
-            <Ltr className="cell-name">{c.name}</Ltr>
-            <span className="sub grow">{c.type} · {c.country}</span>
-          </span>
-        ),
-      })),
-    },
-  ];
-  const go = (to) => { setQ(''); nav(to); };
-  const first = groups.flatMap((g) => g.items)[0];
-  return (
-    <div className="search" role="search">
-      <Search size={16} aria-hidden="true" />
-      {q === '' && <span className="search-ph" aria-hidden="true">חפש לפי שם, <bdi dir="ltr">IMO</bdi> או <bdi dir="ltr">MMSI</bdi></span>}
-      <Combobox value={q} onChange={setQ} ariaLabel="חיפוש לפי שם, IMO או MMSI" placeholder="" inputClassName=""
-        emptyText="לא נמצאו תוצאות" groups={groups} onSelect={(it) => go(it.to)} onEnter={() => { if (first) go(first.to); }} />
-    </div>
-  );
-}
-
-/** תפריט משתמש (נתוני דמה; "התנתק" הוא placeholder) */
-function UserMenu() {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onClose={() => setOpen(false)} align="end" panelProps={{ role: 'menu', 'aria-label': 'תפריט משתמש' }}
-      anchor={
-        <Button variant="ghost" size="sm" className="user-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-          <span className="avatar" aria-hidden="true">{initials(USER.name)}</span>
-          <span className="user-label"><span className="user-name">{USER.name}</span><ChevronDown size={16} aria-hidden="true" /></span>
-        </Button>
-      }>
-      <div className="user-menu">
-        <div className="user-menu-head"><strong>{USER.name}</strong><span className="sub">{USER.role}</span></div>
-        <Button variant="text" size="sm" role="menuitem" icon={<LogOut size={16} aria-hidden="true" />} onClick={() => setOpen(false)}>התנתק</Button>
-        <SpecNote tag>הצעה</SpecNote>
-      </div>
-    </Popover>
-  );
-}
-
 /** כפתור אייקון בסרגל העליון: 32x32, אייקון 20px, tooltip ו-aria-label */
 function ToolbarButton({ icon: Icon, label, active, onClick, expanded }) {
   return (
@@ -152,7 +85,6 @@ export default function Shell() {
       <header className="toolbar">
         <div className="tb-brand"><Brand /></div>
         <PageTitle />
-        <div className="tb-search"><GlobalSearch /></div>
         <div className="tb-spacer" />
         <div className="tb-end">
           <Clock />
@@ -163,7 +95,7 @@ export default function Shell() {
             <ToolbarButton icon={light ? Moon : Sun} label={light ? 'מצב כהה' : 'מצב בהיר'} onClick={toggle} />
           </div>
           <span className="tb-sep" aria-hidden="true" />
-          <UserMenu />
+          <span className="greeting">שלום, <strong>{USER_NAME}</strong></span>
           <span className="tb-sep" aria-hidden="true" />
           <CompanyLogo />
         </div>

@@ -96,3 +96,17 @@
 .map-handle { width: var(--space-4); height: var(--space-4); display: grid; place-items: center; cursor: grab; }
 .map-handle::before { content: ''; width: var(--space-2); height: var(--space-2); background: var(--map-handle); box-shadow: 0 0 0 2px var(--accent-text); }
 .map-handle:active { cursor: grabbing; }
+/* חצי חץ כיוון על מסלול כלי (משולש ישר-זווית; MapLibre מסובב את הסמן לפי כיוון התנועה) */
+.map-arrow { width: 0; height: 0; border-inline-start: 6px solid transparent; border-bottom: 12px solid var(--map-vessel); filter: drop-shadow(0 0 1px var(--map-halo)); }
+.mt-readout.wide { grid-column: 1 / -1; }
+.mt-knots { display: grid; gap: var(--space-1); }
+.mt-check { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-md); }
+.mt-note { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.mt-origin { font-size: var(--fs-md); color: var(--text-primary); }
+.mt-port-search { position: relative; }
+.mt-compare h3 { margin: 0 0 var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.mt-compare table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.mt-compare th, .mt-compare td { height: var(--control-h-sm); padding: 0 var(--space-1); text-align: start; border-top: 1px solid var(--border-subtle); font-weight: 400; white-space: nowrap; }
+.mt-compare thead th { height: var(--space-5); border-top: 0; font-size: var(--fs-xs); color: var(--text-secondary); }
+.mt-compare tbody th { color: var(--text-primary); }
+.mt-compare .mt-note { margin-top: var(--space-2); }

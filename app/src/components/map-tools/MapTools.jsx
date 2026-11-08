@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { circlePolygon, distance } from '../../map/geodesy';
+import { bearing, circlePolygon, distance } from '../../map/geodesy';
+import { demoTrack, trackStats } from '../../map/route';
+import { PORTS } from '../../data/ports';
 import { addToolLayers, setToolData } from '../../map/layers';
-import { DEFAULT_RADII_NM, buildScene, metrics, withCursor } from '../../map/scene';
-import { NM, useUnit } from '../../map/units';
+import { DEFAULT_KNOTS, DEFAULT_RADII_NM, buildScene, metrics, withCursor } from '../../map/scene';
+import { NM, travelHours, useUnit } from '../../map/units';
 import useMarkers from '../../map/useMarkers';
 import { GeneralToolbar, VesselBar } from './Toolbars';
-import { GeneralPanel, ProximityPanel } from './ToolPanel';
+import { ArrivalPanel, GeneralPanel, ProximityPanel, RoutePanel } from './ToolPanel';
 
 const MAX_SAVED = 5;
 const MAX_CIRCLES = 3;
-const DRAW = ['distance', 'radius', 'area'];
+const DRAW = ['distance', 'radius', 'area', 'time'];
 let seq = 0;
 const uid = () => `m${++seq}`;
 const defaultProx = () => ({ on: true, visible: true, radii: DEFAULT_RADII_NM.map((n) => n * NM) });
+const defaultRoute = () => ({ on: true, visible: true, hours: 24, marks: true });
+const defaultArrival = () => ({ on: true, dest: null, destName: '', speed: null });
 
 /** נוסח הנחיה: [ארוך, קצר]; הקצר מוצג כשרוחב המפה קטן (container query) */
 function hintFor(tool, draft, items) {
+  if (tool?.family === 'vessel' && tool.id === 'arrival') return ['לחיצה על המפה: בחירת יעד (או חיפוש נמל בפאנל) · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: יעד · Esc: סגירה'];
   if (!tool || tool.family !== 'general' || !DRAW.includes(tool.id)) return null;
   if (tool.id === 'radius') {
     if (draft) return ['לחיצה נוספת: קביעת הרדיוס (או הקלדה בלוח) · Esc: ביטול', 'לחיצה: רדיוס · Esc: ביטול'];
@@ -24,6 +29,7 @@ function hintFor(tool, draft, items) {
   }
   if (draft) return ['לחיצה: הוספת נקודה · לחיצה כפולה או Enter: סיום · Backspace: מחיקת נקודה · Esc: ביטול', 'לחיצה: נקודה · Enter: סיום · Esc: ביטול'];
   if (items.length >= MAX_SAVED) return ['הגעת ל-5 מדידות: מחק אחת כדי להמשיך · Esc: סגירת הכלי', 'עד 5 מדידות · Esc: סגירה'];
+  if (tool.id === 'time') return ['לחיצה על המפה: בחירת מוצא, ואז ביניים ויעד · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מוצא · Esc: סגירה'];
   return ['לחיצה על המפה: תחילת מדידה · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: תחילת מדידה · Esc: סגירה'];
 }
 
@@ -39,11 +45,16 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   const [cursor, setCursor] = useState(null);
   const [selId, setSelId] = useState(null);
   const [prox, setProx] = useState({});
+  const [route, setRoute] = useState({});
+  const [arrival, setArrival] = useState({});
+  const [timeSpeed, setTimeSpeed] = useState(DEFAULT_KNOTS);
   const [unit, setUnit] = useUnit();
   const st = useRef({});
-  st.current = { tool, items, draft, selId };
+  st.current = { tool, items, draft, selId, timeSpeed };
 
   const drawing = tool?.family === 'general' && DRAW.includes(tool.id);
+  const arrivalTool = tool?.family === 'vessel' && tool.id === 'arrival';
+  const picking = drawing || arrivalTool;
   const selected = drawing ? items.find((i) => i.id === selId && i.kind === tool.id) : undefined;
 
   const commit = useCallback((g) => {
@@ -57,23 +68,28 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
     const d = st.current.draft;
     if (!d || d.kind === 'radius') return;
     if (d.points.length < (d.kind === 'area' ? 3 : 2)) return;
-    commit({ kind: d.kind, points: d.points });
+    commit({ kind: d.kind, points: d.points, ...(d.kind === 'time' ? { speed: st.current.timeSpeed } : {}) });
   }, [commit]);
 
   const pick = (kind, id) => {
     setDraft(null); setCursor(null); setSelId(null);
     if (kind === 'general') setTool((t) => (t?.family === 'general' && t.id === id ? null : { family: 'general', id }));
     else if (vessel) {
-      setProx((p) => ({ ...p, [vessel.id]: p[vessel.id]?.on ? p[vessel.id] : { ...(p[vessel.id] ?? defaultProx()), on: true } }));
       const opening = !(tool?.family === 'vessel' && tool.id === id);
       setTool(opening ? { family: 'vessel', id, vesselId: vessel.id } : null);
-      if (opening && map) {
-        // ההתמצאות: מתאימים את התצוגה למעגל החיצוני, ומשאירים מקום לפאנל בקצה ה-end
-        const radii = (prox[vessel.id]?.radii ?? defaultProx().radii);
-        const ring = circlePolygon([vessel.lon, vessel.lat], Math.max(...radii), 24);
-        const lons = ring.map((p) => p[0]);
-        const lats = ring.map((p) => p[1]);
-        map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: { top: 120, bottom: 120, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
+      const ensure = (set, make) => set((p) => ({ ...p, [vessel.id]: p[vessel.id]?.on ? p[vessel.id] : { ...(p[vessel.id] ?? make()), on: true } }));
+      if (id === 'prox') ensure(setProx, defaultProx);
+      if (id === 'route') ensure(setRoute, defaultRoute);
+      if (id === 'arrival') ensure(setArrival, defaultArrival);
+      if (opening && map && (id === 'prox' || id === 'route')) {
+        // התאמת התצוגה למעגל החיצוני או למסלול, עם מקום לפאנל בקצה ה-end
+        const pts = id === 'prox'
+          ? circlePolygon([vessel.lon, vessel.lat], Math.max(...(prox[vessel.id]?.radii ?? defaultProx().radii)), 24)
+          : demoTrack(vessel, route[vessel.id]?.hours ?? 24).map((p) => p.ll);
+        const lons = pts.map((p) => p[0]);
+        const lats = pts.map((p) => p[1]);
+        const pad = 0.05;
+        map.fitBounds([[Math.min(...lons) - pad, Math.min(...lats) - pad], [Math.max(...lons) + pad, Math.max(...lats) + pad]], { padding: { top: 120, bottom: 120, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
       }
     }
   };
@@ -85,7 +101,12 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       if (!vessel) return null;
       return t.vesselId === vessel.id ? t : { ...t, vesselId: vessel.id };
     });
-    if (vessel) setProx((p) => (p[vessel.id] || tool?.family !== 'vessel' ? p : { ...p, [vessel.id]: defaultProx() }));
+    if (vessel && tool?.family === 'vessel') {
+      const ensure = (set, make) => set((p) => (p[vessel.id] ? p : { ...p, [vessel.id]: make() }));
+      if (tool.id === 'prox') ensure(setProx, defaultProx);
+      if (tool.id === 'route') ensure(setRoute, defaultRoute);
+      if (tool.id === 'arrival') ensure(setArrival, defaultArrival);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vessel?.id]);
 
@@ -103,7 +124,13 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   useEffect(() => {
     if (!map) return undefined;
     const isDrawing = () => { const t = st.current.tool; return t?.family === 'general' && DRAW.includes(t.id); };
+    const isArrival = () => { const t = st.current.tool; return t?.family === 'vessel' && t.id === 'arrival' && !!t.vesselId; };
     const onClick = (e) => {
+      if (isArrival()) {
+        const vid = st.current.tool.vesselId;
+        setArrival((p) => ({ ...p, [vid]: { ...(p[vid] ?? defaultArrival()), on: true, dest: [e.lngLat.lng, e.lngLat.lat], destName: 'נקודה על המפה' } }));
+        return;
+      }
       if (!isDrawing()) return;
       const { tool: t, draft: d, items: list } = st.current;
       const ll = [e.lngLat.lng, e.lngLat.lat];
@@ -131,6 +158,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
     const onDbl = () => { if (isDrawing() && st.current.tool.id !== 'radius') finish(); };
     let raf = 0;
     const onMove = (e) => {
+      if (isArrival()) { map.getCanvas().style.cursor = 'crosshair'; return; }
       if (!isDrawing()) return;
       map.getCanvas().style.cursor = 'crosshair'; // MapView מאפס סמן ביציאה מסמל כלי
       if (!st.current.draft) return;
@@ -146,15 +174,15 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
 
   // סמן crosshair, ללא זום בלחיצה כפולה, וחסימת בחירת כלי מסמל במהלך ציור
   useEffect(() => {
-    if (blockRef) blockRef.current = drawing;
-    if (!map || !drawing) return undefined;
+    if (blockRef) blockRef.current = picking;
+    if (!map || !picking) return undefined;
     map.doubleClickZoom.disable();
     map.getCanvas().style.cursor = 'crosshair';
     return () => {
       if (blockRef) blockRef.current = false;
       try { map.doubleClickZoom.enable(); map.getCanvas().style.cursor = ''; } catch { /* המפה כבר הוסרה */ }
     };
-  }, [map, drawing, blockRef]);
+  }, [map, picking, blockRef]);
 
   // מקלדת: Esc מבטל טיוטה או סוגר כלי (ב-capture, לפני Drawer), Enter מסיים, Backspace מוחק נקודה
   useEffect(() => {
@@ -187,10 +215,18 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   // סצנה: פיצ'רים, תוויות וידיות
   const edit = draft ? { id: 'draft', g: draft } : selected && selected.visible ? { id: selected.id, g: selected } : null;
   const proxState = vessel ? prox[vessel.id] : undefined;
+  const routeState = vessel ? route[vessel.id] : undefined;
+  const arrState = vessel ? arrival[vessel.id] : undefined;
+  const track = useMemo(() => (vessel && routeState?.on ? demoTrack(vessel, routeState.hours) : null), [vessel, routeState?.on, routeState?.hours]);
   const scene = useMemo(
-    () => buildScene({ items, draft, cursor, edit, unit, prox: proxState?.on && proxState.visible ? { vessel, radii: proxState.radii } : null }),
+    () => buildScene({
+      items, draft, cursor, edit, unit,
+      prox: proxState?.on && proxState.visible ? { vessel, radii: proxState.radii } : null,
+      route: track && routeState.visible ? { track, hours: routeState.hours, marks: routeState.marks } : null,
+      arrival: arrState?.on && arrState.dest ? { vessel, dest: arrState.dest, editable: arrivalTool } : null,
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, draft, cursor, selId, tool, unit, proxState, vessel],
+    [items, draft, cursor, selId, tool, unit, proxState, track, routeState, arrState, vessel],
   );
   featuresRef.current = scene.features;
   useEffect(() => { if (map) setToolData(map, scene.features); }, [map, scene.features]);
@@ -202,16 +238,23 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       pts[h.idx] = ll;
       return { ...g, points: pts };
     };
+    if (h.id === 'arrival') {
+      const vid = st.current.tool?.vesselId;
+      if (vid) setArrival((p) => ({ ...p, [vid]: { ...p[vid], dest: ll, destName: 'נקודה על המפה' } }));
+      return;
+    }
     if (h.id === 'draft') setDraft((d) => (d ? upd(d) : d));
     else setItems((l) => l.map((x) => (x.id === h.id ? upd(x) : x)));
   }, []);
   useMarkers(map, [
     ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.strong ? ' strong' : ''}` })),
+    ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: 'map-arrow' })),
     ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: 'map-handle', draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined })),
   ]);
 
   // ===== פאנל =====
-  const live = draft ? withCursor(draft, cursor) : selected;
+  const rawLive = draft ? withCursor(draft, cursor) : selected;
+  const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
   const m = metrics(live);
   const patchSel = (fn) => setItems((l) => l.map((x) => (x.id === selId ? fn(x) : x)));
   const closeTool = () => { setTool(null); setDraft(null); setCursor(null); setSelId(null); };
@@ -220,7 +263,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   let panel = null;
   if (drawing) {
     panel = (
-      <GeneralPanel tool={tool.id} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
+      <GeneralPanel tool={tool.id} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
         onSelect={(id) => {
           const it = items.find((x) => x.id === id);
           setDraft(null); setCursor(null); setSelId(id);
@@ -239,6 +282,33 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       <ProximityPanel vessel={vessel} vessels={vessels} radii={proxState.radii} visible={proxState.visible} unit={unit} setUnit={setUnit}
         onRadii={(radii) => setP({ radii })} onToggle={() => setP({ visible: !proxState.visible })}
         onClear={() => { setP({ on: false }); setTool(null); }} onClose={() => setTool(null)} onPickVessel={onSelectVessel} />
+    );
+  }
+
+  if (!panel && tool?.family === 'vessel' && vessel && tool.id === 'route' && routeState && track) {
+    const setR = (patch) => setRoute((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
+    panel = (
+      <RoutePanel vessel={vessel} hours={routeState.hours} marks={routeState.marks} visible={routeState.visible} stats={trackStats(track, routeState.hours)}
+        unit={unit} setUnit={setUnit} onHours={(hours) => setR({ hours })} onMarks={(marks) => setR({ marks })} onToggle={() => setR({ visible: !routeState.visible })}
+        onClear={() => { setR({ on: false }); setTool(null); }} onClose={() => setTool(null)} />
+    );
+  }
+  if (!panel && arrivalTool && vessel && arrState) {
+    const setA = (patch) => setArrival((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
+    const fallback = arrState.speed == null && !(vessel.speed >= 1);
+    const knots = arrState.speed ?? (vessel.speed >= 1 ? vessel.speed : DEFAULT_KNOTS);
+    const from = [vessel.lon, vessel.lat];
+    const dist = arrState.dest ? distance(from, arrState.dest) : 0;
+    const ma = arrState.dest ? { distance: dist, bearing: bearing(from, arrState.dest), hours: travelHours(dist, knots) } : null;
+    panel = (
+      <ArrivalPanel vessel={vessel} dest={arrState.dest} destName={arrState.destName} knots={knots} usedFallback={fallback} metricsArr={ma}
+        unit={unit} setUnit={setUnit} onSpeed={(k) => setA({ speed: k })}
+        onPickPort={(pid) => {
+          const p = PORTS.find((x) => x.id === pid);
+          setA({ dest: [p.lon, p.lat], destName: p.name });
+          if (map) map.fitBounds([[Math.min(from[0], p.lon), Math.min(from[1], p.lat)], [Math.max(from[0], p.lon), Math.max(from[1], p.lat)]], { padding: { top: 120, bottom: 120, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
+        }}
+        onClear={() => setA({ dest: null, destName: '' })} onClose={() => setTool(null)} />
     );
   }
 

@@ -10,14 +10,14 @@ export const GENERAL_TOOLS = [
   { id: 'area', label: 'שטח', icon: Hexagon },
   { id: 'height', label: 'גובה', icon: Mountain, soon: true },
   { id: 'terrain', label: 'חקירת שטח', icon: ScanSearch, soon: true },
-  { id: 'time', label: 'חישוב זמנים', icon: Timer, soon: true },
+  { id: 'time', label: 'חישוב זמנים', icon: Timer },
 ];
 
 /** כלי כלי השיט: רק כשכלי נבחר */
 export const VESSEL_TOOLS = [
   { id: 'prox', label: 'מעגלי קרבה', icon: Target },
-  { id: 'route', label: 'מסלול', icon: Route, soon: true },
-  { id: 'arrival', label: 'חישוב הגעה', icon: Navigation, soon: true },
+  { id: 'route', label: 'מסלול', icon: Route },
+  { id: 'arrival', label: 'חישוב הגעה', icon: Navigation },
 ];
 
 /** סרגל כלים כלליים, אנכי בקצה ה-end של המפה. תוויות גלויות, בלי tooltip. */

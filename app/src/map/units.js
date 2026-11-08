@@ -20,6 +20,29 @@ export const formatDistance = (m, unit) => ({ value: fmt(toUnit(m, unit), UNITS[
 export const formatArea = (m2, unit) => ({ value: fmt(areaToUnit(m2, unit), UNITS[unit].decimals), unit: UNITS[unit].area });
 export const formatBearing = (d) => `${Math.round(d)}°`;
 
+/** שעות הפלגה במרחק נתון (מטרים) ובמהירות נתונה (קשר = מייל ימי לשעה) */
+export const travelHours = (m, knots) => (knots > 0 ? m / (knots * NM) : Infinity);
+
+/** משך בעברית: "2 י׳ 4 ש׳" / "5 ש׳ 12 ד׳" / "40 ד׳" */
+export function formatDuration(hours) {
+  if (!Number.isFinite(hours)) return '—';
+  const t = Math.round(hours * 60);
+  const d = Math.floor(t / 1440);
+  const h = Math.floor((t % 1440) / 60);
+  const m = t % 60;
+  if (d) return `${d} י׳ ${h} ש׳`;
+  if (h) return `${h} ש׳ ${m} ד׳`;
+  return `${m} ד׳`;
+}
+
+/** שעת הגעה: dd.mm.yyyy HH:mm (שעון מקומי) */
+export function formatEta(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 const KEY = 'sea-map-unit';
 const read = () => {
   try {

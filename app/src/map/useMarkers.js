@@ -44,7 +44,7 @@ export default function useMarkers(map, specs) {
       if (!e) {
         const el = document.createElement('div');
         el.dir = 'ltr';
-        const marker = new maplibregl.Marker({ element: el, anchor: s.anchor ?? 'center', offset: s.offset ?? [0, 0] }).setLngLat(s.lngLat).addTo(map);
+        const marker = new maplibregl.Marker({ element: el, anchor: s.anchor ?? 'center', offset: s.offset ?? [0, 0], rotation: s.rotation ?? 0, rotationAlignment: 'map' }).setLngLat(s.lngLat).addTo(map);
         e = { marker, el, cls: '' };
         cur.set(s.key, e);
         if (s.draggable) attachDrag(map, el, () => latest.current.find((x) => x.key === s.key)?.onDrag, () => latest.current.find((x) => x.key === s.key)?.onDouble);
@@ -57,6 +57,7 @@ export default function useMarkers(map, specs) {
       }
       if (s.text !== undefined && e.el.textContent !== s.text) e.el.textContent = s.text;
       e.marker.setLngLat(s.lngLat);
+      if (s.rotation !== undefined) e.marker.setRotation(s.rotation);
     }
   });
   useEffect(() => () => {

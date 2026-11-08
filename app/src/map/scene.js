@@ -1,8 +1,11 @@
 // בניית "סצנה" מהמצב: פיצ'רים לשכבות, תוויות (chips) וידיות. פונקציות טהורות, בלי תלות במפה.
 import { bearing, centroid, circleArea, circleCircumference, circlePolygon, destination, distance, greatCircle, pathLength, polygonArea, polygonPerimeter } from './geodesy';
-import { formatArea, formatDistance } from './units';
+import { formatArea, formatDistance, travelHours } from './units';
+import { markStep } from './route';
 
-export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח' };
+export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים' };
+export const DEFAULT_KNOTS = 10;
+export const COMPARE_KNOTS = [8, 10, 12, 14];
 export const DEFAULT_RADII_NM = [5, 10, 20];
 // תוויות המעגלים בזוויות שונות (צפון, דרום-מזרח, דרום-מערב), כדי שמעגלים קטנים לא יערמו תוויות זו על זו
 const PROX_CHIP = [
@@ -34,9 +37,10 @@ export function withCursor(g, cursor) {
 /** מדדים לפאנל */
 export function metrics(g) {
   if (!g) return null;
-  if (g.kind === 'distance') {
+  if (g.kind === 'distance' || g.kind === 'time') {
     const n = g.points.length;
-    return { total: pathLength(g.points), segments: Math.max(0, n - 1), bearing: n >= 2 ? bearing(g.points[n - 2], g.points[n - 1]) : null, points: n };
+    const total = pathLength(g.points);
+    return { total, segments: Math.max(0, n - 1), bearing: n >= 2 ? bearing(g.points[n - 2], g.points[n - 1]) : null, points: n, knots: g.speed ?? DEFAULT_KNOTS, hours: travelHours(total, g.speed ?? DEFAULT_KNOTS) };
   }
   if (g.kind === 'area') {
     const n = g.points.length;
@@ -61,19 +65,23 @@ const dist = (m, unit) => { const f = formatDistance(m, unit); return `${f.value
  * items: מדידות שמורות; draft+cursor: טיוטה; edit: האובייקט שעורכים (ידיות); prox: {vessel, radii}
  * מחזיר { features, chips, handles }; handles: { key, lngLat, idx, id } (id = 'draft' או מזהה שמור)
  */
-export function buildScene({ items, draft, cursor, edit, prox, unit }) {
+export function buildScene({ items, draft, cursor, edit, prox, route, arrival, unit }) {
   const features = [];
   const chips = [];
   const handles = [];
+  const arrows = [];
 
   const addObj = (g, key) => {
-    if (g.kind === 'distance') {
+    if (g.kind === 'distance' || g.kind === 'time') {
       const pts = g.points;
       if (pts.length >= 2) features.push(feat({ type: 'LineString', coordinates: lineThrough(pts) }, {}));
       for (let i = 1; i < pts.length; i++) {
         chips.push({ key: `${key}-s${i}`, lngLat: greatCircle(pts[i - 1], pts[i], 2)[1], text: dist(distance(pts[i - 1], pts[i]), unit), color: 'draw', anchor: 'bottom', offset: [0, -8] });
       }
-      if (pts.length >= 3) chips.push({ key: `${key}-t`, lngLat: pts[pts.length - 1], text: dist(pathLength(pts), unit), color: 'draw', strong: true, anchor: 'top', offset: [0, 14] });
+      if (g.kind === 'time' && pts.length >= 1) {
+        chips.push({ key: `${key}-o`, lngLat: pts[0], text: 'מוצא', color: 'draw', strong: true, anchor: 'top', offset: [0, 12] });
+        if (pts.length >= 2) chips.push({ key: `${key}-d`, lngLat: pts[pts.length - 1], text: 'יעד', color: 'draw', strong: true, anchor: 'top', offset: [0, 12] });
+      } else if (pts.length >= 3) chips.push({ key: `${key}-t`, lngLat: pts[pts.length - 1], text: dist(pathLength(pts), unit), color: 'draw', strong: true, anchor: 'top', offset: [0, 14] });
     } else if (g.kind === 'area') {
       const pts = g.points;
       if (pts.length >= 3) {
@@ -109,5 +117,25 @@ export function buildScene({ items, draft, cursor, edit, prox, unit }) {
       chips.push({ key: `p${i}`, lngLat: destination(c, pos.brg, r), text: dist(r, unit), color: 'vessel', anchor: pos.anchor, offset: pos.offset });
     });
   }
-  return { features, chips, handles };
+  if (route) {
+    const pts = route.track.map((p) => p.ll);
+    features.push(feat({ type: 'LineString', coordinates: pts }, { t: 'vessel' }));
+    const step = markStep(route.hours);
+    for (let h = step; h <= route.hours + 1e-9; h += step) {
+      if (route.marks === false) break;
+      const i = Math.round(h / 0.25);
+      if (route.track[i]) chips.push({ key: `rt${h}`, lngLat: route.track[i].ll, text: `-${h}h`, color: 'vessel', anchor: 'top', offset: [0, 6] });
+      // חצי חץ כיוון באמצע כל קטע בין סימונים, מופנה בכיוון התנועה (מהישן לחדש)
+      const mid = Math.round((h - step / 2) / 0.25);
+      if (route.track[mid] && route.track[mid - 1]) arrows.push({ key: `ra${h}`, lngLat: route.track[mid].ll, rotation: bearing(route.track[mid].ll, route.track[mid - 1].ll) });
+    }
+  }
+
+  if (arrival?.dest) {
+    const from = [arrival.vessel.lon, arrival.vessel.lat];
+    features.push(feat({ type: 'LineString', coordinates: lineThrough([from, arrival.dest]) }, { t: 'vessel' }));
+    chips.push({ key: 'arr', lngLat: greatCircle(from, arrival.dest, 2)[1], text: dist(distance(from, arrival.dest), unit), color: 'vessel', anchor: 'bottom', offset: [0, -8] });
+    if (arrival.editable) handles.push({ key: 'ha', lngLat: arrival.dest, idx: 'd', id: 'arrival' });
+  }
+  return { features, chips, handles, arrows };
 }

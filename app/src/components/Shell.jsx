@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
-import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship, BookUser, MessageSquare, ChevronDown, LogOut } from 'lucide-react';
+import { Map, Building2, ListChecks, Route, Bell, Search, Sun, Moon, Anchor, FlaskConical, Ship, BookUser, MessageSquare, ChevronDown, ChevronLeft, LogOut } from 'lucide-react';
 import { searchEntities } from '../data/api';
 import { getCompany } from '../data/companies';
 import { getVessel } from '../data/vessels';
@@ -10,7 +10,7 @@ import Brand from '../ui/Brand';
 import Button from '../ui/Button';
 import Clock from '../ui/Clock';
 import Combobox from '../ui/Combobox';
-import CompanyLogo from '../ui/CompanyLogo';
+import CompanyLogo, { initials } from '../ui/CompanyLogo';
 import Drawer from '../ui/Drawer';
 import Popover from '../ui/Popover';
 import { Ltr, Mono } from '../ui/Ltr';
@@ -31,7 +31,7 @@ const NAV = [
 const TITLES = { '/': 'מפה', '/companies': 'חברות', '/tracking': 'אוניות למעקב', '/od': 'ניתוח מקור–יעד', '/models': 'מודלים', '/ports': 'נמלים', '/design': 'מערכת עיצוב' };
 
 /** משתמש לדוגמה (נתוני דמה) */
-const USER = { name: 'דנה כהן', role: 'אנליסטית ימית', initials: 'דכ' };
+const USER = { name: 'דנה כהן', role: 'אנליסטית ימית' };
 
 /** פאנלים צדדיים שטרם הוגדרו (הצעה): מצב ריק מכוון */
 const PANELS = {
@@ -51,7 +51,7 @@ function PageTitle() {
   const crumb = (parent, to, name) => (
     <nav aria-label="מיקום בדף" className="breadcrumb">
       <Link to={to} className="breadcrumb-link">{parent}</Link>
-      <span className="breadcrumb-sep" aria-hidden="true">›</span>
+      <ChevronLeft size={16} className="breadcrumb-sep" aria-hidden="true" />
       <span className="breadcrumb-current" aria-current="page"><Ltr>{name}</Ltr></span>
     </nav>
   );
@@ -103,7 +103,8 @@ function GlobalSearch() {
   return (
     <div className="search" role="search">
       <Search size={16} aria-hidden="true" />
-      <Combobox value={q} onChange={setQ} ariaLabel="חיפוש כלי שיט וחברות" placeholder="חפש שם, IMO, MMSI" inputClassName=""
+      {q === '' && <span className="search-ph" aria-hidden="true">חפש לפי שם, <bdi dir="ltr">IMO</bdi> או <bdi dir="ltr">MMSI</bdi></span>}
+      <Combobox value={q} onChange={setQ} ariaLabel="חיפוש לפי שם, IMO או MMSI" placeholder="" inputClassName=""
         emptyText="לא נמצאו תוצאות" groups={groups} onSelect={(it) => go(it.to)} onEnter={() => { if (first) go(first.to); }} />
     </div>
   );
@@ -116,9 +117,8 @@ function UserMenu() {
     <Popover open={open} onClose={() => setOpen(false)} align="end" panelProps={{ role: 'menu', 'aria-label': 'תפריט משתמש' }}
       anchor={
         <Button variant="ghost" size="sm" className="user-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-          <span className="avatar" aria-hidden="true">{USER.initials}</span>
-          <span className="user-name">{USER.name}</span>
-          <ChevronDown size={16} aria-hidden="true" />
+          <span className="avatar" aria-hidden="true">{initials(USER.name)}</span>
+          <span className="user-label"><span className="user-name">{USER.name}</span><ChevronDown size={16} aria-hidden="true" /></span>
         </Button>
       }>
       <div className="user-menu">
@@ -150,13 +150,12 @@ export default function Shell() {
   return (
     <div className="shell">
       <header className="toolbar">
-        <Brand />
-        <span className="tb-sep" aria-hidden="true" />
+        <div className="tb-brand"><Brand /></div>
         <PageTitle />
         <div className="tb-search"><GlobalSearch /></div>
+        <div className="tb-spacer" />
         <div className="tb-end">
           <Clock />
-          <span className="tb-sep" aria-hidden="true" />
           <div className="tb-icons">
             <ToolbarButton icon={BookUser} label="ספר טלפונים" active={panel === 'phonebook'} expanded={panel === 'phonebook'} onClick={() => togglePanel('phonebook')} />
             <ToolbarButton icon={MessageSquare} label="צ'אט תמיכה" active={panel === 'chat'} expanded={panel === 'chat'} onClick={() => togglePanel('chat')} />

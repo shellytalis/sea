@@ -20,7 +20,7 @@
 .panel-body .ui-table tbody tr:last-child td { border-bottom: 0; }
 
 /* ===== דפי ישות (כלי, חברה) ===== */
-.entity { overflow: clip; display: grid; grid-template-columns: 216px minmax(0, 1fr); height: 100%; min-height: 0; }
+.entity { overflow: clip; display: grid; grid-template-columns: 200px minmax(0, 1fr); height: 100%; min-height: 0; }
 .entity-nav { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4) var(--space-2); background: var(--surface); border-inline-end: 1px solid var(--border); overflow: auto; }
 .entity-nav a { display: flex; align-items: center; min-height: var(--control-h); padding: 0 var(--space-4); border-radius: var(--radius-md); color: var(--text-secondary); border-inline-start: 2px solid transparent; }
 .entity-nav a:hover { background: var(--surface-raised); color: var(--text-primary); }

@@ -44,6 +44,14 @@ export function formatEta(ms) {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/** שעת הגעה קצרה לטבלאות: dd.mm HH:mm */
+export function formatEtaShort(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 const KEY = 'sea-map-unit';
 const read = () => {
   try {

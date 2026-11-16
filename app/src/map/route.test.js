@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bearing, distance } from './geodesy.js';
-import { demoTrack, markStep, trackStats } from './route.js';
+import { demoTrack, markLabel, markStep, trackStats } from './route.js';
 import { NM, formatDuration, formatEta, travelHours } from './units.js';
 
 const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} expected ${b} ± ${tol}, got ${a}`);
@@ -27,8 +27,12 @@ test('formatEta: פורמט dd.mm.yyyy HH:mm', () => {
   assert.match(formatEta(new Date(2026, 10, 8, 9, 5).getTime()), /^08\.11\.2026 09:05$/);
 });
 
-test('markStep: עד 6 סימונים בכל חלון', () => {
-  for (const h of [6, 12, 24, 48]) assert.ok(h / markStep(h) <= 6);
+test('markStep: עד 7 סימונים בכל טווח; שעות עד 24 ש׳, ימים מעל', () => {
+  for (const h of [6, 12, 24, 48, 168, 336, 720]) assert.ok(h / markStep(h).step <= 7, String(h));
+  assert.equal(markStep(24).unit, 'h');
+  assert.equal(markStep(25).unit, 'd');
+  assert.equal(markLabel(4, 'h'), '−4 ש׳');
+  assert.equal(markLabel(48, 'd'), '−2 י׳');
 });
 
 test('demoTrack: אורך המסלול = מהירות x זמן, נגמר בנקודת הכלי, והכיוון הכללי הפוך לכיוון התנועה', () => {

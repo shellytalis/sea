@@ -10,9 +10,13 @@ import "./styles/global.css";
 import "./styles/ui.css";
 import "./styles/entity.css";
 import "./styles/map-tools.css";
+import "./styles/map-tools-set.css";
 import App from "./App";
+import { VesselSetProvider } from "./state/vesselSet";
 createRoot(document.getElementById("root")).render(<StrictMode>
     <BrowserRouter>
-      <App />
+      <VesselSetProvider>
+        <App />
+      </VesselSetProvider>
     </BrowserRouter>
   </StrictMode>);

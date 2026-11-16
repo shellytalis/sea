@@ -1,7 +1,7 @@
 // בניית "סצנה" מהמצב: פיצ'רים לשכבות, תוויות (chips) וידיות. פונקציות טהורות, בלי תלות במפה.
 import { bearing, centroid, circleArea, circleCircumference, circlePolygon, destination, distance, greatCircle, pathLength, polygonArea, polygonPerimeter } from './geodesy';
 import { formatArea, formatDistance, travelHours } from './units';
-import { markStep } from './route';
+import { markLabel, markStep, trackStep } from './route';
 import { profileSamples, profileStats } from './elevation';
 
 export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה', terrain: 'חקירת שטח' };
@@ -10,12 +10,6 @@ export const isCircle = (kind) => kind === 'radius' || kind === 'terrain';
 export const DEFAULT_KNOTS = 10;
 export const COMPARE_KNOTS = [8, 10, 12, 14];
 export const DEFAULT_RADII_NM = [5, 10, 20];
-// תוויות המעגלים בזוויות שונות (צפון, דרום-מזרח, דרום-מערב), כדי שמעגלים קטנים לא יערמו תוויות זו על זו
-const PROX_CHIP = [
-  { brg: 0, anchor: 'bottom', offset: [0, -4] },
-  { brg: 120, anchor: 'top-left', offset: [4, 2] },
-  { brg: 240, anchor: 'top-right', offset: [-4, 2] },
-];
 
 const feat = (geometry, props) => ({ type: 'Feature', properties: { t: 'draw', fill: false, dash: false, ...props }, geometry });
 
@@ -77,10 +71,11 @@ export function inRange(vessel, radiusM, all) {
 const dist = (m, unit) => { const f = formatDistance(m, unit); return `${f.value} ${f.unit}`; };
 
 /**
- * items: מדידות שמורות; draft+cursor: טיוטה; edit: האובייקט שעורכים (ידיות); prox: {vessel, radii}
+ * items: מדידות שמורות; draft+cursor: טיוטה; edit: האובייקט שעורכים (ידיות);
+ * vessels: [{ vessel, vi, active, radii?, route?: { track, hours, marks }, arrival?: { dest, editable } }]
  * מחזיר { features, chips, handles }; handles: { key, lngLat, idx, id } (id = 'draft' או מזהה שמור)
  */
-export function buildScene({ items, draft, cursor, edit, prox, route, arrival, unit }) {
+export function buildScene({ items, draft, cursor, edit, vessels, unit }) {
   const features = [];
   const chips = [];
   const handles = [];
@@ -124,33 +119,38 @@ export function buildScene({ items, draft, cursor, edit, prox, route, arrival, u
     }
   }
 
-  if (prox) {
-    const c = [prox.vessel.lon, prox.vessel.lat];
-    prox.radii.forEach((r, i) => {
-      features.push(feat({ type: 'LineString', coordinates: circlePolygon(c, r) }, { t: 'vessel', dash: true }));
-      const pos = PROX_CHIP[i % PROX_CHIP.length];
-      chips.push({ key: `p${i}`, lngLat: destination(c, pos.brg, r), text: dist(r, unit), color: 'vessel', anchor: pos.anchor, offset: pos.offset });
-    });
-  }
-  if (route) {
-    const pts = route.track.map((p) => p.ll);
-    features.push(feat({ type: 'LineString', coordinates: pts }, { t: 'vessel' }));
-    const step = markStep(route.hours);
-    for (let h = step; h <= route.hours + 1e-9; h += step) {
-      if (route.marks === false) break;
-      const i = Math.round(h / 0.25);
-      if (route.track[i]) chips.push({ key: `rt${h}`, lngLat: route.track[i].ll, text: `−${h} ש׳`, color: 'vessel', anchor: 'top', offset: [0, 6] });
-      // חצי חץ כיוון באמצע כל קטע בין סימונים, מופנה בכיוון התנועה (מהישן לחדש)
-      const mid = Math.round((h - step / 2) / 0.25);
-      if (route.track[mid] && route.track[mid - 1]) arrows.push({ key: `ra${h}`, lngLat: route.track[mid].ll, rotation: bearing(route.track[mid].ll, route.track[mid - 1].ll) });
+  // כלי שיט בסט: לכל כלי צבע (vi), דפוס קו (pat) ואטימות (הפעיל 1, האחרים 0.7)
+  for (const e of vessels ?? []) {
+    const c = [e.vessel.lon, e.vessel.lat];
+    const name = e.vessel.name;
+    const base = { t: 'vessel', vi: e.vi, active: e.active };
+    const chip = (key, lngLat, text, extra = {}) => chips.push({ key: `${e.vessel.id}-${key}`, lngLat, text, color: 'vessel', vi: e.vi, dim: !e.active, ...extra });
+    if (e.radii) {
+      e.radii.forEach((r) => features.push(feat({ type: 'LineString', coordinates: circlePolygon(c, r) }, { ...base, pat: 8 })));
+      const outer = Math.max(...e.radii);
+      chip('prox', destination(c, 0, outer), `${name} · ${dist(outer, unit)}`, { anchor: 'bottom', offset: [0, -4] });
     }
-  }
-
-  if (arrival?.dest) {
-    const from = [arrival.vessel.lon, arrival.vessel.lat];
-    features.push(feat({ type: 'LineString', coordinates: lineThrough([from, arrival.dest]) }, { t: 'vessel' }));
-    chips.push({ key: 'arr', lngLat: greatCircle(from, arrival.dest, 2)[1], text: dist(distance(from, arrival.dest), unit), color: 'vessel', anchor: 'bottom', offset: [0, -8] });
-    if (arrival.editable) handles.push({ key: 'ha', lngLat: arrival.dest, idx: 'd', id: 'arrival' });
+    if (e.route) {
+      const { track, hours, marks } = e.route;
+      features.push(feat({ type: 'LineString', coordinates: track.map((p) => p.ll) }, { ...base, pat: e.vi }));
+      chip('rname', track[Math.floor(track.length / 2)].ll, name, { strong: true, anchor: 'bottom', offset: [0, -8] });
+      if (marks) {
+        const { step, unit: mu } = markStep(hours);
+        const ts = trackStep(hours);
+        for (let h = step; h <= hours + 1e-9; h += step) {
+          const i = Math.round(h / ts);
+          if (track[i]) chip(`rt${h}`, track[i].ll, markLabel(h, mu), { anchor: 'top', offset: [0, 6] });
+          // חצי חץ כיוון באמצע כל קטע בין סימונים, מופנה בכיוון התנועה (מהישן לחדש)
+          const mid = Math.round((h - step / 2) / ts);
+          if (track[mid] && track[mid - 1]) arrows.push({ key: `${e.vessel.id}-ra${h}`, lngLat: track[mid].ll, rotation: bearing(track[mid].ll, track[mid - 1].ll), vi: e.vi, dim: !e.active });
+        }
+      }
+    }
+    if (e.arrival?.dest) {
+      features.push(feat({ type: 'LineString', coordinates: lineThrough([c, e.arrival.dest]) }, { ...base, pat: e.vi }));
+      chip('arr', greatCircle(c, e.arrival.dest, 2)[1], `${name} · ${dist(distance(c, e.arrival.dest), unit)}`, { anchor: 'bottom', offset: [0, -8] });
+      if (e.arrival.editable && e.active) handles.push({ key: 'ha', lngLat: e.arrival.dest, idx: 'd', id: 'arrival' });
+    }
   }
   return { features, chips, handles, arrows };
 }

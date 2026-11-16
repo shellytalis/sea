@@ -6,7 +6,7 @@ import Combobox from '../ui/Combobox';
 import Popover from '../ui/Popover';
 import { Ltr, Mono, Num } from '../ui/Ltr';
 import { Autocomplete, CheckGroup, MultiSelect, RangeField, Select, TextField } from '../ui/Fields';
-import { SeverityBadge, Tooltip } from '../ui/Badges';
+import { SeverityBadge, Shape, Tooltip } from '../ui/Badges';
 import { SEVERITIES } from '../ui/severity';
 import DataTable from '../ui/DataTable';
 import Drawer from '../ui/Drawer';
@@ -15,7 +15,7 @@ import { EmptyState, ErrorState, ForbiddenState, TableSkeleton } from '../ui/Sta
 import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
-import { ChevronDown, Hexagon, Mountain, Route, Ruler, Target } from 'lucide-react';
+import { Calendar, ChevronDown, Hexagon, Mountain, Navigation, Route, Ruler, Target, X } from 'lucide-react';
 import { COMPANIES, COMPANY_TYPES } from '../data/companies';
 import { SignalsPanel } from '../components/Signals';
 import Panel from '../ui/Panel';
@@ -214,16 +214,23 @@ export default function DesignPage() {
               <button type="button" className="mt-tool"><Hexagon size={20} aria-hidden="true" /><span className="mt-tool-label">רדיוס חופשי</span></button>
               <button type="button" className="mt-tool"><Mountain size={20} aria-hidden="true" /><span className="mt-tool-label">גובה</span></button>
             </nav>
-            <section className="mt-vbar" style={{ position: 'static' }} aria-label="סרגל כלי שיט (דוגמה)">
-              <div className="mt-vctx"><bdi dir="ltr" className="mt-vname">SEA FALCON</bdi><span className="mt-vimo"><bdi dir="ltr" className="mono">IMO 9198364</bdi></span></div>
-              <span className="mt-vsep" aria-hidden="true" />
-              <div className="mt-vtools">
-                <button type="button" className="mt-vtool active"><Target size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מעגלי קרבה</span></span></button>
-                <button type="button" className="mt-vtool"><Route size={20} aria-hidden="true" /><span className="mt-vtool-text"><span>מסלול</span></span></button>
+            <section className="mt-vbar" style={{ position: 'static', maxWidth: 'none' }} aria-label="סרגל כלי שיט (דוגמה)">
+              <div className="mt-vrow">
+                <span className="mt-setdd"><span className="mt-setbtn"><span className="mt-swatch vi-0" aria-hidden="true" /><Shape risk="critical" /><span className="mt-setname" dir="ltr">GULF PIONEER</span><span className="mt-setcount">3</span><ChevronDown size={16} aria-hidden="true" /></span></span>
+                <div className="mt-seg mt-modeseg"><button type="button" className="active">כלי בודד</button><button type="button">כל הסט (3)</button></div>
+                <span className="mt-daterange"><span className="mt-datebtn"><Calendar size={16} aria-hidden="true" /><span dir="ltr">07.11 – 08.11.2026</span></span></span>
+              </div>
+              <div className="mt-vrow">
+                <div className="mt-vtools">
+                  <span className="mt-vtool active on on"><Target size={20} aria-hidden="true" /><span>מעגלי קרבה</span><span className="mt-ondot" aria-hidden="true" /></span>
+                  <span className="mt-vtool"><Route size={20} aria-hidden="true" /><span>מסלול</span></span>
+                  <span className="mt-vtool"><Navigation size={20} aria-hidden="true" /><span>חישוב הגעה</span></span>
+                </div>
+                <span className="mt-vclose"><X size={16} aria-hidden="true" /></span>
               </div>
             </section>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span className="map-chip">12.4 NM</span><span className="map-chip strong">30,171.16 NM²</span><span className="map-chip vessel">−4 ש׳</span><span className="map-handle" />
+              <span className="map-chip">12.4 NM</span><span className="map-chip strong">30,171.16 NM²</span><span className="map-chip vessel vi-0">GULF PIONEER · 20 NM</span><span className="map-chip vessel vi-1 dim">−4 ש׳</span><span className="map-handle" />
             </div>
           </div>
           <div className="ds-row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap', marginTop: 16 }}>
@@ -234,7 +241,8 @@ export default function DesignPage() {
             <label className="ui-check"><input type="checkbox" defaultChecked /><span>סימוני זמן</span></label>
             <span className="ui-chip tag">נתוני דמה</span>
           </div>
-          <p className="ds-note">קריאה: ערך 16/600 ואחריו יחידה 12 משנית, בתוך bdi ltr ("716.92 NM"); משך בעברית בלי אפסים. בקרת יחידות אחת (select 32px) בכותרת הפאנל. תיבת סימון של מערכת העיצוב (16px, מסגרת 2px). צבעים (Dark): <bdi dir="ltr">--map-draw #4dd3ff</bdi>, <bdi dir="ltr">--map-vessel #cf8fff</bdi>, הילה <bdi dir="ltr">--map-halo</bdi> 3px, ידית 8px לבנה עם טבעת accent. ניגודיות מול היבשה #13263f והמים #0a1a30: 8.8 ו-10.0 (draw), 6.6 ו-7.5 (vessel). Light: TODO.</p>
+          <div className="ds-row" style={{ gap: 8, marginTop: 16 }} aria-label="צבעי כלים בסט">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <span key={i} className={'mt-swatch vi-' + i} style={{ width: 32, height: 16 }} />)}</div>
+          <p className="ds-note">קריאה: ערך 16/600 ואחריו יחידה 12 משנית, בתוך bdi ltr ("716.92 NM"); משך בעברית בלי אפסים. בקרת יחידות אחת (select 32px) בכותרת הפאנל. תיבת סימון של מערכת העיצוב (16px, מסגרת 2px). סט כלי שיט: עד 10 כלים בזיכרון האפליקציה (לא ב-URL); dropdown סט, מתג כלי בודד / כל הסט, טווח תאריכים למסלול; מעגלי קרבה, מסלול והגעה הם שכבות מקבילות (הפעיל באטימות מלאה, האחרים 70%). צבעים (Dark): <bdi dir="ltr">--map-draw #4dd3ff</bdi>, <bdi dir="ltr">--map-vessel-1..8</bdi> (ΔE של לפחות 35 זה מזה ולפחות 33 מצבעי החומרה, draw והסמלים; ניגודיות לפחות 5:1), בנוסף תווית שם ודפוס קו לכל כלי, הילה <bdi dir="ltr">--map-halo</bdi> 3px, ידית 8px לבנה עם טבעת accent. ניגודיות מול היבשה #13263f והמים #0a1a30: 8.8 ו-10.0 (draw), 6.6 ו-7.5 (vessel). Light: TODO.</p>
         </section>
 
         <section>

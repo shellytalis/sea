@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Check, ChevronDown, Copy, Eye, EyeOff, Search, Trash2, X } from 'lucide-react';
 import Combobox from '../../ui/Combobox';
 import { searchPorts } from '../../data/ports';
-import { ROUTE_WINDOWS } from '../../map/route';
 import Panel from '../../ui/Panel';
 import Button from '../../ui/Button';
 import { Ltr, Mono, Num } from '../../ui/Ltr';
 import { COMPARE_KNOTS, KIND_LABEL, inRange, metrics } from '../../map/scene';
 import { elevationAt } from '../../map/elevation';
 import { LISTS } from '../../data/vessels';
-import { UNITS, formatArea, formatBearing, formatDistance, formatDuration, formatEta, fromUnit, toUnit, travelHours } from '../../map/units';
+import { UNITS, formatArea, formatBearing, formatDistance, formatDuration, formatEta, formatEtaShort, fromUnit, toUnit, travelHours } from '../../map/units';
+import { fmtFull, rangeLabel, spanLabel } from '../../map/range';
 
 const NAMES = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה ופרופיל', terrain: 'חקירת שטח', prox: 'מעגלי קרבה', route: 'מסלול', arrival: 'חישוב הגעה' };
 const HEB = /[א-ת]/;
@@ -210,12 +210,14 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
   );
 }
 
-/** פאנל מעגלי קרבה: עד שלושה מעגלים בסדר עולה (ring1 < ring2 < ring3), עם ספירת כלים בטווח */
-export function ProximityPanel({ vessel, vessels, radii, visible, unit, setUnit, onRadii, onToggle, onClear, onClose, onPickVessel }) {
-  const [open, setOpen] = useState(null);
+const Swatch = ({ vi }) => <span className={`mt-swatch vi-${vi ?? 0}`} aria-hidden="true" />;
+
+/** פאנל מעגלי קרבה: רדיוסים משותפים לסט (ring1 < ring2 < ring3), וטבלת "כלים בטווח" מקובצת לפי כלי (אקורדיון) */
+export function ProximityPanel({ meta, targets, colors, all, radii, anyOn, unit, setUnit, onRadii, onToggle, onClear, onClose, onPickVessel }) {
+  const [openV, setOpenV] = useState(null);
+  const [openR, setOpenR] = useState(null);
   const [bad, setBad] = useState(null);
   useEffect(() => setBad(null), [unit, radii.length]);
-  const copy = radii.map((r, i) => `מעגל ${i + 1}: ${fd(r, unit).value} ${fd(r, unit).unit} · ${inRange(vessel, r, vessels).length} כלים בטווח`);
   const short = UNITS[unit].short;
   const fmtR = (m) => `${fd(m, unit).value} ${short}`;
   const L = (m) => <Ltr>{fmtR(m)}</Ltr>;
@@ -226,59 +228,88 @@ export function ProximityPanel({ vessel, vessels, radii, visible, unit, setUnit,
     setBad(null);
     onRadii(radii.map((x, j) => (j === i ? m : x)));
   };
+  const copy = targets.flatMap((v) => [v.name, ...radii.map((r, i) => `  מעגל ${i + 1}: ${fmtR(r)} · ${inRange(v, r, all).length} כלים בטווח`)]);
+  const open = openV ?? targets[0]?.id;
   return (
-    <Panel id="mt-panel" title={NAMES.prox} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+    <Panel id="mt-panel" title={NAMES.prox} meta={meta} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
       footer={(
         <Actions copy={copy} onClear={onClear}>
-          <Button variant="icon" size="sm" aria-pressed={!visible} aria-label={visible ? 'הסתר מעגלים' : 'הצג מעגלים'} onClick={onToggle}
-            icon={visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
+          <Button variant="icon" size="sm" aria-pressed={!anyOn} aria-label={anyOn ? 'כבה את שכבת מעגלי הקרבה' : 'הפעל את שכבת מעגלי הקרבה'} onClick={onToggle}
+            icon={anyOn ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
         </Actions>
       )}>
       <ul className="mt-circles">
-        {radii.map((r, i) => {
-          const found = inRange(vessel, r, vessels);
-          const isOpen = open === i;
+        {radii.map((r, i) => (
+          <li key={i}>
+            <div className="mt-circle-head">
+              <span className="mt-circle-name">מעגל {i + 1}</span>
+              <NumberField meters={r} unit={unit} label={`רדיוס מעגל ${i + 1}`} invalid={bad === i} onValue={(m) => change(i, m)} />
+              <span className="mt-readout-unit">{short}</span>
+            </div>
+            {bad === i && <p className="mt-field-error" role="alert">הרדיוס חייב להיות {rule(i)}</p>}
+          </li>
+        ))}
+      </ul>
+      {!anyOn && <p className="mt-empty">השכבה כבויה. לחץ על העין כדי להפעיל.</p>}
+      <div className="mt-acc">
+        <h3>כלים בטווח, לפי כלי</h3>
+        {targets.map((v) => {
+          const isOpen = open === v.id;
+          const outer = inRange(v, radii[radii.length - 1], all).length;
           return (
-            <li key={i}>
-              <div className="mt-circle-head">
-                <span className="mt-circle-name">מעגל {i + 1}</span>
-                <NumberField meters={r} unit={unit} label={`רדיוס מעגל ${i + 1}`} invalid={bad === i} onValue={(m) => change(i, m)} />
-                <span className="mt-readout-unit">{short}</span>
-              </div>
-              {bad === i && <p className="mt-field-error" role="alert">הרדיוס חייב להיות {rule(i)}</p>}
-              <button type="button" className="mt-range" aria-expanded={isOpen} disabled={found.length === 0} onClick={() => setOpen(isOpen ? null : i)}>
-                <span className="mt-readout-label">כלים בטווח</span>
-                <Num className="mt-num">{found.length}</Num>
+            <div key={v.id} className="mt-acc-item">
+              <button type="button" className="mt-acc-head" aria-expanded={isOpen} onClick={() => setOpenV(isOpen ? '' : v.id)}>
+                <Swatch vi={colors[v.id]} />
+                <Ltr className="cell-name">{v.name}</Ltr>
+                <Num className="mt-num mt-acc-count">{outer}</Num>
                 <ChevronDown size={16} aria-hidden="true" className={isOpen ? 'flip' : ''} />
               </button>
               {isOpen && (
-                <ul className="mt-range-list">
-                  {found.map(({ v, d }) => (
-                    <li key={v.id}>
-                      <button type="button" onClick={() => onPickVessel(v.id)}>
-                        <Ltr className="cell-name">{v.name}</Ltr>
-                        <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
-                      </button>
-                    </li>
-                  ))}
+                <ul className="mt-acc-body">
+                  {radii.map((r, i) => {
+                    const found = inRange(v, r, all);
+                    const k = `${v.id}:${i}`;
+                    return (
+                      <li key={k}>
+                        <button type="button" className="mt-range" aria-expanded={openR === k} disabled={found.length === 0} onClick={() => setOpenR(openR === k ? null : k)}>
+                          <span className="mt-readout-label">מעגל {i + 1} · <Ltr>{fmtR(r)}</Ltr></span>
+                          <Num className="mt-num">{found.length}</Num>
+                          <ChevronDown size={16} aria-hidden="true" className={openR === k ? 'flip' : ''} />
+                        </button>
+                        {openR === k && (
+                          <ul className="mt-range-list">
+                            {found.map(({ v: o, d }) => (
+                              <li key={o.id}>
+                                <button type="button" onClick={() => onPickVessel(o.id)}>
+                                  <Ltr className="cell-name">{o.name}</Ltr>
+                                  <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </Panel>
   );
 }
 
-/** שדה מהירות בקשרים (מספר חיובי) */
-function KnotField({ value, onValue, label }) {
+/** שדה מהירות בקשרים (מספר חיובי); allowEmpty: ריק = ביטול הערך */
+function KnotField({ value, onValue, label, placeholder, allowEmpty }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
-    <input className="ui-input sm mt-field" type="text" inputMode="decimal" dir="ltr" aria-label={label} value={text}
+    <input className="ui-input sm mt-field" type="text" inputMode="decimal" dir="ltr" aria-label={label} value={text} placeholder={placeholder}
       onChange={(e) => {
         setText(e.target.value);
+        if (allowEmpty && e.target.value.trim() === '') { onValue(null); return; }
         const n = Number(e.target.value);
         if (Number.isFinite(n) && n > 0 && n <= 60) onValue(n);
       }} />
@@ -311,64 +342,77 @@ function CompareTable({ total }) {
   );
 }
 
-/** פאנל מסלול כלי: חלון זמן, סימוני זמן, מדדים. נתוני דמה */
-export function RoutePanel({ vessel, hours, marks, visible, stats, unit, setUnit, onHours, onMarks, onToggle, onClear, onClose }) {
-  const d = fd(stats.distance, unit);
-  const copy = [`מסלול ${vessel.name}, ${hours} שעות אחרונות`, `מרחק שנעבר: ${d.value} ${d.unit}`, `מהירות ממוצעת: ${stats.avgKnots.toFixed(1)} קשר`];
+/** פאנל מסלול כלי: סיכום הטווח (הבחירה עצמה בכפתור הטווח בסרגל), סימוני זמן, מדדים. נתוני דמה */
+export function RoutePanel({ meta, targets, colors, info, marks, anyOn, statsList, unit, setUnit, onMarks, onToggle, onClear, onClose }) {
+  const multi = targets.length > 1;
+  const rows = targets.map((v, i) => ({ v, d: fd(statsList[i].distance, unit), k: statsList[i].avgKnots }));
+  const copy = [`מסלול, ${rangeLabel(info.from, info.to)} (${spanLabel(info.hours)})`, ...rows.map((r) => `${r.v.name}: ${r.d.value} ${r.d.unit}, ממוצע ${r.k.toFixed(1)} קשר`)];
+  const one = targets[0];
   return (
-    <Panel id="mt-panel" title={NAMES.route} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+    <Panel id="mt-panel" title={NAMES.route} meta={meta} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
       footer={(
         <Actions copy={copy} onClear={onClear}>
-          <Button variant="icon" size="sm" aria-pressed={!visible} aria-label={visible ? 'הסתר מסלול' : 'הצג מסלול'} onClick={onToggle}
-            icon={visible ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
+          <Button variant="icon" size="sm" aria-pressed={!anyOn} aria-label={anyOn ? 'כבה את שכבת המסלול' : 'הפעל את שכבת המסלול'} onClick={onToggle}
+            icon={anyOn ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
         </Actions>
       )}>
-      <div>
-        <div className="mt-label-row"><span className="mt-readout-label">חלון זמן</span><DemoTag /></div>
-        <div className="mt-seg" role="radiogroup" aria-label="חלון זמן">
-          {ROUTE_WINDOWS.map((h) => (
-            <button key={h} type="button" role="radio" aria-checked={hours === h} className={hours === h ? 'active' : ''} onClick={() => onHours(h)}>
-              <Num>{h}</Num> ש׳
-            </button>
-          ))}
-        </div>
+      <div className="mt-readout">
+        <div className="mt-label-row"><span className="mt-readout-label">טווח</span><DemoTag /></div>
+        <span className="mt-range-sum"><Num>{fmtFull(info.from)}</Num> – <Num>{fmtFull(info.to)}</Num> · {spanLabel(info.hours)}</span>
       </div>
       <label className="ui-check mt-check">
         <input type="checkbox" checked={marks} onChange={(e) => onMarks(e.target.checked)} />
         <span>סימוני זמן</span>
       </label>
-      <div className="mt-readouts">
-        <Readout label="מרחק שנעבר" value={d.value} unit={d.unit} />
-        <Readout label="מהירות ממוצעת" value={stats.avgKnots.toFixed(1)} unit="קשר" />
-        <Readout label="כיוון נוכחי" value={formatBearing(vessel.course ?? 0)} />
-        <Readout label="מהירות נוכחית" value={String(vessel.speed ?? 0)} unit="קשר" />
-      </div>
-      <p className="mt-note">המסלול מחושב לאחור מהמיקום, המהירות והכיוון האחרונים. החצים מראים את כיוון התנועה.</p>
+      {!anyOn && <p className="mt-empty">השכבה כבויה. לחץ על העין כדי להפעיל.</p>}
+      {multi ? (
+        <div className="mt-compare">
+          <table>
+            <thead><tr><th scope="col">כלי</th><th scope="col">מרחק ({UNITS[unit].short})</th><th scope="col">ממוצע (קשר)</th></tr></thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.v.id}>
+                  <th scope="row"><span className="mt-rowname"><Swatch vi={colors[r.v.id]} /><Ltr>{r.v.name}</Ltr></span></th>
+                  <td><Num>{r.d.value}</Num></td>
+                  <td><Num>{r.k.toFixed(1)}</Num></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : one && (
+        <div className="mt-readouts">
+          <Readout label="מרחק שנעבר" value={rows[0].d.value} unit={rows[0].d.unit} />
+          <Readout label="מהירות ממוצעת" value={rows[0].k.toFixed(1)} unit="קשר" />
+          <Readout label="כיוון נוכחי" value={formatBearing(one.course ?? 0)} />
+          <Readout label="מהירות נוכחית" value={String(one.speed ?? 0)} unit="קשר" />
+        </div>
+      )}
+      <p className="mt-note">המסלול מחושב לאחור מהמיקום, המהירות והכיוון האחרונים. החצים מראים את כיוון התנועה, והתוויות את הזמן עד סוף הטווח.</p>
     </Panel>
   );
 }
 
-/** פאנל חישוב הגעה: מוצא = הכלי, מהירות ברירת מחדל = מהירות הכלי, יעד בלחיצה על המפה או בחיפוש נמל */
-export function ArrivalPanel({ vessel, dest, destName, knots, usedFallback, metricsArr, unit, setUnit, onSpeed, onPickPort, onClear, onClose }) {
+/** פאנל חישוב הגעה: יעד משותף (לחיצה על המפה או חיפוש נמל), מהירות אחידה אופציונלית, וטבלה: כלי | מרחק | משך | הגעה */
+export function ArrivalPanel({ meta, colors, dest, destName, uniform, anyOn, rows, multi, unit, setUnit, onUniform, onPickPort, onToggle, onClear, onClose }) {
   const [q, setQ] = useState('');
   const ports = q.trim() ? searchPorts(q) : [];
   const groups = [{
     id: 'ports', label: 'נמלים', icon: <Search size={16} aria-hidden="true" />,
     items: ports.map((p) => ({ key: p.id, text: p.name, id: p.id, render: () => <span className="search-hit"><Ltr className="cell-name">{p.name}</Ltr><span className="sub grow">{p.country}</span></span> })),
   }];
-  const m = metricsArr;
-  const d = m ? fd(m.distance, unit) : null;
-  const eta = m ? formatEta(Date.now() + m.hours * 36e5) : null;
-  const copy = m ? [`מוצא: ${vessel.name}`, `יעד: ${destName}`, `מרחק: ${d.value} ${d.unit}`, `כיוון: ${formatBearing(m.bearing)}`, `מהירות: ${knots} קשר`, `משך: ${formatDuration(m.hours)}`, `שעת הגעה: ${eta}`] : [];
+  const copy = dest ? [`יעד: ${destName}`, ...rows.map((r) => `${r.vessel.name}: ${fd(r.distance, unit).value} ${fd(r.distance, unit).unit}, ${formatDuration(r.hours)}, הגעה ${formatEta(Date.now() + r.hours * 36e5)}`)] : [];
+  const anyFallback = rows.some((r) => r.fallback);
   return (
-    <Panel id="mt-panel" title={NAMES.arrival} meta={<Ltr>{vessel.name}</Ltr>} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
-      footer={<Actions copy={copy} clearDisabled={!dest} onClear={onClear} />}>
+    <Panel id="mt-panel" title={NAMES.arrival} meta={meta} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
+      footer={(
+        <Actions copy={copy} clearDisabled={!dest} onClear={onClear}>
+          <Button variant="icon" size="sm" aria-pressed={!anyOn} aria-label={anyOn ? 'כבה את שכבת ההגעה' : 'הפעל את שכבת ההגעה'} onClick={onToggle}
+            icon={anyOn ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />} />
+        </Actions>
+      )}>
       <div className="mt-readout">
-        <span className="mt-readout-label">מוצא</span>
-        <span className="mt-origin"><Ltr className="cell-name">{vessel.name}</Ltr> · מיקום נוכחי</span>
-      </div>
-      <div className="mt-readout">
-        <span className="mt-readout-label">יעד</span>
+        <span className="mt-readout-label">יעד {multi ? 'משותף' : ''}</span>
         <div className="search mt-port-search">
           <Search size={16} aria-hidden="true" />
           <Combobox value={q} onChange={setQ} ariaLabel="חיפוש נמל יעד" placeholder={dest ? destName : 'חפש נמל, או לחץ על המפה'} inputClassName=""
@@ -377,19 +421,29 @@ export function ArrivalPanel({ vessel, dest, destName, knots, usedFallback, metr
         {dest && <span className="mt-readout-coord">{destName}</span>}
       </div>
       <label className="mt-knots">
-        <span className="mt-readout-label">מהירות (קשר)</span>
-        <KnotField value={knots} label="מהירות בקשרים" onValue={onSpeed} />
-        {usedFallback && <span className="mt-note">מהירות הכלי נמוכה מ-1 קשר, ולכן ברירת המחדל היא 10 קשר.</span>}
+        <span className="mt-readout-label">{multi ? 'מהירות אחידה (קשר, אופציונלי)' : 'מהירות (קשר, אופציונלי)'}</span>
+        <KnotField value={uniform ?? ''} label="מהירות אחידה בקשרים" placeholder="מהירות הכלי" onValue={onUniform} allowEmpty />
       </label>
-      {m ? (
-        <div className="mt-readouts">
-          <Readout label="מרחק" value={d.value} unit={d.unit} />
-          <Readout label="כיוון" value={formatBearing(m.bearing)} />
-          <Readout label="משך" value={formatDuration(m.hours)} />
-          <Readout label="שעת הגעה" value={eta} wide />
+      {!anyOn && <p className="mt-empty">השכבה כבויה. לחץ על העין כדי להפעיל.</p>}
+      {dest ? (
+        <div className="mt-compare">
+          <table>
+            <thead><tr><th scope="col">כלי</th><th scope="col">מרחק ({UNITS[unit].short})</th><th scope="col">משך</th><th scope="col">הגעה</th></tr></thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.vessel.id}>
+                  <th scope="row"><span className="mt-rowname"><Swatch vi={colors[r.vessel.id]} /><Ltr>{r.vessel.name}</Ltr></span></th>
+                  <td><Num>{fd(r.distance, unit).value}</Num></td>
+                  <td>{formatDuration(r.hours)}{r.fallback ? ' *' : ''}</td>
+                  <td><Num>{formatEtaShort(Date.now() + r.hours * 36e5)}</Num></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {anyFallback && <p className="mt-note">* מהירות הכלי מתחת ל-1 קשר, ולכן חושב ב-10 קשר.</p>}
+          <p className="mt-note">קו ישר, בלי יבשה, נתיבי שיט או מזג אוויר.</p>
         </div>
       ) : <p className="mt-empty">בחר יעד: לחיצה על המפה או חיפוש נמל.</p>}
-      {m && <p className="mt-note">קו ישר, בלי יבשה, נתיבי שיט או מזג אוויר.</p>}
     </Panel>
   );
 }

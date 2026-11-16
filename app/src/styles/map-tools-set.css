@@ -1,0 +1,109 @@
+/* ===== סט כלי שיט, שכבות מקבילות וטווח תאריכים =====
+   סרגל כלי שיט בשתי שורות, מעוגן בתחתית מימין לסרגל הכללי (בצד ה-start שלו). הסרגל הכללי והפאנל נעצרים מעליו. */
+.map-col { --vbar-h: 100px; --vbar-bottom: var(--space-5); }
+.mt-stack.with-vbar { inset-block-end: calc(var(--vbar-bottom) + var(--vbar-h) + var(--space-2)); }
+.mt-bar { max-height: 100%; overflow-y: auto; scrollbar-width: thin; }
+
+.mt-vbar { align-items: stretch; position: absolute; z-index: 6; inset-block-end: var(--vbar-bottom); inset-inline-end: calc(var(--space-4) + 56px + var(--space-2)); width: 520px; max-width: calc(100cqw - 80px - 302px); height: var(--vbar-h); box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--surface); border: 1px solid var(--border-strong); border-top: 2px solid var(--map-vessel-1); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
+.mt-vrow { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.mt-vrow .mt-vtools { flex: 1; min-width: 0; }
+
+/* צבע כלי בסט: --vi לפי אינדקס */
+.vi-0 { --vi: var(--map-vessel-1); } .vi-1 { --vi: var(--map-vessel-2); } .vi-2 { --vi: var(--map-vessel-3); } .vi-3 { --vi: var(--map-vessel-4); }
+.vi-4 { --vi: var(--map-vessel-5); } .vi-5 { --vi: var(--map-vessel-6); } .vi-6 { --vi: var(--map-vessel-7); } .vi-7 { --vi: var(--map-vessel-8); }
+.mt-swatch { flex: none; width: var(--space-2); height: var(--space-4); border-radius: var(--radius-sm); background: var(--vi, var(--map-vessel-1)); }
+.map-chip[class*=' vi-'] { border-color: var(--vi); }
+.map-chip.dim, .map-arrow.dim, .map-ring.dim { opacity: 0.7; }
+.map-arrow[class*=' vi-'] { border-bottom-color: var(--vi); }
+.map-ring.set { width: 38px; height: 38px; border-color: var(--vi); box-shadow: 0 0 0 1.5px var(--map-halo); }
+
+/* dropdown הסט */
+.mt-setdd { position: relative; flex: 1; min-width: 0; }
+.mt-setbtn { width: 100%; height: var(--control-h-sm); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-md); color: var(--text-primary); text-align: start; }
+.mt-setbtn:hover { border-color: var(--text-secondary); }
+.mt-setname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 600; text-align: start; }
+.mt-setcount { flex: none; min-width: 20px; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--border); text-align: center; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-primary); }
+.mt-setbtn svg:last-child { flex: none; color: var(--text-secondary); }
+.mt-vpop { position: absolute; z-index: var(--z-popover); inset-block-end: calc(100% + var(--space-2)); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-pop); }
+.mt-setpop { inset-inline-start: 0; width: 360px; max-width: calc(100cqw - 96px); }
+.mt-setlist { list-style: none; margin: 0; padding: var(--space-1); max-height: 264px; overflow-y: auto; scrollbar-width: thin; outline: none; }
+.mt-setrow { display: flex; align-items: center; gap: var(--space-2); height: var(--row-h); padding: 0 var(--space-2); border-radius: var(--radius-sm); cursor: pointer; border-inline-start: 2px solid transparent; }
+.mt-setrow.hi { background: var(--surface-raised); outline: 2px solid var(--focus); outline-offset: -2px; }
+.mt-setlist:not(:focus) .mt-setrow.hi { outline: none; }
+.mt-setrow.on { border-inline-start-color: var(--accent); }
+.mt-setrow-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 600; text-align: start; }
+.mt-setrow-imo { font-size: var(--fs-sm); color: var(--text-secondary); white-space: nowrap; }
+.mt-setrow-check { width: var(--space-4); flex: none; color: var(--accent-text); }
+.mt-setrow-x { flex: none; width: var(--control-h-sm); height: var(--control-h-sm); display: grid; place-items: center; background: none; border: 0; border-radius: var(--radius-md); color: var(--text-secondary); }
+.mt-setrow-x:hover { background: var(--border); color: var(--text-primary); }
+.mt-setfoot { display: flex; padding: var(--space-1) var(--space-2); border-top: 1px solid var(--border); }
+
+/* מתג כלי בודד / כל הסט */
+.mt-modeseg { flex: none; grid-template-columns: repeat(2, auto); width: auto; }
+.mt-modeseg button { padding: 0 var(--space-3); font-size: var(--fs-sm); }
+
+/* טווח תאריכים */
+.mt-daterange { position: relative; flex: none; }
+.mt-datebtn { height: var(--control-h-sm); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--fs-sm); white-space: nowrap; }
+.mt-datebtn:hover { border-color: var(--text-secondary); }
+.mt-datebtn svg { color: var(--text-secondary); }
+.mt-rangepop { inset-inline-end: 0; width: 320px; display: grid; gap: var(--space-3); padding: var(--space-3); }
+.mt-presets { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.mt-presets button { height: 28px; padding: 0 var(--space-2); background: none; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--fs-sm); }
+.mt-presets button:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.mt-presets button.active { background: var(--accent-bg); border-color: var(--accent); color: var(--text-primary); }
+.mt-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.mt-rfield { display: grid; gap: var(--space-1); padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.mt-rfield.on { border-color: var(--accent); }
+.mt-rfield-day { display: grid; background: none; border: 0; padding: 0; text-align: start; color: var(--text-primary); }
+.mt-rfield .ui-input { width: 100%; }
+.mt-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1); }
+.mt-cal-title { font-size: var(--fs-md); font-weight: 600; }
+.mt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mt-cal-wd { text-align: center; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); padding-bottom: var(--space-1); }
+.mt-cal-day { height: var(--control-h-sm); background: none; border: 0; border-radius: var(--radius-sm); color: var(--text-primary); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.mt-cal-day:hover:not(:disabled) { background: var(--surface-raised); }
+.mt-cal-day:disabled { color: var(--text-tertiary); opacity: 0.5; cursor: not-allowed; }
+.mt-cal-day.in { background: var(--accent-bg); }
+.mt-cal-day.today { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.mt-cal-day.sel { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.mt-popfoot { display: flex; gap: var(--space-2); }
+
+/* שכבות כלי שיט: נקודת "פעיל" */
+.mt-vtools { display: flex; gap: var(--space-1); }
+.mt-vtool { position: relative; }
+.mt-ondot { position: absolute; inset-block-start: 5px; inset-inline-start: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-text); }
+.mt-vtool.part .mt-ondot { background: none; box-shadow: inset 0 0 0 1.5px var(--accent-text); }
+.mt-vtool.active { box-shadow: inset 0 -2px 0 var(--accent-text); }
+.mt-vclose { margin-inline-start: auto; flex: none; }
+
+/* פאנלים: אקורדיון כלים בטווח, טבלאות, טווח */
+.mt-acc h3 { margin: 0 0 var(--space-1); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; color: var(--text-secondary); }
+.mt-acc-item { border-top: 1px solid var(--border-subtle); }
+.mt-acc-head { width: 100%; height: var(--row-h); display: flex; align-items: center; gap: var(--space-2); padding: 0; background: none; border: 0; text-align: start; color: var(--text-primary); }
+.mt-acc-head .cell-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: start; font-weight: 600; }
+.mt-acc-head svg { color: var(--text-secondary); transition: transform 120ms; }
+.mt-acc-head svg.flip { transform: rotate(180deg); }
+.mt-acc-count { font-weight: 600; }
+.mt-acc-body { list-style: none; margin: 0 0 var(--space-2); padding: 0 0 0 0; padding-inline-start: var(--space-4); }
+.mt-rowname { display: inline-flex; align-items: center; gap: var(--space-2); }
+.mt-range-sum { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-primary); }
+
+/* מגירת הסט */
+.set-list { list-style: none; margin: 0; padding: 0; }
+.set-row { width: 100%; min-height: var(--row-h); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2); background: none; border: 0; border-bottom: 1px solid var(--border-subtle); border-inline-start: 2px solid transparent; text-align: start; color: var(--text-primary); }
+.set-row:hover { background: var(--surface-raised); }
+.set-row.on { background: var(--surface-raised); border-inline-start-color: var(--accent); }
+.set-row-text { flex: 1; min-width: 0; display: grid; justify-items: start; }
+.set-row-sub { font-size: var(--fs-sm); color: var(--text-secondary); }
+.set-row svg:last-child { color: var(--accent-text); }
+
+/* toast */
+.toast { position: fixed; z-index: var(--z-tooltip); inset-block-end: var(--space-5); inset-inline-start: 50%; transform: translateX(50%); display: flex; align-items: center; gap: var(--space-4); max-width: calc(100vw - 32px); padding: var(--space-3) var(--space-4); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-pop); color: var(--text-primary); font-size: var(--fs-md); }
+.toast-action { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 600; font-size: var(--fs-md); }
+.toast-action:hover { text-decoration: underline; }
+
+.mt-compare th, .mt-compare td { padding: 0 var(--space-1); }
+.mt-compare tbody th { white-space: nowrap; max-width: 134px; overflow: hidden; text-overflow: ellipsis; }
+.mt-rowname { white-space: nowrap; }
+.mt-compare td { line-height: var(--lh-xs); padding-block: var(--space-1); }

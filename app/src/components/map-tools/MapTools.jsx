@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { bearing, circlePolygon, distance } from '../../map/geodesy';
+import { circlePolygon, distance } from '../../map/geodesy';
 import { demoTrack, trackStats } from '../../map/route';
+import { resolveRange } from '../../map/range';
 import { PORTS } from '../../data/ports';
 import { addToolLayers, setToolData } from '../../map/layers';
-import { DEFAULT_KNOTS, DEFAULT_RADII_NM, buildScene, isCircle, metrics, withCursor, within } from '../../map/scene';
-import { NM, travelHours, useUnit } from '../../map/units';
+import { DEFAULT_KNOTS, buildScene, isCircle, metrics, withCursor, within } from '../../map/scene';
+import { travelHours, useUnit } from '../../map/units';
 import useMarkers from '../../map/useMarkers';
+import { DEFAULT_RADII, useVesselSet } from '../../state/vesselSet';
 import { GeneralToolbar, VesselBar } from './Toolbars';
 import { ArrivalPanel, GeneralPanel, ProximityPanel, RoutePanel } from './ToolPanel';
 
 const MAX_SAVED = 5;
 const MAX_CIRCLES = 3;
 const DRAW = ['distance', 'radius', 'area', 'time', 'height', 'terrain'];
+const LAYER_KEYS = ['prox', 'route', 'arrival'];
 let seq = 0;
 const uid = () => `m${++seq}`;
-const defaultProx = () => ({ on: true, visible: true, radii: DEFAULT_RADII_NM.map((n) => n * NM) });
-const defaultRoute = () => ({ on: true, visible: true, hours: 24, marks: true });
-const defaultArrival = () => ({ on: true, dest: null, destName: '', speed: null });
 
 /** נוסח הנחיה: [ארוך, קצר]; הקצר מוצג כשרוחב המפה קטן (container query) */
 function hintFor(tool, draft, items) {
@@ -36,25 +36,32 @@ function hintFor(tool, draft, items) {
 }
 
 /**
- * כלי מפה: שתי משפחות, מצב יחיד { family, id, vesselId? } ופאנל אחד בכל רגע.
+ * כלי מפה: כלים כלליים (מצב יחיד { family, id }, פאנל אחד בכל רגע) ושכבות כלי שיט על סט הכלים (מעגלי קרבה, מסלול,
+ * הגעה) שאפשר להפעיל במקביל, ל"כלי בודד" או ל"כל הסט". הסט והשכבות שמורים ב-state ברמת האפליקציה.
  * רכיב אחי של המפה (לא בתוך קוד המפה): מקבל את מופע המפה דרך onMapReady.
  * children: כלי החיפוש, שיושב בשורת ה-overlay (חיפוש ב-start, הנחיה באמצע, מקום לזום ב-end).
  */
-export default function MapTools({ map, vessel, vessels, onSelectVessel, onClearVessel, blockRef, children }) {
+export default function MapTools({ map, vessels, onActivate, onSelectVessel, blockRef, children }) {
+  const vs = useVesselSet();
+  const { ids, activeId, mode, layers, radii, range, marks, arrival: arr, colors } = vs.state;
   const [tool, setTool] = useState(null);
   const [items, setItems] = useState([]);
   const [draft, setDraft] = useState(null);
   const [cursor, setCursor] = useState(null);
   const [selId, setSelId] = useState(null);
-  const [prox, setProx] = useState({});
-  const [route, setRoute] = useState({});
-  const [arrival, setArrival] = useState({});
   const [timeSpeed, setTimeSpeed] = useState(DEFAULT_KNOTS);
   const [watch, setWatch] = useState({});
   const [hoverLL, setHoverLL] = useState(null);
   const [unit, setUnit] = useUnit();
+
+  const setVessels = useMemo(() => ids.map((id) => vessels.find((v) => v.id === id)).filter(Boolean), [ids, vessels]);
+  const active = setVessels.find((v) => v.id === activeId) ?? null;
+  const targets = mode === 'all' ? setVessels : active ? [active] : [];
+  const targetIds = targets.map((v) => v.id);
+  const rr = useMemo(() => resolveRange(range), [range]);
+
   const st = useRef({});
-  st.current = { tool, items, draft, selId, timeSpeed };
+  st.current = { tool, items, draft, selId, timeSpeed, targetIds };
 
   const drawing = tool?.family === 'general' && DRAW.includes(tool.id);
   const arrivalTool = tool?.family === 'vessel' && tool.id === 'arrival';
@@ -75,44 +82,44 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
     commit({ kind: d.kind, points: d.points, ...(d.kind === 'time' ? { speed: st.current.timeSpeed } : {}) });
   }, [commit]);
 
-  const pick = (kind, id) => {
+  const pickGeneral = (id) => {
     setDraft(null); setCursor(null); setSelId(null);
-    if (kind === 'general') setTool((t) => (t?.family === 'general' && t.id === id ? null : { family: 'general', id }));
-    else if (vessel) {
-      const opening = !(tool?.family === 'vessel' && tool.id === id);
-      setTool(opening ? { family: 'vessel', id, vesselId: vessel.id } : null);
-      const ensure = (set, make) => set((p) => ({ ...p, [vessel.id]: p[vessel.id]?.on ? p[vessel.id] : { ...(p[vessel.id] ?? make()), on: true } }));
-      if (id === 'prox') ensure(setProx, defaultProx);
-      if (id === 'route') ensure(setRoute, defaultRoute);
-      if (id === 'arrival') ensure(setArrival, defaultArrival);
-      if (opening && map && (id === 'prox' || id === 'route')) {
-        // התאמת התצוגה למעגל החיצוני או למסלול, עם מקום לפאנל בקצה ה-end
-        const pts = id === 'prox'
-          ? circlePolygon([vessel.lon, vessel.lat], Math.max(...(prox[vessel.id]?.radii ?? defaultProx().radii)), 24)
-          : demoTrack(vessel, route[vessel.id]?.hours ?? 24).map((p) => p.ll);
-        const lons = pts.map((p) => p[0]);
-        const lats = pts.map((p) => p[1]);
-        const pad = 0.05;
-        map.fitBounds([[Math.min(...lons) - pad, Math.min(...lats) - pad], [Math.max(...lons) + pad, Math.max(...lats) + pad]], { padding: { top: 120, bottom: 120, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
-      }
-    }
+    setTool((t) => (t?.family === 'general' && t.id === id ? null : { family: 'general', id }));
   };
 
-  // מחזור חיי הכלי הנבחר: ביטול בחירה סוגר את כלי הכלי; בחירת כלי אחר מזיזה את הכלי אליו
-  useEffect(() => {
-    setTool((t) => {
-      if (!t || t.family !== 'vessel') return t;
-      if (!vessel) return null;
-      return t.vesselId === vessel.id ? t : { ...t, vesselId: vessel.id };
-    });
-    if (vessel && tool?.family === 'vessel') {
-      const ensure = (set, make) => set((p) => (p[vessel.id] ? p : { ...p, [vessel.id]: make() }));
-      if (tool.id === 'prox') ensure(setProx, defaultProx);
-      if (tool.id === 'route') ensure(setRoute, defaultRoute);
-      if (tool.id === 'arrival') ensure(setArrival, defaultArrival);
+  /** התאמת התצוגה לשכבה שהופעלה, עם מקום לפאנל בקצה ה-end */
+  const fit = (pts) => {
+    if (!map || !pts.length) return;
+    const lons = pts.map((p) => p[0]);
+    const lats = pts.map((p) => p[1]);
+    const pad = 0.05;
+    map.fitBounds([[Math.min(...lons) - pad, Math.min(...lats) - pad], [Math.max(...lons) + pad, Math.max(...lats) + pad]], { padding: { top: 120, bottom: 160, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
+  };
+
+  /**
+   * לחיצה על שכבה בסרגל: אם אינה פעילה לכל היעדים, מפעילה ופותחת את הפאנל; אם פעילה והפאנל פתוח, מכבה (לחיצה חוזרת);
+   * אם פעילה והפאנל סגור, פותחת את הפאנל. היעדים: הפעיל ב"כלי בודד", כל הסט ב"כל הסט".
+   */
+  const toggleLayer = (key) => {
+    setDraft(null); setCursor(null); setSelId(null);
+    if (!targets.length) return;
+    const allOn = targets.every((v) => layers[v.id]?.[key]);
+    const open = tool?.family === 'vessel' && tool.id === key;
+    if (allOn && open) { vs.setLayer(targetIds, key, false); setTool(null); return; }
+    setTool({ family: 'vessel', id: key });
+    if (!allOn) {
+      vs.setLayer(targetIds, key, true);
+      if (key === 'prox') fit(targets.flatMap((v) => circlePolygon([v.lon, v.lat], Math.max(...radii), 24)));
+      if (key === 'route') fit(targets.flatMap((v) => demoTrack(v, rr.hours).map((p) => p.ll)));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vessel?.id]);
+  };
+  const setEye = (key) => {
+    const anyOn = targets.some((v) => layers[v.id]?.[key]);
+    vs.setLayer(targetIds, key, !anyOn);
+  };
+
+  // סט ריק: אין כלי שיט, ולכן גם פאנל כלי שיט נסגר
+  useEffect(() => { if (!setVessels.length) setTool((t) => (t?.family === 'vessel' ? null : t)); }, [setVessels.length]);
 
   // שכבות GeoJSON: נוספות בכל style.load, מתחת לסמלי הכלים
   const featuresRef = useRef([]);
@@ -128,11 +135,11 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   useEffect(() => {
     if (!map) return undefined;
     const isDrawing = () => { const t = st.current.tool; return t?.family === 'general' && DRAW.includes(t.id); };
-    const isArrival = () => { const t = st.current.tool; return t?.family === 'vessel' && t.id === 'arrival' && !!t.vesselId; };
+    const isArrival = () => { const t = st.current.tool; return t?.family === 'vessel' && t.id === 'arrival'; };
     const onClick = (e) => {
       if (isArrival()) {
-        const vid = st.current.tool.vesselId;
-        setArrival((p) => ({ ...p, [vid]: { ...(p[vid] ?? defaultArrival()), on: true, dest: [e.lngLat.lng, e.lngLat.lat], destName: 'נקודה על המפה' } }));
+        vs.setArrival({ dest: [e.lngLat.lng, e.lngLat.lat], destName: 'נקודה על המפה' });
+        vs.setLayer(st.current.targetIds, 'arrival', true);
         return;
       }
       if (!isDrawing()) return;
@@ -174,7 +181,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
     map.on('dblclick', onDbl);
     map.on('mousemove', onMove);
     return () => { cancelAnimationFrame(raf); map.off('click', onClick); map.off('dblclick', onDbl); map.off('mousemove', onMove); };
-  }, [map, commit, finish]);
+  }, [map, commit, finish, vs]);
 
   // סמן crosshair, ללא זום בלחיצה כפולה, וחסימת בחירת כלי מסמל במהלך ציור
   useEffect(() => {
@@ -200,7 +207,7 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
         return;
       }
       if (e.key === 'Escape') {
-        if (document.querySelector('[role=listbox]')) return;
+        if (document.querySelector('[role=listbox], [role=dialog].mt-vpop')) return;
         e.preventDefault();
         e.stopImmediatePropagation();
         if (d) { setDraft(null); setCursor(null); } else { setTool(null); setSelId(null); }
@@ -218,19 +225,24 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
 
   // סצנה: פיצ'רים, תוויות וידיות
   const edit = draft ? { id: 'draft', g: draft } : selected && selected.visible ? { id: selected.id, g: selected } : null;
-  const proxState = vessel ? prox[vessel.id] : undefined;
-  const routeState = vessel ? route[vessel.id] : undefined;
-  const arrState = vessel ? arrival[vessel.id] : undefined;
-  const track = useMemo(() => (vessel && routeState?.on ? demoTrack(vessel, routeState.hours) : null), [vessel, routeState?.on, routeState?.hours]);
+  const tracks = useMemo(
+    () => Object.fromEntries(setVessels.filter((v) => layers[v.id]?.route).map((v) => [v.id, demoTrack(v, rr.hours)])),
+    [setVessels, layers, rr.hours],
+  );
   const scene = useMemo(
     () => buildScene({
       items, draft, cursor, edit, unit,
-      prox: proxState?.on && proxState.visible ? { vessel, radii: proxState.radii } : null,
-      route: track && routeState.visible ? { track, hours: routeState.hours, marks: routeState.marks } : null,
-      arrival: arrState?.on && arrState.dest ? { vessel, dest: arrState.dest, editable: arrivalTool } : null,
+      vessels: setVessels.map((v) => ({
+        vessel: v,
+        vi: colors[v.id] ?? 0,
+        active: v.id === activeId,
+        radii: layers[v.id]?.prox ? radii : null,
+        route: tracks[v.id] ? { track: tracks[v.id], hours: rr.hours, marks } : null,
+        arrival: layers[v.id]?.arrival && arr.dest ? { dest: arr.dest, editable: arrivalTool } : null,
+      })),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, draft, cursor, selId, tool, unit, proxState, track, routeState, arrState, vessel],
+    [items, draft, cursor, selId, tool, unit, setVessels, layers, radii, tracks, rr.hours, marks, arr.dest, arrivalTool, activeId, colors],
   );
   featuresRef.current = scene.features;
   useEffect(() => { if (map) setToolData(map, scene.features); }, [map, scene.features]);
@@ -242,21 +254,18 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
       pts[h.idx] = ll;
       return { ...g, points: pts };
     };
-    if (h.id === 'arrival') {
-      const vid = st.current.tool?.vesselId;
-      if (vid) setArrival((p) => ({ ...p, [vid]: { ...p[vid], dest: ll, destName: 'נקודה על המפה' } }));
-      return;
-    }
+    if (h.id === 'arrival') { vs.setArrival({ dest: ll, destName: 'נקודה על המפה' }); return; }
     if (h.id === 'draft') setDraft((d) => (d ? upd(d) : d));
     else setItems((l) => l.map((x) => (x.id === h.id ? upd(x) : x)));
-  }, []);
+  }, [vs]);
   const rawLive = draft ? withCursor(draft, cursor) : selected;
   const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
   const m = metrics(live);
   const hits = live?.kind === 'terrain' && live.radius > 0 ? within(live.center, live.radius, vessels) : [];
   useMarkers(map, [
-    ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.strong ? ' strong' : ''}` })),
-    ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: 'map-arrow' })),
+    ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.vi != null ? ` vi-${c.vi}` : ''}${c.strong ? ' strong' : ''}${c.dim ? ' dim' : ''}` })),
+    ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: `map-arrow vi-${a.vi}${a.dim ? ' dim' : ''}` })),
+    ...setVessels.map((v) => ({ key: `set-${v.id}`, lngLat: [v.lon, v.lat], className: `map-ring set vi-${colors[v.id] ?? 0}${v.id === activeId ? '' : ' dim'}` })),
     ...hits.map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
     ...(hoverLL ? [{ key: 'hover', lngLat: hoverLL, className: 'map-ring small' }] : []),
     ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: 'map-handle', draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined })),
@@ -266,12 +275,14 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
   const patchSel = (fn) => setItems((l) => l.map((x) => (x.id === selId ? fn(x) : x)));
   const closeTool = () => { setHoverLL(null); setTool(null); setDraft(null); setCursor(null); setSelId(null); };
   const hint = hintFor(tool, draft, items);
+  const meta = mode === 'all' ? <>כל הסט (<span className="num">{setVessels.length}</span>)</> : active ? <bdi dir="ltr">{active.name}</bdi> : null;
+  const anyOn = (key) => targets.some((v) => layers[v.id]?.[key]);
 
   let panel = null;
   if (drawing) {
     panel = (
       <GeneralPanel tool={tool.id} hits={hits} onPickVessel={onSelectVessel} onHover={setHoverLL} watch={watch}
-        onAddToList={(list, ids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...ids])] }))} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
+        onAddToList={(list, vids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...vids])] }))} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
         onSelect={(id) => {
           const it = items.find((x) => x.id === id);
           setDraft(null); setCursor(null); setSelId(id);
@@ -284,41 +295,47 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
         onClearCurrent={() => { if (draft) { setDraft(null); setCursor(null); } else if (selId) { setItems((l) => l.filter((x) => x.id !== selId)); setSelId(null); } }}
         onRadius={(r) => { if (isCircle(draft?.kind) && draft.center) commit({ kind: draft.kind, center: draft.center, radius: r }); else if (selected) patchSel((x) => ({ ...x, radius: r })); }} />
     );
-  } else if (tool?.family === 'vessel' && tool.id === 'prox' && vessel && proxState) {
-    const setP = (patch) => setProx((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
-    panel = (
-      <ProximityPanel vessel={vessel} vessels={vessels} radii={proxState.radii} visible={proxState.visible} unit={unit} setUnit={setUnit}
-        onRadii={(radii) => setP({ radii })} onToggle={() => setP({ visible: !proxState.visible })}
-        onClear={() => { setP({ on: false }); setTool(null); }} onClose={() => setTool(null)} onPickVessel={onSelectVessel} />
-    );
+  } else if (tool?.family === 'vessel' && targets.length) {
+    const close = () => setTool(null);
+    if (tool.id === 'prox') {
+      panel = (
+        <ProximityPanel meta={meta} targets={targets} colors={colors} all={vessels} radii={radii} anyOn={anyOn('prox')} unit={unit} setUnit={setUnit}
+          onRadii={vs.setRadii} onToggle={() => setEye('prox')} onClose={close}
+          onClear={() => { vs.setRadii(DEFAULT_RADII); vs.setLayer(targetIds, 'prox', false); close(); }} onPickVessel={onSelectVessel} />
+      );
+    } else if (tool.id === 'route') {
+      const statsList = targets.map((v) => trackStats(tracks[v.id] ?? demoTrack(v, rr.hours), rr.hours));
+      panel = (
+        <RoutePanel meta={meta} targets={targets} colors={colors} info={rr} marks={marks} anyOn={anyOn('route')} statsList={statsList} unit={unit} setUnit={setUnit}
+          onMarks={vs.setMarks} onToggle={() => setEye('route')} onClose={close} onClear={() => { vs.setLayer(targetIds, 'route', false); close(); }} />
+      );
+    } else if (tool.id === 'arrival') {
+      const rows = targets.map((v) => {
+        const from = [v.lon, v.lat];
+        const d = arr.dest ? distance(from, arr.dest) : 0;
+        const slow = !(v.speed >= 1);
+        const knots = arr.speed ?? (slow ? DEFAULT_KNOTS : v.speed);
+        return { vessel: v, distance: d, knots, fallback: arr.speed == null && slow, hours: travelHours(d, knots) };
+      });
+      panel = (
+        <ArrivalPanel meta={meta} colors={colors} dest={arr.dest} destName={arr.destName} uniform={arr.speed} anyOn={anyOn('arrival')} rows={rows} multi={mode === 'all'}
+          unit={unit} setUnit={setUnit} onUniform={(k) => vs.setArrival({ speed: k })}
+          onPickPort={(pid) => {
+            const p = PORTS.find((x) => x.id === pid);
+            vs.setArrival({ dest: [p.lon, p.lat], destName: p.name });
+            vs.setLayer(targetIds, 'arrival', true);
+            fit([[p.lon, p.lat], ...targets.map((v) => [v.lon, v.lat])]);
+          }}
+          onToggle={() => setEye('arrival')} onClear={() => { vs.setArrival({ dest: null, destName: '', speed: null }); vs.setLayer(targetIds, 'arrival', false); close(); }} onClose={close} />
+      );
+    }
   }
 
-  if (!panel && tool?.family === 'vessel' && vessel && tool.id === 'route' && routeState && track) {
-    const setR = (patch) => setRoute((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
-    panel = (
-      <RoutePanel vessel={vessel} hours={routeState.hours} marks={routeState.marks} visible={routeState.visible} stats={trackStats(track, routeState.hours)}
-        unit={unit} setUnit={setUnit} onHours={(hours) => setR({ hours })} onMarks={(marks) => setR({ marks })} onToggle={() => setR({ visible: !routeState.visible })}
-        onClear={() => { setR({ on: false }); setTool(null); }} onClose={() => setTool(null)} />
-    );
-  }
-  if (!panel && arrivalTool && vessel && arrState) {
-    const setA = (patch) => setArrival((p) => ({ ...p, [vessel.id]: { ...p[vessel.id], ...patch } }));
-    const fallback = arrState.speed == null && !(vessel.speed >= 1);
-    const knots = arrState.speed ?? (vessel.speed >= 1 ? vessel.speed : DEFAULT_KNOTS);
-    const from = [vessel.lon, vessel.lat];
-    const dist = arrState.dest ? distance(from, arrState.dest) : 0;
-    const ma = arrState.dest ? { distance: dist, bearing: bearing(from, arrState.dest), hours: travelHours(dist, knots) } : null;
-    panel = (
-      <ArrivalPanel vessel={vessel} dest={arrState.dest} destName={arrState.destName} knots={knots} usedFallback={fallback} metricsArr={ma}
-        unit={unit} setUnit={setUnit} onSpeed={(k) => setA({ speed: k })}
-        onPickPort={(pid) => {
-          const p = PORTS.find((x) => x.id === pid);
-          setA({ dest: [p.lon, p.lat], destName: p.name });
-          if (map) map.fitBounds([[Math.min(from[0], p.lon), Math.min(from[1], p.lat)], [Math.max(from[0], p.lon), Math.max(from[1], p.lat)]], { padding: { top: 120, bottom: 120, left: 440, right: 60 }, maxZoom: 10, duration: 600 });
-        }}
-        onClear={() => setA({ dest: null, destName: '' })} onClose={() => setTool(null)} />
-    );
-  }
+  const toolStates = Object.fromEntries(LAYER_KEYS.map((k) => {
+    const n = targets.filter((v) => layers[v.id]?.[k]).length;
+    return [k, n === 0 ? 'off' : n === targets.length ? 'on' : 'part'];
+  }));
+  const hasSet = setVessels.length > 0;
 
   return (
     <>
@@ -331,12 +348,17 @@ export default function MapTools({ map, vessel, vessels, onSelectVessel, onClear
           </div>
         )}
       </div>
-      <div className={`mt-stack${vessel ? ' with-vbar' : ''}`}>
+      <div className={`mt-stack${hasSet ? ' with-vbar' : ''}`}>
         {panel}
-        <GeneralToolbar active={tool?.family === 'general' ? tool.id : null} onPick={(id) => pick('general', id)}
+        <GeneralToolbar active={tool?.family === 'general' ? tool.id : null} onPick={pickGeneral}
           canClear={items.length > 0 || !!draft} onClear={() => { setItems([]); setDraft(null); setCursor(null); setSelId(null); }} />
       </div>
-      {vessel && <VesselBar vessel={vessel} active={tool?.family === 'vessel' ? tool.id : null} onPick={(id) => pick('vessel', id)} onClose={onClearVessel} />}
+      {hasSet && (
+        <VesselBar vessels={setVessels} activeId={activeId} colors={colors} mode={mode} onMode={vs.setMode}
+          onActivate={onActivate} onRemove={vs.remove} onClear={vs.clear}
+          range={{ from: rr.from, to: rr.to, preset: range.preset }} onRange={vs.setRange}
+          toolStates={toolStates} openTool={tool?.family === 'vessel' ? tool.id : null} onTool={toggleLayer} />
+      )}
     </>
   );
 }

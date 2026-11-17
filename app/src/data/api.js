@@ -1,6 +1,6 @@
 // שכבה אסינכרונית דקה מעל נתוני הדמה, כדי שהדפים יתנסו במצבי טעינה/שגיאה/אין הרשאה
 // כמו מול שרת אמיתי. החלפה בקריאות אמיתיות לא תדרוש שינוי בדפים.
-import { COMPANIES, getCompany, searchCompanies } from './companies';
+import { COMPANIES, getCompany, relationDataOf, searchCompanies } from './companies';
 import { VESSELS, getVessel, searchVessels } from './vessels';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -17,6 +17,12 @@ export async function searchCompaniesApi(q) {
 export async function getCompanyApi(id) {
   await wait(250);
   return getCompany(id) ?? null;
+}
+
+/** קשרים בין חברות (תוצר מודל, נטען בנפרד מהחברה) @returns {Promise<ReturnType<typeof relationDataOf>>} */
+export async function getRelationsApi(id) {
+  await wait(350);
+  return relationDataOf(id);
 }
 
 /** @returns {Promise<import('./vessels').Vessel|null>} */

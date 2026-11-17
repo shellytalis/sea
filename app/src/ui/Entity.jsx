@@ -103,14 +103,16 @@ export function EntityPage({ header, summary, sections, resetKey, children }) {
 /**
  * שם ומטא-דאטה בצד ההתחלה, והפעולות צמודות אליהם באותה שורה.
  * compactBadge: החיווי שנשאר ליד השם כשהכותרת מכווצת לשורה אחת (שם, חיווי, פעולות).
+ * titleTags: תגים תמיד ליד השם (בחברה: פרופיל מהמודל); תג עם המחלקה entity-title-optional נעלם בכותרת המכווצת.
  */
-export function EntityHead({ back, title, meta, badges, compactBadge, actions }) {
+export function EntityHead({ back, title, titleTags, meta, badges, compactBadge, actions }) {
   return (
     <div className="entity-head-row">
       <div className="entity-head-main">
         {back}
         <div className="entity-title-line">
           <h1>{title}</h1>
+          {titleTags && <span className="entity-title-tags">{titleTags}</span>}
           {compactBadge && <span className="entity-compact-badge">{compactBadge}</span>}
         </div>
         {meta && <div className="entity-meta">{meta}</div>}

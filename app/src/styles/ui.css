@@ -186,8 +186,6 @@
 .cs-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); align-items: stretch; }
 .cs-list { list-style: none; margin: 0; padding: 0; }
 .cs-list li + li { border-top: 1px solid var(--border-subtle); }
-.signals { display: inline-flex; align-items: center; gap: var(--space-2); }
-.signal-pill { display: inline-flex; align-items: center; gap: var(--space-1); }
 
 /* ===== דף /design ===== */
 .ds { padding: var(--space-5); display: grid; gap: var(--space-7); max-width: var(--entity-max); margin-inline: auto; }
@@ -234,21 +232,11 @@
 /* ===== טופס חיפוש חברות: שדות נוספים ===== */
 .ui-range-inputs .ui-input { flex: 1; min-width: 0; }
 .ui-model-icon { display: inline-flex; color: var(--text-secondary); }
-.signal-sev { font-weight: 400; color: inherit; }
-.signal-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
-.signal-rows li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .alerts-empty { display: grid; gap: var(--space-1); color: var(--text-secondary); }
 .alerts-empty strong { color: var(--text-primary); font-size: var(--fs-lg); }
 .alerts-empty p { margin: 0; }
 
 .ui-drawer:focus { outline: none; }
-.signal-list { display: grid; gap: var(--space-4); }
-.signal-detail { display: grid; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
-.signal-detail:last-child { border-bottom: 0; padding-bottom: 0; }
-.signal-detail-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
-.signal-detail-head strong { margin-inline-end: auto; }
-.signal-why { color: var(--text-secondary); }
-.signal-meta { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
 .ui-btn.icon.sm { width: var(--control-h-sm); min-height: var(--control-h-sm); }
 .ui-table th:hover .ui-btn.th .dim, .ui-btn.th:focus-visible .dim { opacity: .6; }
 .ui-chip.more { color: var(--text-secondary); }

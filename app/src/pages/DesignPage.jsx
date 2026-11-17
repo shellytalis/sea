@@ -16,10 +16,11 @@ import { EntityStatus } from '../ui/Entity';
 import { useSpecNotes } from '../ui/prefs';
 import SpecNote from '../ui/SpecNote';
 import { Calendar, ChevronDown, Hexagon, Mountain, Navigation, Route, Ruler, Target, X } from 'lucide-react';
-import { COMPANIES, COMPANY_TYPES } from '../data/companies';
-import { SignalsPanel } from '../components/Signals';
+import { COMPANIES, COMPANY_TYPES, getCompany } from '../data/companies';
+import { MismatchTag, ModelOutputsDetail, ModelSummary, ProfileTag } from '../components/ModelOutputs';
+import { RelationKind, RelationLegend, StrengthMeter } from '../components/RelationParts';
+import RelationsSection from '../components/RelationsSection';
 import Panel from '../ui/Panel';
-import RelationsView from '../components/RelationsView';
 import Tabs from '../ui/Tabs';
 
 const COLORS = ['bg-base', 'surface', 'surface-raised', 'border', 'border-strong', 'text-primary', 'text-secondary', 'text-tertiary', 'accent', 'accent-text', 'focus'];
@@ -35,6 +36,9 @@ const GROUPED = [
   { id: 'vessels', label: 'כלי שיט', items: [{ key: 'v1', text: 'SEA FALCON', render: () => <><Ltr className="cell-name">SEA FALCON</Ltr><span className="sub"><Mono>IMO 9198364</Mono></span></> }] },
   { id: 'companies', label: 'חברות', items: [{ key: 'c1', text: 'Falcon Maritime', render: () => <Ltr className="cell-name">Falcon Maritime</Ltr> }] },
 ];
+
+const c13 = getCompany('c13');
+const c12 = getCompany('c12');
 
 export default function DesignPage() {
   const [name, setName] = useState('');
@@ -170,15 +174,56 @@ export default function DesignPage() {
         </section>
 
         <section>
-          <h2>אותות מודל<SpecNote tag>הצעה</SpecNote></h2>
-          <p className="entity-note">כותרת אחת לרצועה (מקור, עדכון, גרסה); כל כרטיס: שם, חומרה בשורה קבועה, סיבה אחת עם +N. אין ציון מסכם לחברה. הכרטיס כולו לחיץ.</p>
-          <SignalsPanel signals={COMPANIES[12].signals} target={{ fleet: '#', activity: '#', identity: '#', links: '#' }} onGo={() => {}} />
+          <h2>תג פרופיל ואי-התאמה<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">ליד שם החברה: תג הפרופיל עם סימון "מודל" (ModelTag), ואם יש אי-התאמה לרישום, תג נוסף עם משולש וטקסט. בכותרת המכווצת (56px) נשאר רק תג הפרופיל. "לא הוערך" מוצג כעיגול מקווקו.</p>
+          <div className="ds-row">
+            <ProfileTag profile={c13.modelOutputs.profile} />
+            <MismatchTag text={c13.modelOutputs.profile.mismatch} />
+            <ProfileTag profile={c12.modelOutputs.profile} />
+          </div>
         </section>
 
         <section>
-          <h2>גרף קשרים בין חברות<SpecNote tag>הצעה</SpecNote></h2>
-          <p className="entity-note">SVG עם פריסה סטטית, ללא ספרייה: הקל ביותר שמספיק לאב-טיפוס. סוג הקשר מובחן בסגנון הקו, וקשר חריג בצבע, עובי וסמל. לצד הגרף טבלה לאותו מידע.</p>
-          <Panel title="קשרים בין חברות" flush><RelationsView companyId="c13" /></Panel>
+          <h2>תוצרי מודל: שורת הסיכום<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">Panel אחד (מחליף את ארבעת האותות), מטא "עודכן · גרסה" פעם אחת. ארבעה תאים שווים: קבוצת שליטה ופרופיל חברה (ערך, רמת ביטחון, הגורם הראשון, "עוד N גורמים" בפופאובר), ושני תאים "בתכנון" (שלב ב׳ ושלב ג׳). תא קבוצת השליטה לחיץ וגולל ל"קשרים בין חברות". מצבים: קבוצה גדולה, קבוצה קטנה, לא נמצאו קשרים, חלקי (הקבוצה לא הוערכה והפרופיל כן), ולא הוערך (רצועה אחת).</p>
+          <div className="ds-stack">
+            <ModelSummary id="ds-mo-large" outputs={c13.modelOutputs} onGo={() => {}} />
+            <ModelSummary id="ds-mo-small" outputs={getCompany('c5').modelOutputs} onGo={() => {}} />
+            <ModelSummary id="ds-mo-none" outputs={getCompany('c1').modelOutputs} onGo={() => {}} />
+            <ModelSummary id="ds-mo-partial" outputs={getCompany('c24').modelOutputs} onGo={() => {}} />
+            <ModelSummary id="ds-mo-unassessed" outputs={c12.modelOutputs} onGo={() => {}} />
+          </div>
+        </section>
+
+        <section>
+          <h2>חוזק וסוג הקשר<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">חוזק: שלושה פסים בגבהים עולים + תווית (חזק / בינוני / חלש). סוג: קו רציף "מוצהר" (ברישום) או קו מקווקו "הוסק" (המודל). לעולם לא צבע בלבד; מקרא הקווים בכותרת המקטע.</p>
+          <div className="ds-row">
+            <StrengthMeter strength="strong" /><StrengthMeter strength="medium" /><StrengthMeter strength="weak" />
+            <RelationKind declared /><RelationKind declared={false} /><RelationLegend />
+          </div>
+        </section>
+
+        <section>
+          <h2>קשרים בין חברות<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">טבלה עם סינון חוזק וסוג ראיה (במצב ב-URL), שורת ראיה נפוצה, אשכול שנפתח בלחיצה, פאנל ראיות עם "נכון / שגוי" (בסשן בלבד) וגרף של עד 15 הקשרים החזקים (SVG בפריסה סטטית, ללא ספרייה). בקבוצה גדולה: הגרף מציג את הקשרים החזקים והשאר בטבלה.</p>
+          <div className="ds-stack">
+            <RelationsSection id="ds-rel-large" company={c13} />
+            <RelationsSection id="ds-rel-small" company={getCompany('c5')} />
+          </div>
+          <h3 className="ds-sub">מצבי המקטע: לא נמצאו קשרים, לא הוערך, טעינה, שגיאה</h3>
+          <div className="ds-stack">
+            <RelationsSection id="ds-rel-none" company={getCompany('c1')} />
+            <RelationsSection id="ds-rel-unassessed" company={c12} />
+            <Panel title="קשרים בין חברות" meta="טעינה" flush><div className="rel2-loading" aria-busy="true"><TableSkeleton rows={4} cols={5} /></div></Panel>
+            <Panel title="קשרים בין חברות" meta="שגיאה" flush><ErrorState onRetry={() => {}} title="טעינת הקשרים נכשלה">אירעה שגיאה בטעינת הקשרים. הסינון נשמר.</ErrorState></Panel>
+          </div>
+        </section>
+
+        <section>
+          <h2>תוצרי מודל במגירת התצוגה המהירה<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">במגירה יש מקום, ולכן מוצגים כל הגורמים של כל מודל, ואי-ההתאמה לרישום.</p>
+          <div className="ds-drawer-box"><ModelOutputsDetail outputs={c13.modelOutputs} /></div>
         </section>
 
         <section>

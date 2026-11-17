@@ -9,6 +9,7 @@ import "./styles/tokens.css";
 import "./styles/global.css";
 import "./styles/ui.css";
 import "./styles/entity.css";
+import "./styles/models.css";
 import "./styles/map-tools.css";
 import "./styles/map-tools-set.css";
 import App from "./App";

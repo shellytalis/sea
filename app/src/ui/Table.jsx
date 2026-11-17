@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import Button from './Button';
 
@@ -8,7 +9,7 @@ import Button from './Button';
  * sort/onSort: אם onSort קיים, כותרות העמודות הממיינות הן כפתורים.
  * onRowClick: הופך שורות לאינטראקטיביות (מקלדת, בחירה).
  */
-export default function TableCore({ caption, columns, rows, rowKey, sort, onSort, onRowClick, selectedKey, stickyHead = true, className = '' }) {
+export default function TableCore({ caption, columns, rows, rowKey, sort, onSort, onRowClick, selectedKey, stickyHead = true, className = '', expandedKeys, renderDetail }) {
   const weighted = columns.some((c) => c.weight || c.width);
   const total = columns.reduce((a, c) => a + (c.width ? 0 : (c.weight ?? 1)), 0);
   const grouped = columns.some((c) => c.group);
@@ -67,12 +68,17 @@ export default function TableCore({ caption, columns, rows, rowKey, sort, onSort
       <tbody>
         {rows.map((r) => {
           const k = rowKey(r);
+          const expanded = !!renderDetail && expandedKeys?.includes(k);
           return (
-            <tr key={k} className={selectedKey === k ? 'selected' : ''} aria-selected={onRowClick ? selectedKey === k : undefined}
-              tabIndex={onRowClick ? 0 : undefined} onClick={() => onRowClick?.(r)}
-              onKeyDown={(e) => { if (onRowClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(r); } }}>
-              {columns.map((c) => <td key={c.id} className={cellClass(c)}>{c.render(r)}</td>)}
-            </tr>
+            <Fragment key={k}>
+              <tr className={selectedKey === k ? 'selected' : ''} aria-selected={onRowClick ? selectedKey === k : undefined}
+                aria-expanded={renderDetail && r.kind === 'cluster' ? expanded : undefined}
+                tabIndex={onRowClick ? 0 : undefined} onClick={() => onRowClick?.(r)}
+                onKeyDown={(e) => { if (onRowClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(r); } }}>
+                {columns.map((c) => <td key={c.id} className={cellClass(c)}>{c.render(r)}</td>)}
+              </tr>
+              {expanded && <tr className="detail"><td colSpan={columns.length}>{renderDetail(r)}</td></tr>}
+            </Fragment>
           );
         })}
       </tbody>

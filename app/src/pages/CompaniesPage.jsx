@@ -16,7 +16,7 @@ import { Facts } from '../ui/Entity';
 import { EmptyState, ErrorState, TableSkeleton } from '../ui/States';
 import useAsync from '../ui/useAsync';
 import useScrollbarGap from '../ui/useScrollbarGap';
-import { SIGNAL_COLUMNS, SignalDetail, SignalsHeading } from '../components/Signals';
+import { MODEL_COLUMNS, ModelOutputsDetail } from '../components/ModelOutputs';
 
 const fleetText = ([lo, hi]) => (lo === null && hi === null ? '' : `גודל צי ${lo ?? ''}–${hi ?? ''}`);
 const describe = (q) => [q.name.trim(), q.country, q.city, ...q.types, fleetText(q.fleet)].filter(Boolean).join(' · ');
@@ -126,7 +126,7 @@ export default function CompaniesPage() {
     { id: 'type', label: 'סוג', weight: 9, sort: (c) => c.type, render: (c) => c.type },
     { id: 'fleet', label: 'גודל צי', weight: 6, align: 'end', sort: (c) => c.fleetSize, render: (c) => <Num>{c.fleetSize}</Num> },
     { id: 'roles', label: 'תפקידים', weight: 12, render: (c) => <Roles list={c.roleList} /> },
-    ...SIGNAL_COLUMNS,
+    ...MODEL_COLUMNS,
     { id: 'updated', label: 'עדכון אחרון', weight: 9, sort: (c) => c.updated, render: (c) => <Num className="sec">{c.updated}</Num> },
     {
       id: 'actions', label: '', srLabel: 'תצוגה מהירה', noManage: true, width: 48, align: 'end',
@@ -255,10 +255,7 @@ export default function CompaniesPage() {
           <Drawer overlay title={<><Ltr>{sel.name}</Ltr><div className="ui-drawer-sub">{sel.type} · {sel.country}</div></>}
             onClose={() => patch({ sel: null })}
             footer={<Button to={`/companies/${sel.id}`} state={{ back: location.search }} variant="primary" icon={<ArrowLeft size={16} aria-hidden="true" />}>פתח פרופיל מלא</Button>}>
-            <section className="ui-drawer-group">
-              <SignalsHeading signals={sel.signals} />
-              <div className="signal-list">{sel.signals.map((sg) => <SignalDetail key={sg.kind} signal={sg} />)}</div>
-            </section>
+            <ModelOutputsDetail outputs={sel.modelOutputs} />
             <section className="ui-drawer-group">
               <h3>נתוני מפתח</h3>
               <Facts layout="list" items={[

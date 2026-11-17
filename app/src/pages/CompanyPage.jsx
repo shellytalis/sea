@@ -11,13 +11,10 @@ import { Ltr, Mono, Num } from '../ui/Ltr';
 import SpecNote from '../ui/SpecNote';
 import { EmptyState } from '../ui/States';
 import useAsync from '../ui/useAsync';
-import { SignalsPanel } from '../components/Signals';
-import RelationsView from '../components/RelationsView';
+import { MismatchTag, ModelSummary, ProfileTag } from '../components/ModelOutputs';
+import RelationsSection from '../components/RelationsSection';
 import CompanyRef from '../components/CompanyRef';
 import { VesselFlags } from '../components/VesselFlags';
-
-/** כל עמודת אות גוללת למקטע הרלוונטי. הצעה: פעילות וזהות מפנות ל"צי", כי אין להן מקטע משלהן */
-const SIGNAL_TARGET = { fleet: 'fleet', activity: 'fleet', identity: 'fleet', links: 'relations' };
 
 const SECTIONS = [
   { id: 'fleet', label: 'צי' },
@@ -71,9 +68,13 @@ export default function CompanyPage() {
       header={
         <EntityHead title={<Ltr>{c.name}</Ltr>}
           meta={<>{c.type} · {c.country}, <Ltr>{c.city}</Ltr> · גודל צי <Num>{c.fleetSize}</Num> · עדכון אחרון <Num>{c.updated}</Num></>}
+          titleTags={<>
+            <ProfileTag profile={c.modelOutputs.profile} />
+            {c.modelOutputs.profile.mismatch && <MismatchTag text={c.modelOutputs.profile.mismatch} />}
+          </>}
           badges={c.roleList.map((r) => <Chip key={r} tag>{r}</Chip>)} />
       }
-      summary={<SignalsPanel signals={c.signals} target={SIGNAL_TARGET} onGo={goSection} />}>
+      summary={<ModelSummary outputs={c.modelOutputs} onGo={goSection} />}>
       <Section id="fleet" title="צי" source={src} flush
         meta={fleet.length > 0 ? <>מוצגים <Num>{fleet.length}</Num> מתוך <Num>{c.fleetSize}</Num> כלים הזמינים במערכת</> : null}>
         {fleet.length === 0 ? (
@@ -85,9 +86,7 @@ export default function CompanyPage() {
         )}
       </Section>
 
-      <Section id="relations" title="קשרים בין חברות" source={src} flush actions={<SpecNote tag>הצעה</SpecNote>}>
-        <RelationsView companyId={c.id} />
-      </Section>
+      <RelationsSection company={c} />
 
       <Section id="registration" title="פרטי רישום ובעלות" source={src}>
         <FactGroup title="רישום" items={[

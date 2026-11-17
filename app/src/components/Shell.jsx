@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useMatch } from 'react-router-dom';
-import { Map, Building2, ListChecks, Route, Bell, Sun, Moon, Anchor, FlaskConical, BookUser, MessageSquare, ChevronLeft } from 'lucide-react';
+import { Map, Building2, ListChecks, Route, Bell, Sun, Moon, Anchor, FlaskConical, BrainCircuit, BookUser, MessageSquare, ChevronLeft } from 'lucide-react';
 import { getCompany } from '../data/companies';
 import { getVessel } from '../data/vessels';
 import { useTheme } from '../ui/prefs';
@@ -21,11 +21,12 @@ const NAV = [
   { to: '/tracking', icon: ListChecks, label: 'מעקב', match: (p) => p.startsWith('/tracking') },
   { to: '/od', icon: Route, label: 'ניתוח', match: (p) => p.startsWith('/od') },
   { to: '/models', icon: FlaskConical, label: 'מודלים', match: (p) => p.startsWith('/models') },
+  { to: '/ai-models', icon: BrainCircuit, label: 'מודלי בינה מלאכותית', match: (p) => p.startsWith('/ai-models') },
   { to: '/ports', icon: Anchor, label: 'נמלים', match: (p) => p.startsWith('/ports') },
 ];
 
 /** שמות דפים בסרגל העליון (לדפים ללא ישות) */
-const TITLES = { '/': 'מפה', '/companies': 'חברות', '/tracking': 'אוניות למעקב', '/od': 'ניתוח מקור–יעד', '/models': 'מודלים', '/ports': 'נמלים', '/design': 'מערכת עיצוב' };
+const TITLES = { '/': 'מפה', '/companies': 'חברות', '/tracking': 'אוניות למעקב', '/od': 'ניתוח מקור–יעד', '/models': 'מודלים', '/ai-models': 'מודלי בינה מלאכותית', '/ports': 'נמלים', '/design': 'מערכת עיצוב' };
 
 /** משתמש לדוגמה (נתוני דמה): טקסט סטטי בסרגל העליון */
 const USER_NAME = 'דנה כהן';

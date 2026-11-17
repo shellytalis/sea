@@ -244,7 +244,7 @@ export function searchVessels(q) {
   if (!s) return [];
   return VESSELS.filter((v) => v.name.toLowerCase().includes(s) || v.imo.includes(s) || v.mmsi.includes(s));
 }
-export const getVessel = (id) => VESSELS.find((v) => v.id === id);
+export const getVessel = (id) => VESSELS.find((v) => v.id === id) ?? EXTRA_VESSELS.find((v) => v.id === id);
 
 
 /** כלי דמה נוספים, לשיוך לצי של Gulf Horizon Shipping ו-Marmara Tankers */
@@ -326,3 +326,29 @@ export const activityA = (v) => [
   { time: "2026-10-25 07:05", activity: "יציאה מאזור נמל", place: v.destination, details: "הפלגה לכיוון נמל היעד" },
   { time: "2026-10-23 21:15", activity: "הפחתת מהירות", place: "מצרי קפריסין", details: "ירידה מתחת ל-3 קשר ל-2 שעות" }
 ];
+
+/**
+ * כלי דמה נוספים (v13..v100) לדף "מודלי בינה מלאכותית", כדי שהרצה גדולה (80+ כלים) תעבוד עם המפה, המגירה ודף הכלי.
+ * אינם חלק מ-VESSELS: לא מוצגים בדף הבית ולא בחיפוש הגלובלי, רק ב-getVessel. מיקומים וערכים סינתטיים.
+ * @type {Vessel[]}
+ */
+const NAME_A = ["ATLANTIC", "BLUE", "CORAL", "DELTA", "EASTERN", "FORTUNE", "GOLDEN", "HARBOUR", "IONIAN", "JADE", "KARAM", "LEVANT", "MISTRAL", "NEPTUNE", "ORIENT", "PEARL", "QUEEN", "RED SEA", "SILVER", "TIDE"];
+const NAME_B = ["STAR", "VOYAGER", "SPIRIT", "TRADER", "CARRIER", "WAVE", "PRIDE", "HORIZON", "GLORY", "EXPRESS"];
+const TYPES = ["Crude Oil Tanker", "Product Tanker", "Bulk Carrier", "Container Ship", "General Cargo", "Chemical Tanker"];
+const FLAGS = ["פנמה", "ליבריה", "איי מרשל", "מלטה", "קפריסין", "יוון", "טורקיה", "איחוד האמירויות"];
+const frac = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+export const EXTRA_VESSELS = Array.from({ length: 88 }, (_, n) => {
+  const i = n + 13;
+  const lat = 12 + frac(i, 1) * 26, lon = 19 + frac(i, 2) * 38;
+  const type = TYPES[i % TYPES.length];
+  return {
+    id: `v${i}`, name: `${NAME_A[i % NAME_A.length]} ${NAME_B[(i * 7) % NAME_B.length]}`,
+    imo: String(9300000 + i * 4231), mmsi: String(200000000 + i * 3917003).slice(0, 9), callSign: `D${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i * 3) % 26))}${i % 10}`,
+    type, flag: FLAGS[i % FLAGS.length], built: 1998 + (i % 24), dwt: 20e3 + (i % 9) * 11e3, length: 150 + (i % 9) * 15,
+    owner: "—", manager: "—", lat, lon, prevLat: lat - 0.3, prevLon: lon - 0.4, speed: Math.round(frac(i, 3) * 140) / 10, course: Math.round(frac(i, 4) * 359),
+    destination: ["HAIFA", "PIRAEUS", "SUEZ", "JEDDAH", "FUJAIRAH"][i % 5], lastReceived: "2026-11-15 09:00", lists: [],
+    stamp: { source: "מקור א", updated: "2026-11-15 09:00" },
+    subType: "—", beam: 30, draft: 10, classSociety: "—", pandi: "—", beneficialOwner: "—", operator: "—", technicalManager: "—", commercialManager: "—", aisTransmitter: "Class A",
+    indicators: [], risk: "none", history: []
+  };
+});

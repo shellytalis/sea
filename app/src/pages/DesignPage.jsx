@@ -221,6 +221,22 @@ export default function DesignPage() {
         </section>
 
         <section>
+          <h2>דף "מודלי בינה מלאכותית": שלוש רמות בפאנל אחד<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">נתיב <bdi dir="ltr">/ai-models</bdi>: פאנל בצד ה-start ברוחב פאנלי הצד והמפה בצד ה-end. פירורי לחם בכותרת הפאנל (48px) ולחצן חזרה; המצב ב-URL (<bdi dir="ltr">?model=&amp;customer=&amp;run=</bdi>, ובטבלה q, reason, sort, page, sel).</p>
+          <ul className="plain-list bulleted">
+            <li><strong>רמה 1:</strong> שורה לכל זוג מודל + לקוח (שם המודל, Chip של הלקוח, מה המודל מזהה, הרצה אחרונה, כמה כלים סומנו) ושדה חיפוש. מודל משוכפל מופיע בשורה לכל לקוח.</li>
+            <li><strong>רמה 2:</strong> הרצות, החדשה למעלה: תאריך ושעה, סטטוס (צורה + תווית + צבע), מספר כלים, גרסה. הרצה שנכשלה או שלא הוערכה אינה נפתחת ומוסבר למה; חלקית נפתחת עם אזהרה.</li>
+            <li><strong>רמה 3:</strong> טבלת הכלים (חיפוש כלי או סיבה, מונה "12 מתוך 87", סינון לפי סיבה עם ספירה, מיון חומרה / זמן, עימוד 50). המפה מציגה רק את הכלים שבטבלה; לחיצה על שורה או על כלי במפה מדגישה, וה-VesselDrawer נפתח כעמודה.</li>
+            <li><strong>מצבים:</strong> מודל בלי הרצות; הרצה שלא סימנה כלים ("המודל רץ ולא סימן כלים": תקין, לא כשל); הרצה שנכשלה / לא הוערכה; אין תוצאות חיפוש.</li>
+          </ul>
+          <div className="ds-row start">
+            <div className="ds-panel ds-w-lg"><EmptyState title="המודל רץ ולא סימן כלים"><span>זה תוצר תקין של ההרצה, לא כשל.</span></EmptyState></div>
+            <div className="ds-panel ds-w-lg"><EmptyState title="לא נמצאו כלים. נסה שם, IMO או סיבה אחרת"><span>הסר את החיפוש או את הסינון כדי לראות את כל הכלים.</span></EmptyState></div>
+            <div className="ds-panel ds-w-lg"><EmptyState title="למודל אין הרצות עבור הלקוח"><span>עדיין לא בוצעה הרצה.</span></EmptyState></div>
+          </div>
+        </section>
+
+        <section>
           <h2>תוצרי מודל במגירת התצוגה המהירה<SpecNote tag>הצעה</SpecNote></h2>
           <p className="entity-note">במגירה יש מקום, ולכן מוצגים כל הגורמים של כל מודל, ואי-ההתאמה לרישום.</p>
           <div className="ds-drawer-box"><ModelOutputsDetail outputs={c13.modelOutputs} /></div>

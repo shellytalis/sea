@@ -6,6 +6,7 @@ import VesselPage from "./pages/VesselPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import CompanyPage from "./pages/CompanyPage";
 import DesignPage from "./pages/DesignPage";
+import AiModelsPage from "./pages/AiModelsPage";
 import { Mono } from "./ui/Ltr";
 function Soon() {
   const { pathname } = useLocation();
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="vessels/:id" element={<VesselPage />} />
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="companies/:id" element={<CompanyPage />} />
+        <Route path="ai-models" element={<AiModelsPage />} />
         <Route path="design" element={<DesignPage />} />
         <Route path="*" element={<Soon />} />
       </Route>

@@ -1,0 +1,54 @@
+/* ===== דף "מודלי בינה מלאכותית" (שלב 3, הצעה) ===== */
+/* הפאנל בצד ה-start ברוחב פאנלי הצד (--drawer-w), המפה בצד ה-end; כלי נבחר פותח VesselDrawer כעמודה נוספת */
+.workspace.ai { grid-template-columns: var(--drawer-w) minmax(0, 1fr); }
+.workspace.ai.with-vessel { grid-template-columns: var(--drawer-w) var(--drawer-w) minmax(0, 1fr); }
+.workspace.ai > .map-col { min-height: 0; }
+
+.ai-panel { height: 100%; display: flex; flex-direction: column; border-radius: 0; border-block: 0; border-inline-start: 0; min-height: 0; }
+.ai-panel .panel-body { flex: 1; min-height: 0; overflow: auto; display: block; padding: 0; }
+.ai-panel .panel-head h2 { min-width: 0; flex: 1; overflow: hidden; }
+
+/* פירורי לחם בכותרת הפאנל (48px) */
+.ai-crumbs { display: flex; align-items: center; gap: var(--space-1); min-width: 0; overflow: hidden; font-size: var(--fs-md); font-weight: 600; white-space: nowrap; }
+.ai-crumb { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-text); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ai-crumb:hover { text-decoration: underline; }
+.ai-crumb.current { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; }
+.ai-crumb-sep { flex: none; color: var(--text-tertiary); }
+
+.ai-source { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-3) var(--space-4) 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.ai-note { margin: 0; padding: var(--space-2) var(--space-4) var(--space-3); font-size: var(--fs-sm); color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.ai-warn { display: grid; gap: var(--space-1); margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--fs-sm); border-bottom: 1px solid var(--border); background: var(--surface-raised); }
+.ai-tools { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+.ai-search { flex: 1; min-width: 0; height: var(--control-h-sm); }
+.ai-count { flex: none; font-size: var(--fs-sm); color: var(--text-secondary); }
+.ai-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-4) var(--space-3); }
+
+/* רשימות: מודל × לקוח (רמה 1) והרצות (רמה 2); שורה כפולה, לחיצה על כל השורה */
+.ai-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.ai-list li + li { border-top: 1px solid var(--border-subtle); }
+.ai-row { position: relative; width: 100%; display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-6) var(--space-3) var(--space-4); text-align: start; background: none; border: 0; color: var(--text-primary); font-size: var(--fs-md); }
+.ai-row:hover:not([aria-disabled]) { background: var(--surface-raised); }
+.ai-row[aria-disabled] { cursor: not-allowed; }
+.ai-row-main { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ai-row-main strong { font-weight: 600; }
+.ai-row-desc { font-size: var(--fs-sm); color: var(--text-secondary); }
+.ai-row-meta { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.ai-row-go { position: absolute; inset-inline-end: var(--space-3); inset-block-start: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+.ai-run-date { font-size: var(--fs-md); font-weight: 600; }
+
+/* טבלת הכלים (רמה 3): פאנל צר, לכן גלילה אופקית עם רוחב מינימלי */
+.ai-table-scroll { border-top: 1px solid var(--border); }
+.ai-table { min-width: 820px; }
+.ai-table td { white-space: normal; }
+.ai-reasons { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.ai-pager { position: sticky; inset-block-end: 0; background: var(--surface); }
+
+.ai-crumbs.deep > .ai-crumb:first-child, .ai-crumbs.deep > .ai-crumb:last-child { flex: none; }
+/* תווית הניווט הראשי ארוכה: נשברת לשתי שורות בתוך הפריט */
+.ui-btn.rail .rail-label { white-space: normal; text-align: center; max-width: 100%; padding-inline: var(--space-1); }
+.ds-w-lg { width: 320px; }
+
+/* רמות 1 ו-2 מינימליות: שורה בודדת 44px */
+.ai-row { align-items: center; min-height: var(--row-h); padding-block: 0; }
+.ai-run[aria-disabled] { opacity: .6; }
+.ai-status { display: inline-flex; }

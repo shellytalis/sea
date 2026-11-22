@@ -1,0 +1,126 @@
+/* ===== תוצרי מודל בדף החברה (שלב 2, הצעה) ===== */
+
+/* תגי כותרת ליד שם החברה */
+.entity-title-line { flex-wrap: wrap; }
+.entity-title-tags { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.mo-tag { gap: var(--space-2); }
+.mo-tag .ui-tip { align-items: center; }
+.entity-head.compact .entity-title-optional { display: none; }
+.entity-head.compact .entity-title-line { flex-wrap: nowrap; }
+
+/* שורת הסיכום: ארבעה תאים שווים מופרדים בקו אנכי */
+.mo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mo-cell { position: relative; display: grid; grid-auto-rows: min-content; align-content: start; gap: var(--space-2); padding: var(--space-4); min-width: 0; }
+.mo-cell + .mo-cell { border-inline-start: 1px solid var(--border); }
+.mo-cell.clickable:hover { background: var(--surface-raised); }
+.mo-cell.clickable:has(.mo-name:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+.mo-name { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 500; color: var(--text-secondary); }
+.mo-name:focus-visible { outline: none; }
+.mo-cell.clickable .mo-name::after { content: ''; position: absolute; inset: 0; }
+.mo-value { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; min-height: var(--lh-lg); }
+.mo-value .ui-sev { font-size: var(--fs-md); }
+.mo-conf { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.mo-reason { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-primary); }
+.mo-reason.sec { color: var(--text-secondary); }
+.mo-more { position: relative; z-index: 1; justify-self: start; background: none; border: 0; padding: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--accent-text); }
+.mo-more:hover { text-decoration: underline; }
+.mo-planned { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-md); color: var(--text-secondary); min-height: var(--lh-lg); }
+.mo-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); font-size: var(--fs-sm); }
+.mo-ok { font-weight: 500; color: var(--text-secondary); }
+
+/* מגירת התצוגה המהירה */
+.mo-drawer-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.mo-drawer-head h3 { margin: 0; font-size: var(--fs-md); font-weight: 600; }
+.mo-drawer-meta { font-size: var(--fs-xs); color: var(--text-secondary); }
+.mo-detail { display: grid; gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
+.mo-detail:last-child { border-bottom: 0; padding-bottom: 0; }
+.mo-detail-head { display: flex; align-items: center; gap: var(--space-3); }
+.mo-detail-head strong { margin-inline-end: auto; font-size: var(--fs-sm); font-weight: 500; color: var(--text-secondary); }
+.mo-detail-value { font-size: var(--fs-md); font-weight: 600; }
+.mo-why { font-size: var(--fs-sm); }
+.mo-mismatch { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); }
+
+/* טבלת חיפוש */
+.ui-table .w-140 { width: 140px; min-width: 140px; max-width: 140px; }
+
+/* ===== מקטע קשרים בין חברות ===== */
+.rel2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); }
+.rel2.no-graph { grid-template-columns: minmax(0, 1fr); }
+.rel2-main { min-width: 0; }
+.rel2-graph { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-4); border-inline-start: 1px solid var(--border); min-width: 0; }
+.rel2-loading { padding: 0 var(--space-4); }
+.rel2-loading .ui-skeleton { border: 0; padding: 0; }
+.rel2-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.rel2-lab { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.rel2-lab-2 { margin-inline-start: var(--space-4); }
+.rel2-seg { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); }
+.ui-btn.seg { background: var(--surface); border-color: var(--border-strong); font-size: var(--fs-sm); font-weight: 400; }
+.ui-btn.seg:hover:not(:disabled) { border-color: var(--accent-text); }
+.ui-btn.seg.active { background: var(--accent-bg); border-color: var(--accent-text); }
+.rel2-common { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); color: var(--text-secondary); }
+.rel2-common svg { flex: none; }
+.rel2-link { background: none; border: 0; padding: 0; font-size: var(--fs-sm); }
+.rel2-pop { margin: 0; font-size: var(--fs-sm); max-width: 280px; }
+.rel2-table td { white-space: normal; }
+.rel2-table th { vertical-align: middle; padding-bottom: 0; }
+.rel2-table tbody tr.detail { background: var(--surface-raised); cursor: default; }
+.rel2-table tbody tr.detail td { height: auto; padding: var(--space-3) var(--space-4); }
+.rel2-table tbody tr.detail:hover td:first-child { background: none; }
+.rel-toggle { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--accent-text); }
+.rel2-cluster { display: grid; gap: var(--space-2); }
+.rel2-cluster p { margin: 0; }
+.rel2-members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1) var(--space-4); font-size: var(--fs-sm); }
+.rel2-pager { border-top: 0; border-bottom: 1px solid var(--border); }
+.rel2-pager .ui-pager-range { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; align-items: baseline; }
+.rel2-evidence { display: grid; gap: var(--space-3); padding: var(--space-4); background: var(--surface-raised); }
+.rel2-ev-head { display: flex; align-items: center; gap: var(--space-2); }
+.rel2-ev-title { font-size: var(--fs-md); font-weight: 600; }
+.rel2-ev-close { margin-inline-start: auto; }
+.rel2-ev-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); font-size: var(--fs-sm); }
+.rel2-ev-list li { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
+.rel2-feedback { display: flex; align-items: center; gap: var(--space-3); }
+.rel2-fb-q { font-size: var(--fs-xs); color: var(--text-secondary); }
+.rel2-feedback .ui-success { font-size: var(--fs-sm); }
+.rel2-caption { margin: 0; text-align: center; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+
+/* חוזק וסוג הקשר */
+.rel-strength, .rel-kind { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); }
+.rel-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.rel-bars span { width: 4px; background: var(--border); }
+.rel-bars span.on { background: var(--text-primary); }
+.rel-linekey line { stroke: var(--text-secondary); stroke-width: 1.5; }
+.rel-linekey line.dashed { stroke-dasharray: 4 3; }
+.rel-legend-inline { display: inline-flex; align-items: center; gap: var(--space-4); font-size: var(--fs-xs); color: var(--text-secondary); white-space: nowrap; }
+.rel-legend-inline span { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* גרף */
+.rel-svg { width: 100%; max-width: 520px; height: auto; margin-inline: auto; }
+.rel-node rect { fill: var(--surface-raised); stroke: var(--border-strong); stroke-width: 1; }
+.rel-node text { fill: var(--text-primary); font-size: var(--fs-xs); font-family: var(--font); }
+.rel-node { cursor: pointer; }
+.rel-node:hover rect, .rel-node.selected rect { stroke: var(--accent-text); stroke-width: 2; }
+.rel-node.center rect { stroke: var(--accent-text); stroke-width: 2; }
+.rel-node.center text { font-weight: 600; }
+.rel-node.center { cursor: default; }
+.rel-node:focus-visible, .rel-edge:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rel-bars rect { fill: var(--border); }
+.rel-bars rect.on { fill: var(--text-primary); }
+.rel-edge { cursor: pointer; }
+.rel-edge .hit { stroke: transparent; stroke-width: 14; }
+.rel-edge .stroke { stroke: var(--border-strong); fill: none; stroke-width: 1.5; }
+.rel-edge.strength-medium .stroke { stroke-width: 2.5; }
+.rel-edge.strength-strong .stroke { stroke-width: 4; }
+.rel-edge.inferred .stroke { stroke-dasharray: 7 5; }
+.rel-edge:hover .stroke, .rel-edge.selected .stroke { stroke: var(--accent-text); }
+.rel-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-4); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.rel-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+@media (max-width: 1500px) {
+  .rel2 { grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr); }
+  .rel2-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* דף /design */
+.ds-stack { display: grid; gap: var(--space-5); }
+.ds-sub { margin: var(--space-5) 0 var(--space-3); font-size: var(--fs-md); font-weight: 600; color: var(--text-secondary); }
+.ds-drawer-box { width: var(--drawer-w); max-width: 100%; padding: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); display: grid; gap: var(--space-5); }

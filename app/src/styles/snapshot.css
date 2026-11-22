@@ -8,7 +8,9 @@
 .snap-card h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
 /* גלילה פנימית אחת: הגוף בלבד; הכותרת והתחתית קבועות */
 .snap-card-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4) var(--space-5); display: grid; gap: var(--space-5); align-content: start; }
-.snap-card > footer { flex: none; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); }
+.snap-card > footer { flex: none; padding: var(--space-2) var(--space-5); border-top: 1px solid var(--border); }
+.snap-head-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; }
+.snap-head-actions .ui-tip { display: inline-flex; }
 .snap-title { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .snap-title .ui-tip { display: inline-flex; }
 .snap-glance ul { gap: var(--space-2); }
@@ -29,14 +31,11 @@
 .snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
 
 /* תחתית קומפקטית: שורת טקסט אחת ושני כפתורים קטנים */
-.snap-foot { display: grid; gap: var(--space-2); width: 100%; }
 .snap-foot-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
 .snap-cov { all: unset; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 .snap-cov:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.snap-foot-actions { display: flex; gap: var(--space-2); }
-.snap-foot-actions .ui-btn { flex: none; }
-.snap-foot .ui-pop { top: auto; bottom: calc(100% + var(--space-2)); min-width: 280px; display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
-.snap-foot .ui-pop p { margin: 0; }
+.snap-card > footer .ui-pop { top: auto; bottom: calc(100% + var(--space-2)); min-width: 280px; display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+.snap-card > footer .ui-pop p { margin: 0; }
 
 /* הדגשת המקטע אחרי "לפרטים" */
 .snap-flash { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -48,14 +47,14 @@
   .snap-card { position: fixed; inset: 0 !important; width: auto !important; max-width: none; max-height: none !important; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
     --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; --accent-bg: Canvas; }
   .snap-card-body { overflow: visible; }
-  .snap-card > header button, .snap-card > footer .snap-foot-actions, .snap-details { display: none; }
+  .snap-card > header button, .snap-details { display: none; }
 }
-/* "במבט אחד": שורת תוויות לתשומת לב, כל אחת מגללת למשפט המסומן. בלי צבע חומרה: מסגרת וטקסט ניטרליים */
-.snap-labels { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--text-secondary); }
-.snap-label { all: unset; box-sizing: border-box; cursor: pointer; padding: 0 var(--space-2); min-height: var(--control-h-sm); display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); font-size: var(--fs-sm); }
-.snap-label:hover { background: var(--surface-raised); }
+/* "במבט אחד": שורת "לתשומת לב:" בטקסט רגיל ואחריה קישורי ניווט בתוך הכרטיס (לא צ'יפים, כדי שלא יתבלבלו עם צ'יפי האינדיקטורים בדף):
+   צבע הקישור הקיים (.link), בלי מסגרת, קו תחתון דק בריחוף, מופרדים ב-"·", שורה שנשברת טבעית */
+.snap-labels { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-secondary); }
+.snap-label { text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: pointer; }
 .snap-label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-
+.snap-sep { color: var(--text-tertiary); }
 /* שלד טעינה בדמות המבנה האמיתי: כותרת ושורות טקסט לכל בלוק */
 .snap-skel { display: grid; gap: var(--space-5); }
 .snap-skel-block { display: grid; gap: var(--space-2); }

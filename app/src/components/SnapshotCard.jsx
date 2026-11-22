@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Copy, FileDown, X } from 'lucide-react';
+import { Check, Copy, FileDown, X } from 'lucide-react';
 import Button from '../ui/Button';
 import Popover from '../ui/Popover';
 import { Shape, Tooltip } from '../ui/Badges';
@@ -124,12 +124,15 @@ export function SnapshotBody({ s, onNavigate = jumpTo }) {
           {s.overview.map((x) => <li key={x}>{x}</li>)}
         </ul>
         {s.attentionLabels.length > 0 && (
-          <div className="snap-labels">
-            <span>לתשומת לב:</span>
-            {s.attentionLabels.map((a) => (
-              <button key={a.label} type="button" className="snap-label" onClick={() => jumpToSentence(a.target)}>{a.label}</button>
+          <p className="snap-labels">
+            <span>לתשומת לב: </span>
+            {s.attentionLabels.map((a, i) => (
+              <span key={a.label}>
+                {i > 0 && <span className="snap-sep" aria-hidden="true"> · </span>}
+                <a href={`#${a.target}`} className="link snap-label" onClick={(e) => { e.preventDefault(); jumpToSentence(a.target); }}>{a.label}</a>
+              </span>
             ))}
-          </div>
+          </p>
         )}
       </section>
       <section className="ui-drawer-group">
@@ -164,8 +167,15 @@ export default function SnapshotCard({ vessel, anchorRef, onClose }) {
       const r = anchorRef.current?.getBoundingClientRect();
       if (!r) return;
       const width = Math.min(WIDTH, window.innerWidth - 2 * MARGIN);
-      const left = Math.min(Math.max(r.right - width, MARGIN), window.innerWidth - MARGIN - width);
-      const top = r.bottom + GAP;
+      // יישור: קצה ההתחלה של הכרטיס (inline-start, ימין ב-RTL) לקצה ההתחלה של הכפתור, והכרטיס גדל לכיוון הסוף (שמאלה), כמו תפריט נפתח.
+      // הצמדה לקצה החלון (MARGIN) כשהכפתור קרוב אליו.
+      const rtl = getComputedStyle(anchorRef.current).direction === 'rtl';
+      const start = rtl ? r.right : r.left;
+      const left = Math.min(Math.max(rtl ? start - width : start, MARGIN), window.innerWidth - MARGIN - width);
+      // אנכית: מתחת לכל גוש כותרת הדף (שם, MMSI/IMO, צ'יפים וכפתורים), לא רק מתחת לכפתור, כדי שלא לכסות את הצ'יפים ("ברשימה: ...")
+      // שיושבים מתחת לכפתורים באותו צד. נבחר על פני התחלה בצד שאינו מכסה, כי כך הכרטיס אף פעם לא מסתיר רכיב כותרת בשום רוחב.
+      const head = anchorRef.current.closest('.entity-head')?.getBoundingClientRect();
+      const top = Math.max(r.bottom, head?.bottom ?? 0) + GAP;
       setPos({ top, left, width, maxHeight: Math.max(240, window.innerHeight - top - MARGIN) });
     };
     place();
@@ -194,7 +204,7 @@ export default function SnapshotCard({ vessel, anchorRef, onClose }) {
 
   const navigate = (id) => { closeRef.current(); window.setTimeout(() => jumpTo(id), 0); };
   const copy = async () => {
-    try { await navigator.clipboard.writeText(snapshotToText(s, vessel.name)); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* ללא הרשאת לוח */ }
+    try { await navigator.clipboard.writeText(snapshotToText(s, vessel.name)); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* ללא הרשאת לוח */ }
   };
 
   return (
@@ -203,7 +213,20 @@ export default function SnapshotCard({ vessel, anchorRef, onClose }) {
       <header>
         <h2 className="snap-title">תמונת מצב · <Ltr>{vessel.name}</Ltr>
           <Tooltip focusable text="התמונה נבנתה מכללי תצפית על נתוני המערכת, לא ממודל"><span className="ui-model">מבוסס כללים</span></Tooltip></h2>
-        <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={16} aria-hidden="true" /></Button>
+        {/* פעולות בכותרת (ב-RTL מימין לשמאל: העתקה, PDF, סגירה). כל הפעולות בקומפוננטה אחת: אפשר להחזיר לתחתית בשינוי מקום אחד */}
+        <div className="snap-head-actions">
+          {status === 'done' && s && (
+            <>
+              <Tooltip text={copied ? 'הועתק' : 'העתק טקסט'}>
+                <Button variant="icon" onClick={copy} aria-label={copied ? 'הועתק' : 'העתק טקסט'} data-copied={copied || undefined}>
+                  {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+                </Button>
+              </Tooltip>
+              <Tooltip text="ייצא PDF"><Button variant="icon" onClick={() => window.print()} aria-label="ייצא PDF"><FileDown size={16} aria-hidden="true" /></Button></Tooltip>
+            </>
+          )}
+          <Button variant="icon" onClick={onClose} aria-label="סגור"><X size={16} aria-hidden="true" /></Button>
+        </div>
       </header>
       <div className="snap-card-body">
         {status === 'loading' && <SnapshotSkeleton />}
@@ -213,13 +236,7 @@ export default function SnapshotCard({ vessel, anchorRef, onClose }) {
       </div>
       {status === 'done' && s && (
         <footer>
-          <div className="snap-foot">
-            <Coverage cov={s.coverage} generatedAt={s.generatedAt} onNavigate={navigate} />
-            <div className="snap-foot-actions">
-              <Button size="sm" icon={<Copy size={14} aria-hidden="true" />} onClick={copy}>{copied ? 'הועתק' : 'העתק טקסט'}</Button>
-              <Button size="sm" icon={<FileDown size={14} aria-hidden="true" />} onClick={() => window.print()}>ייצא PDF</Button>
-            </div>
-          </div>
+          <Coverage cov={s.coverage} generatedAt={s.generatedAt} onNavigate={navigate} />
         </footer>
       )}
     </aside>

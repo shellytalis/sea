@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 
 const BASE = process.env.BASE ?? 'http://localhost:5173';
-const OUT = process.argv[2] ?? 'audit-screenshots/stage4f-snapshot-card';
+const OUT = process.argv[2] ?? 'audit-screenshots/stage4g-snapshot-card-polish';
 const widths = (process.argv[3] ?? '1920,1366').split(',').map(Number);
 fs.mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -20,6 +20,7 @@ const problems = [];
 const hashes = {};
 
 for (const w of widths) {
+  const ctx = browser.defaultBrowserContext(); await ctx.overridePermissions(BASE, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
   const page = await browser.newPage();
   await page.setViewport({ width: w, height: 900 });
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`[${w}] ${m.text()}`); });
@@ -56,14 +57,37 @@ for (const w of widths) {
     const c = document.querySelector('.snap-card'), x = c.getBoundingClientRect();
     const b = [...document.querySelectorAll('.entity-actions button')].find((e) => e.textContent.includes('תמונת מצב')).getBoundingClientRect();
     const s = document.querySelector('.snap-card-body');
-    return { top: x.top, left: x.left, right: x.right, bottom: x.bottom, width: x.width, btnBottom: b.bottom, scrollable: s.scrollHeight > s.clientHeight, role: c.getAttribute('role'), modal: c.getAttribute('aria-modal'), focused: document.activeElement === c };
+    return { top: x.top, left: x.left, right: x.right, bottom: x.bottom, width: x.width, btnBottom: b.bottom, btnRight: b.right, headBottom: Math.max(...[...document.querySelector('.entity-head').querySelectorAll('h1, .entity-meta, .entity-badges, .entity-actions, .ui-btn, .ui-chip, .entity-badges *')].map((e) => e.getBoundingClientRect().bottom)), scrollable: s.scrollHeight > s.clientHeight, role: c.getAttribute('role'), modal: c.getAttribute('aria-modal'), focused: document.activeElement === c };
   });
+  // יישור: קצה ההתחלה (ימין ב-RTL) של הכרטיס = קצה ההתחלה של הכפתור (אלא אם הוצמד לקצה החלון), והכרטיס לא מכסה אף רכיב בכותרת הדף
+  assert.ok(Math.abs(card.right - card.btnRight) <= 1 || card.left <= 24.5 || card.right >= w - 24.5, `[${w}] הכרטיס לא מיושר לקצה הכפתור (${card.right} מול ${card.btnRight})`);
+  assert.ok(card.top >= card.headBottom, `[${w}] הכרטיס מכסה רכיב בכותרת הדף`);
   assert.ok(card.top >= card.btnBottom, `[${w}] הכרטיס מכסה את שורת הכפתורים`);
   assert.ok(card.left >= 24 && card.right <= w - 24, `[${w}] הכרטיס חורג מהחלון`);
   assert.ok(card.bottom <= 900 - 24 + 1, `[${w}] הכרטיס חורג מתחתית החלון`);
   assert.equal(Math.round(card.width), Math.min(600, w - 48));
   assert.equal(card.role, 'dialog'); assert.equal(card.modal, null); assert.ok(card.focused, `[${w}] המיקוד לא נכנס לכרטיס`);
+  // כפתורי הפעולה בכותרת הכרטיס (aria-label, בסדר העתקה, PDF, סגירה מימין לשמאל), והתחתית בשורה אחת בלי כפתורים
+  const head = await page.evaluate(() => [...document.querySelectorAll('.snap-card > header button')].map((b) => ({ label: b.getAttribute('aria-label'), x: b.getBoundingClientRect().left, text: b.textContent.trim() })));
+  assert.deepEqual(head.map((b) => b.label), ['העתק טקסט', 'ייצא PDF', 'סגור']);
+  assert.ok(head[0].x > head[1].x && head[1].x > head[2].x, `[${w}] סדר הכפתורים בכותרת לא תקין (מימין לשמאל: העתקה, PDF, סגירה)`);
+  assert.ok(head.every((b) => b.text === ''), `[${w}] יש תווית טקסט בכפתור אייקון`);
+  const foot = await page.evaluate(() => { const f = document.querySelector('.snap-card > footer'); return { h: f.getBoundingClientRect().height, buttons: [...f.querySelectorAll('button:not(.snap-cov)')].length, text: f.innerText.replace(/\s+/g, ' ').trim() }; });
+  assert.ok(foot.h <= 40, `[${w}] התחתית גבוהה מדי: ${foot.h}`); assert.equal(foot.buttons, 0);
+  assert.match(foot.text, /^נתונים מ-7 מתוך 7 מקורות · הופק 2026-11-22$/);
+  // תוויות כקישורים: תגי a, בלי מסגרת, בצבע הקישור הקיים, מופרדות ב-"·"
+  const lab = await page.evaluate(() => { const a = [...document.querySelectorAll('.snap-label')]; const cs = getComputedStyle(a[0]); const link = getComputedStyle(document.querySelector('.snap-details')); return { n: a.length, tags: [...new Set(a.map((x) => x.tagName))], border: cs.borderTopWidth, bg: cs.backgroundColor, color: cs.color, linkColor: link.color, seps: document.querySelectorAll('.snap-sep').length }; });
+  assert.deepEqual(lab.tags, ['A']); assert.equal(lab.border, '0px'); assert.equal(lab.color, lab.linkColor); assert.equal(lab.seps, lab.n - 1);
+  assert.equal(lab.bg, 'rgba(0, 0, 0, 0)');
   await shot('01-rich-v4-page-after');
+  // העתקה: האייקון מוחלף ל-✓ ל-1.5 שניות והכרטיס נשאר פתוח
+  await page.evaluate(() => document.querySelector('.snap-card > header button[aria-label="העתק טקסט"]').click());
+  await page.waitForSelector('.snap-card > header button[data-copied]', { timeout: 3000 });
+  assert.ok(await page.evaluate(() => !!document.querySelector('.snap-card > header button[aria-label="הועתק"]')), `[${w}] אין משוב אחרי העתקה`);
+  assert.ok(!(await gone()), `[${w}] הכרטיס נסגר בהעתקה`);
+  await shot('02-after-copy');
+  await sleep(1900);
+  assert.ok(await page.evaluate(() => !document.querySelector('.snap-card > header button[data-copied]')), `[${w}] משוב ההעתקה לא חזר`);
   console.log(`[${w}] card ${Math.round(card.width)}x${Math.round(card.bottom - card.top)} top=${Math.round(card.top)} bodyScrolls=${card.scrollable}`);
 
   // 2. אין סמן במשפטים; לחיצה על תווית גוללת (בתוך הכרטיס) ומדגישה, ואחרי 2 שניות חוזר
@@ -104,7 +128,7 @@ for (const w of widths) {
   await open('/vessels/v4'); await page.waitForSelector('.snap-cov');
   await page.evaluate(() => document.querySelector('.snap-cov').click()); await page.waitForSelector('.snap-sources');
   assert.match(await page.evaluate(() => document.querySelector('.snap-card .ui-pop').innerText), /בעלות וניהול\s+עודכן 2026-11-18/);
-  await shot('04-sources-popover-v4');
+  await shot('03-sources-popover-v4');
   await page.keyboard.press('Escape'); await sleep(250);
   assert.ok(!(await gone()), `[${w}] Escape סגר את הכרטיס ולא רק את ה-Popover`);
   for (const [name, path] of [['02-lean-v10', '/vessels/v10'], ['03-missing-source-v9', '/vessels/v9']]) {

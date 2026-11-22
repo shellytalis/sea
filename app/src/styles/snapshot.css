@@ -3,33 +3,29 @@
 .snap-title { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .snap-title .ui-tip { display: inline-flex; }
 
-.snap-conclusion { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); }
-.snap-conclusion .ui-shape { margin-top: var(--space-1); flex: none; }
-.snap-conclusion > div { display: grid; gap: var(--space-1); }
-.snap-conclusion strong { font-size: var(--fs-md); }
-.snap-conclusion strong:empty { display: none; }
-.snap-conclusion span { font-size: var(--fs-md); }
+.snap-glance ul { gap: var(--space-2); }
+.snap-glance li { font-size: var(--fs-md); line-height: var(--lh-md); }
 
-.snap-findings { gap: 0; }
-.snap-finding { display: grid; gap: var(--space-1); padding-block: var(--space-3); border-top: 1px solid var(--border-subtle); }
-.snap-finding:first-child { border-top: 0; padding-top: 0; }
-.snap-finding-sev { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); font-weight: 500; }
-.snap-finding p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
-.snap-finding-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
+.snap-topics { display: grid; gap: var(--space-5); }
+.snap-topic { display: grid; gap: var(--space-2); padding-block-start: var(--space-4); border-top: 1px solid var(--border-subtle); }
+.snap-topic:first-child { border-top: 0; padding-block-start: 0; }
+.snap-topic h3 { margin: 0; display: flex; align-items: baseline; gap: var(--space-3); font-size: var(--fs-md); }
+.snap-count { font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); }
+.snap-sentence { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
+.snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.snap-topic.no-data h3, .snap-topic.unchecked h3 { color: var(--text-secondary); }
+.snap-src { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); display: block; }
+.snap-src > span { display: block; }
+.snap-details { font-size: var(--fs-sm); display: block; justify-self: start; }
 
-.snap-topics { display: grid; }
-.snap-topic { border-top: 1px solid var(--border-subtle); }
-.snap-topic:first-child { border-top: 0; }
-.snap-topic h3 { margin: 0; font-size: var(--fs-md); }
-.snap-topic h3 button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--control-h); cursor: pointer; color: var(--text-primary); }
-.snap-topic h3 button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.snap-topic.no-data h3 button, .snap-topic.unchecked h3 button { color: var(--text-secondary); }
-.snap-topic-body { display: grid; gap: var(--space-2); padding-block-end: var(--space-3); padding-inline-start: var(--space-5); }
-.snap-topic-body p { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
-.snap-topic-body a { font-size: var(--fs-sm); }
-
+.snap-attn-list { gap: var(--space-3); margin-block-start: var(--space-1); }
+.snap-attn { display: flex; align-items: flex-start; gap: var(--space-2); }
+.snap-attn > .ui-shape, .snap-mark { flex: none; margin-block-start: var(--space-1); color: var(--accent-text); }
+.snap-attn > div { display: grid; gap: var(--space-1); min-width: 0; }
+.snap-attn p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
 .snap-foot { display: grid; gap: var(--space-3); width: 100%; }
-.snap-foot-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-xs); color: var(--text-tertiary); }
+.snap-foot-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-xs); color: var(--text-tertiary); }
+.snap-foot-meta .ui-btn { flex: none; }
 .snap-foot-actions { display: flex; gap: var(--space-2); }
 .snap-foot .ui-pop { top: auto; bottom: calc(100% + var(--space-2)); min-width: 280px; display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 .snap-foot .ui-pop p { margin: 0; }
@@ -45,6 +41,6 @@
   .ui-drawer.snapshot { position: absolute; inset: 0; width: auto; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
     --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; }
   .ui-drawer.snapshot .ui-drawer-body { overflow: visible; }
-  .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-finding-meta .link, .snap-topic-body a { display: none; }
-  .ui-drawer.snapshot .snap-topic-body { display: grid; }
+  .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-details { display: none; }
+ 
 }

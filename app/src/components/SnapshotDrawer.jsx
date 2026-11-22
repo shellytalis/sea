@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronLeft, Copy, FileDown } from 'lucide-react';
+import { Copy, FileDown, Info } from 'lucide-react';
 import Drawer from '../ui/Drawer';
 import Button from '../ui/Button';
 import Popover from '../ui/Popover';
@@ -11,10 +11,9 @@ import { Source, goSection } from '../ui/Entity';
 import useAsync from '../ui/useAsync';
 import { getSnapshotApi } from '../data/api';
 import { snapshotToText } from '../snapshot/compose';
+import { showSeverity } from '../snapshot/thresholds';
 
 const STATE_WORD = { unchecked: 'לא נבדק', nodata: 'אין נתונים במקור' };
-const HAS_LABEL = new Set(['critical', 'high', 'medium', 'low']);
-const TOPIC_MARK = { 'has-data': null, 'no-findings': 'none', unchecked: 'unassessed', 'no-data': null };
 
 /** מעבר למקטע בדף והדגשה קצרה שלו (המגירה נשארת פתוחה) */
 function jumpTo(id) {
@@ -25,37 +24,42 @@ function jumpTo(id) {
   window.setTimeout(() => el.classList.remove('snap-flash'), 1800);
 }
 
-function Finding({ f }) {
+const Evidence = ({ list }) => (
+  <span className="snap-src">{list.map((e, i) => <span key={e.source}>{i > 0 && ' · '}<Source source={e.source} updated={e.asOf} /></span>)}</span>
+);
+
+const DetailsLink = ({ id }) => (
+  <a href={`#${id}`} className="link snap-details" onClick={(e) => { e.preventDefault(); jumpTo(id); }}>לפרטים</a>
+);
+
+/** נקודת תשומת לב: סמן ניטרלי יחיד. חומרה רק כש-showSeverity (מדרגה ב׳) */
+function Attention({ a, first }) {
   return (
-    <li className="snap-finding">
-      <div className="snap-finding-sev"><Shape risk={f.severity} /><span>{SEVERITY_LABEL[f.severity]}</span></div>
-      <p>{f.text}</p>
-      <div className="snap-finding-meta">
-        {f.evidence.map((e) => <span key={e.source}><Source source={e.source} updated={e.asOf} /></span>)}
-        <a href={`#${f.link}`} className="link" onClick={(e) => { e.preventDefault(); jumpTo(f.link); }}>לפרטים</a>
+    <li className="snap-attn" id={first ? 'snap-first-attention' : undefined}>
+      {showSeverity ? <Shape risk={a.severity} /> : <Info size={14} aria-hidden="true" className="snap-mark" />}
+      <div>
+        <p>{showSeverity && <strong>{SEVERITY_LABEL[a.severity]}: </strong>}{a.text}</p>
+        <Evidence list={a.evidence} />
+        <DetailsLink id={a.link} />
       </div>
     </li>
   );
 }
 
-function Topic({ t }) {
-  const [open, setOpen] = useState(t.state === 'has-data');
-  const mark = TOPIC_MARK[t.state];
+function Topic({ t, firstAttentionId }) {
   return (
-    <section className={`snap-topic ${t.state}`}>
-      <h3>
-        <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronLeft size={16} aria-hidden="true" />}
-          <span>{t.label}</span>
-          {mark && <Shape risk={mark} />}
-        </button>
-      </h3>
-      {open && (
-        <div className="snap-topic-body">
-          <p>{t.text}</p>
-          <a href={`#${t.link}`} className="link" onClick={(e) => { e.preventDefault(); jumpTo(t.link); }}>למקטע בדף</a>
-        </div>
+    <section className={`snap-topic ${t.state}`} aria-label={t.label}>
+      <h3>{t.label}{t.attention.length > 0 && <span className="snap-count"><Num>{t.attention.length}</Num> לתשומת לב</span>}</h3>
+      {t.summary.map((x) => <p key={x.text} className="snap-sentence">{x.text}</p>)}
+      {t.summary.length > 0 && <Evidence list={[...new Map(t.summary.flatMap((x) => x.evidence).map((e) => [e.source, e])).values()]} />}
+      {t.note && <p className="snap-note">{t.note}</p>}
+      {t.state === 'data' && t.attention.length === 0 && <p className="snap-note">נבדק ולא נמצאו נקודות לתשומת לב.</p>}
+      {t.attention.length > 0 && (
+        <ul className="plain-list snap-attn-list">
+          {t.attention.map((a) => <Attention key={a.id} a={a} first={a.id === firstAttentionId} />)}
+        </ul>
       )}
+      {t.state === 'data' && <DetailsLink id={t.link} />}
     </section>
   );
 }
@@ -63,7 +67,7 @@ function Topic({ t }) {
 function Coverage({ cov }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onClose={() => setOpen(false)} className="snap-cov-pop" anchor={
+    <Popover open={open} onClose={() => setOpen(false)} anchor={
       <Button variant="text" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
         נתונים מ-<Num>{cov.available}</Num> מתוך <Num>{cov.total}</Num> מקורות
       </Button>
@@ -76,27 +80,23 @@ function Coverage({ cov }) {
   );
 }
 
-/** גוף התמונה (מסקנה, ממצאים, נושאים); מיוצא גם להדגמה ב-/design */
+/** גוף התמונה: "במבט אחד" (המסקנה) ואז סיכום לפי נושא; מיוצא גם להדגמה ב-/design */
 export function SnapshotBody({ s }) {
-  const c = s.conclusion;
+  const firstAttention = s.topics.flatMap((t) => t.attention)[0];
+  const toAttention = () => document.getElementById('snap-first-attention')?.scrollIntoView({ block: 'center' });
   return (
     <>
-      <section className={`snap-conclusion ${c.severity}`} aria-label="מסקנה">
-        <Shape risk={c.severity} />
-        <div>
-          {HAS_LABEL.has(c.severity) && <strong>{SEVERITY_LABEL[c.severity]}</strong>}
-          <span>{c.text}</span>
-        </div>
+      <section className="ui-drawer-group snap-glance" aria-label="במבט אחד">
+        <h3>במבט אחד</h3>
+        <ul className="plain-list">
+          {s.overview.map((x, i) => (
+            <li key={x}>{x}{i === s.overview.length - 1 && s.attentionCount > 0 && <> <a href="#snap-first-attention" className="link" onClick={(e) => { e.preventDefault(); toAttention(); }}>עבור אליהן</a></>}</li>
+          ))}
+        </ul>
       </section>
-      {s.findings.length > 0 && (
-        <section className="ui-drawer-group">
-          <h3>ממצאים</h3>
-          <ul className="plain-list snap-findings">{s.findings.map((f) => <Finding key={f.id} f={f} />)}</ul>
-        </section>
-      )}
       <section className="ui-drawer-group">
         <h3>סיכום לפי נושא</h3>
-        <div className="snap-topics">{s.topics.map((t) => <Topic key={t.id} t={t} />)}</div>
+        <div className="snap-topics">{s.topics.map((t) => <Topic key={t.id} t={t} firstAttentionId={firstAttention?.id} />)}</div>
       </section>
     </>
   );
@@ -113,7 +113,7 @@ export default function SnapshotDrawer({ vessel, onClose }) {
   return (
     <Drawer overlay side="start" className="snapshot" label="תמונת מצב" onClose={onClose}
       title={<span className="snap-title">תמונת מצב · <Ltr>{vessel.name}</Ltr>
-        <Tooltip focusable text="המסקנה נבנתה מכללי תצפית על נתוני המערכת, לא ממודל"><span className="ui-model">מבוסס כללים</span></Tooltip></span>}
+        <Tooltip focusable text="התמונה נבנתה מכללי תצפית על נתוני המערכת, לא ממודל"><span className="ui-model">מבוסס כללים</span></Tooltip></span>}
       footer={s && (
         <div className="snap-foot">
           <div className="snap-foot-meta"><Coverage cov={s.coverage} /><span>הופק <Num>{s.generatedAt}</Num></span></div>

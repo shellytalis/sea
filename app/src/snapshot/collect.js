@@ -38,7 +38,7 @@ export function collectFacts(vesselId) {
   }]));
   return {
     now: NOW,
-    vessel: { id: v.id, name: v.name, type: v.type, built: v.built, dwt: v.dwt },
+    vessel: { id: v.id, name: v.name, type: v.type, flag: v.flag, built: v.built, dwt: v.dwt },
     sources,
     identity: { changes: fx?.identity?.changes ?? [] },
     ownership: fx?.ownership ?? null,

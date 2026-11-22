@@ -149,51 +149,90 @@ test('כל כלל נושא ראיה (מקור וזמן), נושא וקישור �
   }
 });
 
-test('buildSnapshot, מקרה עשיר (v4): ממוין לפי חומרה, חומרה עליונה קריטית', () => {
-  const f = collectFacts('v4');
-  const s = buildSnapshot(f, peersOf(f));
-  assert.deepEqual(s.findings.map((x) => x.severity), ['critical', 'high', 'medium', 'medium', 'medium', 'low']);
-  assert.equal(s.conclusion.severity, 'critical');
-  assert.equal(s.conclusion.text, '6 ממצאים: 1 קריטי, 1 גבוה, 3 בינוני, 1 נמוך');
+const snap = (id) => { const f = collectFacts(id); return { f, s: buildSnapshot(f, peersOf(f)) }; };
+const topic = (s, id) => s.topics.find((t) => t.id === id);
+const texts = (t) => t.summary.map((x) => plain(x.text));
+
+test('buildSnapshot, מקרה עשיר (v4): נקודות תשומת לב בסדר הכללים, severity נשמר בנתונים', () => {
+  const { s } = snap('v4');
+  assert.equal(s.attentionCount, 6);
+  assert.deepEqual(s.findings.map((x) => x.severity), ['critical', 'high', 'medium', 'medium', 'medium', 'low'], 'findings: ממוין לפי חומרה, לנתוני מדרגה ב׳');
+  const order = s.topics.flatMap((t) => t.attention.map((a) => a.id));
+  assert.equal(order.length, 6);
+  assert.equal(topic(s, 'ownership').attention.length, 3);
   assert.equal(s.coverage.available, 7);
 });
 
-test('buildSnapshot, כלי נקי (v5): "אין אינדיקטורים" ולא "נמוך"', () => {
-  const f = collectFacts('v5');
-  const s = buildSnapshot(f, peersOf(f));
-  assert.equal(s.findings.length, 0);
-  assert.deepEqual(s.conclusion, { severity: 'none', text: 'אין אינדיקטורים' });
-  assert.ok(s.topics.every((t) => t.state === 'no-findings'));
+test('overview: כלי מלא (v4) — 4 משפטים: מה הכלי, בעלות, פעילות, נקודות תשומת לב', () => {
+  const { s } = snap('v4');
+  const o = s.overview.map(plain);
+  assert.equal(o.length, 4);
+  assert.match(o[0], /^General Cargo, בן 27 שנים \(נבנה ב-1999\), דגל .+, \d+K DWT\.$/);
+  assert.equal(o[1], 'הבעלים הרשום: Reylaver SA מ-16.4.2026; מנהל טכני: Falcon Maritime.');
+  assert.equal(o[2], 'הקריאה האחרונה בנמל LATAKIA ב-2.11.2026.');
+  assert.equal(o[3], 'יש 6 נקודות לתשומת לב.');
 });
 
-test('buildSnapshot, מקור שלא נבדק (v9): "לא הוערך" נפרד מ"אין ממצאים"', () => {
-  const f = collectFacts('v9');
-  const s = buildSnapshot(f, peersOf(f));
-  const by = Object.fromEntries(s.topics.map((t) => [t.id, t]));
-  assert.equal(by.utilization.state, 'unchecked');
-  assert.equal(by.events.state, 'no-findings');
-  assert.match(by.events.text, /פעילות ו-AIS \(מקור א\): לא נבדק/);
-  assert.equal(by.ports.state, 'no-findings');
-  assert.equal(s.coverage.available, 5);
-  assert.deepEqual(s.coverage.missing.map((m) => m.state), ['unchecked', 'unchecked']);
+test('overview: כלי דל (v10) — בעלות ונמלים "אין נתונים במקור", ובסוף "במקורות שנבדקו"', () => {
+  const { s } = snap('v10');
+  const o = s.overview.map(plain);
+  assert.equal(o[1], 'בעלות וניהול: אין נתונים במקור.');
+  assert.equal(o[2], 'קריאות נמל: אין נתונים במקור.');
+  assert.match(o[3], /^לא נמצאו נקודות לתשומת לב במקורות שנבדקו \(3 מתוך 7\)\.$/);
 });
 
-test('buildSnapshot, כלי כמעט בלי נתונים: נושאים "אין נתונים", מסקנה ללא "אין אינדיקטורים" מלא', () => {
-  const f = collectFacts('v10');
-  const s = buildSnapshot(f, peersOf(f));
-  const by = Object.fromEntries(s.topics.map((t) => [t.id, t]));
-  assert.equal(by.ownership.state, 'no-data');
-  assert.equal(by.utilization.state, 'no-data');
-  assert.equal(by.ports.state, 'no-data');
-  assert.equal(s.coverage.available, 3);
-  assert.match(s.conclusion.text, /במקורות שנבדקו \(3 מתוך 7\)/);
+test('overview: כלי נקי (v5) — "לא נמצאו נקודות לתשומת לב" בלי הסתייגות כיסוי', () => {
+  const { s } = snap('v5');
+  assert.equal(s.attentionCount, 0);
+  assert.equal(s.overview.at(-1), 'לא נמצאו נקודות לתשומת לב.');
+  assert.ok(s.topics.every((t) => t.state === 'data' && t.attention.length === 0));
 });
 
-test('collectFacts: כלי לא קיים; snapshotToText כולל מסקנה, ממצאים וכיסוי', () => {
+test('summarize, בעלות (יש נתונים): מצב נוכחי ואז שינויים, בתבנית הדוגמה', () => {
+  const { s } = snap('v4');
+  const t = texts(topic(s, 'ownership'));
+  assert.equal(t[0], 'הבעלים הרשום הוא Reylaver SA (מקסיקו, 4 כלים) מ-16.4.2026; קודם: Hawk Marine Ltd.');
+  assert.equal(t[1], 'הבעלים המוטב הוא Reylaver SA; לא היה ידוע בין 10.2.2020 ל-16.4.2026.');
+  assert.match(t[2], /^מנהל טכני: Falcon Maritime, מנהל ISM: Falcon Maritime/);
+  assert.ok(topic(s, 'ownership').summary.every((x) => x.evidence.length && x.evidence[0].asOf));
+});
+
+test('summarize, יש נתונים / אין נתונים / לא נבדק', () => {
+  const v9 = snap('v9').s, v10 = snap('v10').s;
+  assert.equal(topic(v9, 'utilization').state, 'unchecked');
+  assert.deepEqual(topic(v9, 'utilization').summary, []);
+  assert.match(topic(v9, 'utilization').note, /לא הוערך: .*לא נבדק/);
+  assert.equal(topic(v9, 'ports').state, 'data');
+  assert.match(topic(v9, 'ports').note, /מקור ג.*לא נבדק/);
+  assert.equal(topic(v10, 'ownership').state, 'no-data');
+  assert.equal(topic(v10, 'ownership').note, 'אין נתונים בנושא זה.');
+  assert.equal(topic(v10, 'ports').summary.length, 0);
+  assert.equal(topic(snap('v4').s, 'ports').summary.length, 2);
+});
+
+test('summarize, ניצולת עם בסיס השוואה, ורשימות/AIS', () => {
+  const { s } = snap('v7');
+  assert.match(texts(topic(s, 'utilization'))[0], /^214 ימים בנמל לעומת חציון 95 של 168 כלים דומים/);
+  assert.match(texts(topic(s, 'events'))[1], /^הפסקת ה-AIS הארוכה ב-90 הימים האחרונים: 52 שעות, החל מ-22\.10\.2026\.$/);
+  assert.match(texts(topic(snap('v5').s, 'events'))[0], /^אינו מופיע ברשימות/);
+});
+
+test('כל משפט עם שם לועזי עטוף בבידוד כיווני (bidi)', () => {
+  const { s } = snap('v4');
+  assert.match(s.overview[0], /^\u2068General Cargo\u2069, .*\u2068\d+K DWT\u2069\.$/);
+  assert.match(topic(s, 'identity').summary[0].text, /\u2068SEA FALCON\u2069/);
+  const attn = topic(s, 'identity').attention.map((a) => a.text).join(' ');
+  assert.match(attn, /\u2068SEA HAWK\u2069 ← \u2068SEA FALCON\u2069/);
+});
+
+test('collectFacts: כלי לא קיים; snapshotToText משקף את המבנה', () => {
   assert.equal(collectFacts('nope'), null);
-  const f = collectFacts('v4');
-  const t = snapshotToText(buildSnapshot(f, peersOf(f)), f.vessel.name);
+  const { f, s } = snap('v4');
+  const t = snapshotToText(s, f.vessel.name);
   assert.match(t, /^תמונת מצב: SEA FALCON/);
-  assert.match(t, /\[קריטי\]/);
+  assert.match(t, /במבט אחד:/);
+  assert.match(t, /בעלות וניהול \(3 לתשומת לב\):/);
+  assert.match(t, /לתשומת לב:/);
+  assert.doesNotMatch(t, /קריטי|בינוני/, 'חומרה לא מוצגת בטקסט כש-showSeverity כבוי');
   assert.match(t, /כיסוי: נתונים מ-7 מתוך 7 מקורות/);
 });

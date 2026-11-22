@@ -22,9 +22,8 @@
 .snap-mark { color: var(--accent-text); }
 .snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
 
-/* שורת מקורות אחת לנושא; כל מקור הוא יחידה שלמה שעוברת לשורה חדשה ולא נשברת */
+/* שורת מקורות אחת לנושא (שם כל מקור פעם אחת + תאריך עדכון אחרון) */
 .snap-src { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
-.snap-src > span { display: inline-block; white-space: nowrap; margin-inline-end: var(--space-2); }
 
 /* תחתית קומפקטית: שורת טקסט אחת ושני כפתורים קטנים */
 .ui-drawer.snapshot > footer { padding-block: var(--space-3); }
@@ -44,8 +43,20 @@
 @media print {
   body * { visibility: hidden; }
   .ui-drawer.snapshot, .ui-drawer.snapshot * { visibility: visible; }
-  .ui-drawer.snapshot { position: absolute; inset: 0; width: auto; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
+  .ui-drawer.snapshot { position: fixed; inset: 0; width: auto; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
     --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; }
   .ui-drawer.snapshot .ui-drawer-body { overflow: visible; }
   .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-details { display: none; }
 }
+
+/* "במבט אחד": שורת תוויות לתשומת לב, כל אחת מגללת למשפט המסומן. בלי צבע חומרה: מסגרת וטקסט ניטרליים */
+.snap-labels { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--text-secondary); }
+.snap-label { all: unset; box-sizing: border-box; cursor: pointer; padding: 0 var(--space-2); min-height: var(--control-h-sm); display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); font-size: var(--fs-sm); }
+.snap-label:hover { background: var(--surface-raised); }
+.snap-label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* שלד טעינה בדמות המבנה האמיתי: כותרת ושורות טקסט לכל בלוק */
+.snap-skel { display: grid; gap: var(--space-5); }
+.snap-skel-block { display: grid; gap: var(--space-2); }
+.snap-skel-head { block-size: var(--space-4); inline-size: 30%; background: var(--border); border-radius: var(--radius-sm); }
+.snap-skel-line { block-size: var(--space-3); background: var(--border-subtle); border-radius: var(--radius-sm); }

@@ -34,15 +34,19 @@ export async function getVesselApi(id) {
   return getVessel(id) ?? null;
 }
 
+/** error-once: ההפעלה הראשונה נכשלת (כולל הקריאה הכפולה של StrictMode בפיתוח, בתוך 200ms), ניסיון חוזר מצליח */
+let snapshotFirstCall = null;
 /**
  * תמונת מצב לכלי (נבנית מכללים, בלי מודל). באב-טיפוס: collectFacts + peerStats + buildSnapshot בצד הלקוח.
- * בשרת: GET /vessels/:id/snapshot. ל-/design ולבדיקות: ‎?snapshot=error מדמה כשל, ‎?snapshot=slow מדמה טעינה ארוכה.
+ * בשרת: GET /vessels/:id/snapshot. לדמה ולבדיקות (פרמטר בכתובת דף הכלי): snapshot=error כשל קבוע,
+ * snapshot=error-once כשל בפעם הראשונה בלבד (לבדיקת "נסה שוב"), snapshot=slow טעינה ארוכה.
  * @returns {Promise<{snapshot: ReturnType<typeof buildSnapshot>, vessel: {id: string, name: string}}|null>}
  */
 export async function getSnapshotApi(id) {
   const demo = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('snapshot') : null;
   await wait(demo === 'slow' ? 60000 : 450);
-  if (demo === 'error') throw apiError('failed');
+  if (demo === 'error-once') snapshotFirstCall ??= Date.now();
+  if (demo === 'error' || (demo === 'error-once' && Date.now() - snapshotFirstCall < 200)) throw apiError('failed');
   const facts = collectFacts(id);
   if (!facts) return null;
   return { snapshot: buildSnapshot(facts, peerStats(facts.vessel, facts.now)), vessel: facts.vessel };

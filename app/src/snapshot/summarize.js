@@ -8,7 +8,7 @@ import { dt, iso, joinHe, withinDays } from './dates.js';
  * summarizeTopic(topicId, facts, peers) → משפטים (מערך ריק כשאין מקור שנבדק).
  */
 const ok = (f, ...ids) => ids.some((id) => f.sources[id].state === 'ok');
-const ev = (f, ...ids) => ids.filter((id) => f.sources[id].state === 'ok').map((id) => ({ source: f.sources[id].label, asOf: f.sources[id].asOf }));
+const ev = (f, ...ids) => ids.filter((id) => f.sources[id].state === 'ok').map((id) => ({ source: f.sources[id].name, asOf: f.sources[id].asOf }));
 const current = (ps) => ps?.[ps.length - 1] ?? null;
 const prevOf = (ps) => (ps && ps.length > 1 ? ps[ps.length - 2] : null);
 const s = (key, text, evidence) => ({ key, text, evidence });

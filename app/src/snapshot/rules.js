@@ -22,18 +22,19 @@ export const ROLE_LABEL = { technical: 'מנהל טכני', ism: 'מנהל ISM',
 const FIELD_LABEL = { name: 'שם הכלי', imo: 'מספר IMO', mmsi: 'מספר MMSI' };
 
 /** @param {(f, p) => any} find @param {(r, f, p) => string} text */
-const rule = ({ mark = true, ...cfg }, find, text, detail) => ({
+const rule = ({ mark = true, label, ...cfg }, find, text, detail) => ({
   mark,
   ...cfg,
+  label: (f, p) => (typeof label === 'function' ? label(find(f, p)) : label ?? null),
   find,
   when: (f, p) => find(f, p) != null,
   text: (f, p) => text(find(f, p), f, p),
   detail: detail ? (f, p) => detail(find(f, p), f, p) : null,
-  evidence: (f) => cfg.sources.map((id) => ({ source: f.sources[id].label, asOf: f.sources[id].asOf })),
+  evidence: (f) => cfg.sources.map((id) => ({ source: f.sources[id].name, asOf: f.sources[id].asOf })),
 });
 
 export const RULES = [
-  rule({ id: 'owner-changed', fact: 'registered', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
+  rule({ id: 'owner-changed', label: 'החלפת בעלים רשום', fact: 'registered', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
     (f) => {
       if (!ok(f, 'ownership')) return null;
       const cur = current(f.ownership?.registered);
@@ -41,11 +42,11 @@ export const RULES = [
     },
     (cur) => `הבעלים הרשום הוחלף בתאריך ${dt(cur.from)} (${cur.company ? iso(cur.company) : 'לא ידוע'}${cur.country ? `, ${cur.country}` : ''}${cur.fleet ? `, ${cur.fleet} כלים` : ''}).`),
 
-  rule({ id: 'beneficial-unknown-period', fact: 'beneficial', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
+  rule({ id: 'beneficial-unknown-period', label: 'בעלים מוטב לא היה ידוע', fact: 'beneficial', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
     (f) => (ok(f, 'ownership') ? (f.ownership?.beneficial ?? []).find((p) => p.company === null) ?? null : null),
     (p) => `הבעלים המוטב לא היה ידוע ${p.to ? `בין ${dt(p.from)} ל־${dt(p.to)}` : `מתאריך ${dt(p.from)} ועד היום`}.`),
 
-  rule({ id: 'beneficial-became-registered', fact: 'beneficial', topic: 'ownership', severity: 'high', link: 'ownership', sources: ['ownership'] },
+  rule({ id: 'beneficial-became-registered', label: 'מוטב הפך לבעלים רשום', fact: 'beneficial', topic: 'ownership', severity: 'high', link: 'ownership', sources: ['ownership'] },
     (f) => {
       if (!ok(f, 'ownership')) return null;
       const reg = current(f.ownership?.registered), ben = current(f.ownership?.beneficial);
@@ -54,7 +55,7 @@ export const RULES = [
     },
     (r) => `הבעלים המוטב (${iso(r.company)}) הוא גם הבעלים הרשום מתאריך ${dt(r.from)}, אחרי תקופה שבה הבעלים המוטב לא היה ידוע.`),
 
-  rule({ id: 'manager-unknown', fact: 'management', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
+  rule({ id: 'manager-unknown', label: 'מנהל לא ידוע', fact: 'management', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
     (f) => {
       if (!ok(f, 'ownership')) return null;
       const roles = ['technical', 'ism'].filter((r) => f.ownership?.[r] && current(f.ownership[r])?.company === null);
@@ -62,7 +63,7 @@ export const RULES = [
     },
     (roles) => `${joinHe(roles.map((r) => ROLE_LABEL[r]))} ${roles.length > 1 ? 'אינם ידועים' : 'אינו ידוע'} במקור הבעלות והניהול.`),
 
-  rule({ id: 'management-churn', fact: 'management', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
+  rule({ id: 'management-churn', label: 'שינויים בניהול', fact: 'management', topic: 'ownership', severity: 'medium', link: 'ownership', sources: ['ownership'] },
     (f) => {
       if (!ok(f, 'ownership')) return null;
       const changed = Object.keys(ROLE_LABEL).map((r) => ({ r, cur: current(f.ownership?.[r]) }))
@@ -73,7 +74,7 @@ export const RULES = [
     (r) => `${r.roles.length} תפקידי ניהול השתנו ב-${T.mgmtWindowMonths} החודשים האחרונים (${r.roles.join(', ')}), האחרון בתאריך ${dt(r.last)}.`,
     (r) => `${r.roles.length} תפקידי ניהול השתנו ב-${T.mgmtWindowMonths} החודשים האחרונים (${joinHe(r.roles)}).`),
 
-  rule({ id: 'flag-changes', fact: 'identity-changes', topic: 'identity', severity: 'high', link: 'history', sources: ['identity'] },
+  rule({ id: 'flag-changes', label: 'החלפות דגל', fact: 'identity-changes', topic: 'identity', severity: 'high', link: 'history', sources: ['identity'] },
     (f) => {
       if (!ok(f, 'identity')) return null;
       const ch = f.identity.changes.filter((c) => c.field === 'flag' && withinMonths(c.date, f.now, T.flagWindowMonths)).sort((a, b) => b.date.localeCompare(a.date));
@@ -82,7 +83,7 @@ export const RULES = [
     (ch) => `הדגל הוחלף ${ch.length} פעמים ב-${T.flagWindowMonths} החודשים האחרונים, האחרונה בתאריך ${dt(ch[0].date)} (שונה מ-${iso(ch[0].from)} ל-${iso(ch[0].to)}).`,
     (ch) => `הדגל הוחלף ${ch.length} פעמים ב-${T.flagWindowMonths} החודשים האחרונים.`),
 
-  rule({ id: 'identity-changed', fact: 'identity-changes', topic: 'identity', severity: 'medium', link: 'history', sources: ['identity'] },
+  rule({ id: 'identity-changed', label: (c) => (c.field === 'name' ? 'שם הכלי שונה' : 'מזהה הכלי שונה'), fact: 'identity-changes', topic: 'identity', severity: 'medium', link: 'history', sources: ['identity'] },
     (f) => {
       if (!ok(f, 'identity')) return null;
       const ch = f.identity.changes.filter((c) => FIELD_LABEL[c.field] && withinMonths(c.date, f.now, T.identityWindowMonths)).sort((a, b) => b.date.localeCompare(a.date));
@@ -90,7 +91,7 @@ export const RULES = [
     },
     (c) => `${FIELD_LABEL[c.field]} שונה מ-${iso(c.from)} ל-${iso(c.to)} בתאריך ${dt(c.date)}.`),
 
-  rule({ id: 'ais-gap', fact: 'ais-gap', topic: 'ports', severity: 'medium', link: 'activity', sources: ['ais'] },
+  rule({ id: 'ais-gap', label: 'הפסקת AIS', fact: 'ais-gap', topic: 'ports', severity: 'medium', link: 'activity', sources: ['ais'] },
     (f) => {
       if (!ok(f, 'ais')) return null;
       const g = (f.ais?.gaps ?? []).filter((x) => x.hours > T.aisGapHours && withinDays(x.start, f.now, T.aisWindowDays)).sort((a, b) => b.hours - a.hours);
@@ -98,7 +99,7 @@ export const RULES = [
     },
     (g) => `הפסקת AIS של ${g.hours} שעות החל מתאריך ${dt(g.start)}, מעל סף ${T.aisGapHours} שעות (${T.aisWindowDays} הימים האחרונים).`),
 
-  rule({ id: 'port-days-high', fact: ['port-days', 'sail-days'], topic: 'utilization', severity: 'medium', link: 'activity', sources: ['ais'] },
+  rule({ id: 'port-days-high', label: 'ניצולת חריגה', fact: ['port-days', 'sail-days'], topic: 'utilization', severity: 'medium', link: 'activity', sources: ['ais'] },
     (f, p) => {
       if (!ok(f, 'ais') || !f.ais || !p || p.n < T.minPeerGroup) return null;
       return f.ais.daysInPort > T.portDaysFactor * p.daysInPort && f.ais.sailingDays < T.sailDaysFactor * p.sailingDays ? f.ais : null;
@@ -114,7 +115,7 @@ export const RULES = [
     },
     (port) => `${T.samePortCalls} הקריאות האחרונות היו כולן ב-${iso(port)}.`),
 
-  rule({ id: 'list-match', fact: 'lists', topic: 'events', severity: 'critical', link: 'risk', sources: ['lists'] },
+  rule({ id: 'list-match', label: 'רשימת מעקב', fact: 'lists', topic: 'events', severity: 'critical', link: 'risk', sources: ['lists'] },
     (f) => (ok(f, 'lists') && f.lists.matches.length ? f.lists.matches : null),
     (m) => `התאמה לרשימת מעקב: ${m.map((x) => `${x.list} (מאז ${dt(x.since)})`).join(', ')}.`),
 

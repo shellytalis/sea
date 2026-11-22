@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { collectFacts } from './collect.js';
 import { peerStats } from './peers.js';
 import { RULES } from './rules.js';
-import { buildSnapshot, snapshotToText } from './compose.js';
+import { buildSnapshot, latest, snapshotToText } from './compose.js';
 
 /** עובדות נקיות (v5: כל המקורות נבדקו, אין ממצאים) כבסיס, עם שינוי נקודתי */
 const base = () => structuredClone(collectFacts('v5'));
@@ -187,13 +187,16 @@ test('עובדות רגילות אינן מסומנות: גיל (כלל 12) ונ
   assert.ok(!texts(topic(s, 'identity')).some((x) => x.includes('27')), 'הגיל לא חוזר בנושא זהות');
 });
 
-test('הפסקת AIS שייכת לנושא "פעילות ונמלים"; "נבדק ולא נמצא" רק בנושא בלי משפט מסומן', () => {
+test('הפסקת AIS שייכת לנושא "פעילות ונמלים"; אין עוד משפט "נבדק ולא נמצא" בפלט הנושא', () => {
   const { s } = snap('v7');
   assert.equal(rule('ais-gap').topic, 'ports');
   assert.equal(marked(topic(s, 'ports'))[0].key, 'ais-gap');
-  assert.equal(topic(s, 'ports').clear, false);
-  assert.equal(topic(s, 'events').clear, true);
-  assert.equal(topic(snap('v4').s, 'events').clear, false);
+  for (const id of ['v4', 'v5', 'v7', 'v9', 'v10']) {
+    const all = JSON.stringify(snap(id).s);
+    assert.ok(!all.includes('נבדק ולא נמצאו'), `${id}: אין "נבדק ולא נמצאו"`);
+    assert.ok(!all.includes('לא נמצאו נקודות לתשומת לב'), `${id}: אין "לא נמצאו נקודות"`);
+    assert.ok(!snap(id).s.topics.some((t) => 'clear' in t));
+  }
 });
 
 test('אין כפילות: אף משפט לא מופיע פעמיים בפלט, בכל מקרי הדמה', () => {
@@ -239,39 +242,59 @@ test('רשימות: תבנית מלאה עם גרש, ובלי רשימה "אינ
   assert.equal(texts(topic(snap('v5').s, 'events'))[0], 'אינו מופיע ברשימות מעקב או סנקציות.');
 });
 
-test('overview: כלי מלא — 4 משפטים: מה הכלי, בעלות, פעילות, נקודות תשומת לב', () => {
-  const o = snap('v4').s.overview.map(plain);
-  assert.equal(o.length, 4);
+test('overview: כלי מלא — 3 משפטי עובדה, והנקודות בשורת תוויות', () => {
+  const { s } = snap('v4');
+  const o = s.overview.map(plain);
+  assert.equal(o.length, 3);
   assert.match(o[0], /^General Cargo, בן 27 שנים \(נבנה ב-1999\), דגל .+, \d+K DWT\.$/);
   assert.equal(o[1], 'הבעלים הרשום: Reylaver SA מתאריך 16.4.2026; מנהל טכני: Falcon Maritime.');
   assert.equal(o[2], 'הקריאה האחרונה בנמל LATAKIA בתאריך 2.11.2026.');
-  assert.equal(o[3], 'יש 4 נקודות לתשומת לב.');
+  assert.ok(!o.some((x) => x.includes('נקודות לתשומת לב')));
 });
 
-test('overview: כלי דל (v10) ונקי (v5)', () => {
-  const o = snap('v10').s.overview.map(plain);
-  assert.equal(o[1], 'בעלות וניהול: אין נתונים במקור.');
-  assert.equal(o[2], 'קריאות נמל: אין נתונים במקור.');
-  assert.match(o[3], /^לא נמצאו נקודות לתשומת לב במקורות שנבדקו \(3 מתוך 7\)\.$/);
-  const clean = snap('v5').s;
-  assert.equal(clean.attentionCount, 0);
-  assert.equal(clean.overview.at(-1), 'לא נמצאו נקודות לתשומת לב.');
-  assert.ok(clean.topics.every((t) => t.state === 'data' && t.clear));
+test('תוויות לתשומת לב: מהכללים שהופעלו, בסדר קבוע (לא לפי חומרה), כל אחת מפנה למשפט המסומן שלה', () => {
+  const { s } = snap('v4');
+  assert.deepEqual(s.attentionLabels.map((a) => a.label), ['רשימת מעקב', 'החלפת בעלים רשום', 'בעלים מוטב לא היה ידוע', 'מוטב הפך לבעלים רשום', 'שם הכלי שונה']);
+  assert.deepEqual(s.attentionLabels.map((a) => a.topic), ['events', 'ownership', 'ownership', 'ownership', 'identity']);
+  const ids = new Set(s.topics.flatMap((t) => t.summary.filter((x) => x.marked).map((x) => x.id)));
+  s.attentionLabels.forEach((a) => assert.ok(ids.has(a.target), a.label));
+  assert.deepEqual(snap('v7').s.attentionLabels.map((a) => a.label), ['הפסקת AIS', 'ניצולת חריגה'], 'פעילות לפני ניצולת');
+  RULES.filter((r) => !r.mark).forEach((r) => assert.equal(r.label(base(), null), null, 'עובדה רגילה: בלי תווית'));
+});
+
+test('אין נקודות: אין תוויות ואין שורה על כך (v5, v10)', () => {
+  for (const id of ['v5', 'v10']) {
+    const { s } = snap(id);
+    assert.deepEqual(s.attentionLabels, []);
+    assert.equal(s.attentionCount, 0);
+    assert.ok(s.overview.every((x) => !x.includes('לתשומת לב')));
+  }
+  assert.equal(snap('v10').s.overview[1], 'בעלות וניהול: אין נתונים במקור.');
+  assert.equal(snap('v10').s.overview[2], 'קריאות נמל: אין נתונים במקור.');
 });
 
 test('מצבי אין נתונים / לא הוערך', () => {
   const v9 = snap('v9').s, v10 = snap('v10').s;
   assert.equal(topic(v9, 'utilization').state, 'unchecked');
   assert.deepEqual(topic(v9, 'utilization').summary, []);
-  assert.match(topic(v9, 'utilization').note, /לא הוערך: .*לא נבדק/);
+  assert.match(topic(v9, 'utilization').note, /לא הוערך: פעילות ו-AIS לא נבדק/);
   assert.equal(topic(v9, 'ports').state, 'data');
-  assert.match(topic(v9, 'ports').note, /מקור ג.*לא נבדק/);
+  assert.match(topic(v9, 'ports').note, /קריאות נמל \(נוסף\).*לא נבדק/);
   assert.equal(topic(v10, 'ownership').state, 'no-data');
   assert.equal(topic(v10, 'ownership').note, 'אין נתונים בנושא זה.');
-  assert.equal(topic(v10, 'ownership').clear, false);
   assert.equal(topic(v10, 'ports').summary.length, 0);
 });
 
+test('שורת מקורות: שם כל מקור פעם אחת, בלי "(מקור א/ב/ג)", תאריך עדכון אחרון', () => {
+  const { s } = snap('v4');
+  assert.deepEqual(topic(s, 'ports').evidence.map((e) => e.source), ['קריאות נמל', 'פעילות ו-AIS'], 'קריאות נמל (שני מקורות) מאוחד');
+  assert.equal(latest(topic(s, 'ports').evidence), '2026-11-22');
+  assert.ok(!JSON.stringify(s).includes('מקור א') && !JSON.stringify(s).includes('מקור ב') && !JSON.stringify(s).includes('מקור ג'));
+  assert.ok(!JSON.stringify(RULES.map((r) => r.evidence(base()))).includes('(מקור'));
+  const t = snapshotToText(s, 'X');
+  assert.match(t, /מקורות: קריאות נמל · פעילות ו-AIS · עודכן לאחרונה 2026-11-22/);
+  assert.ok(!/;\s*$/m.test(t.split('\n').filter((l) => l.includes('מקורות:')).join('\n')), 'בלי נקודה-פסיק תלויה');
+});
 test('כל משפט נושא מקור וזמן; לנושא שורת מקורות אחת בלי כפילות מקורות', () => {
   const { s } = snap('v4');
   s.topics.forEach((t) => {
@@ -297,7 +320,8 @@ test('collectFacts: כלי לא קיים; snapshotToText משקף את המבנ�
   assert.match(t, /במבט אחד:/);
   assert.match(t, /בעלות וניהול \(2 לתשומת לב\):/);
   assert.match(t, /▸ .*\(לתשומת לב\)/);
-  assert.match(t, /מקורות: בעלות וניהול/);
+  assert.match(t, /- לתשומת לב: רשימת מעקב · החלפת בעלים רשום/);
+  assert.match(t, /מקורות: בעלות וניהול · עודכן לאחרונה 2026-11-18/);
   assert.doesNotMatch(t, /קריטי|בינוני/, 'חומרה לא מוצגת בטקסט כש-showSeverity כבוי');
   assert.match(t, /כיסוי: נתונים מ-7 מתוך 7 מקורות/);
 });

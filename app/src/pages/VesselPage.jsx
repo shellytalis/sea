@@ -78,8 +78,12 @@ export default function VesselPage() {
     { id: 'evidence', label: 'ראיות', render: (i) => <span className="wrap">{i.evidence}</span> },
   ];
 
+  /* המגירה דוחפת את תוכן הדף (workspace.with-drawer: עמודת מגירה + עמודת דף) ולא מכסה אותו: ב-RTL כותרת הכלי (שם, MMSI, IMO, כפתורים)
+     נמצאת בצד ה-start, שם נפתחת המגירה, ושכבת-על הייתה חותכת אותה. הדף נשאר mounted באותו מקום בעץ, ולכן הגלילה שלו נשמרת בפתיחה ובסגירה.
+     חלופה שנדחתה: מגירה מעל וכותרת דביקה. */
   return (
-    <>
+    <div className={`workspace${snapshot ? ' with-drawer' : ''}`}>
+      {snapshot && <SnapshotDrawer vessel={v} onClose={() => setSnapshot(false)} />}
       <EntityPage resetKey={v.id} sections={SECTIONS}
         header={
           <EntityHead title={<Ltr>{v.name}</Ltr>}
@@ -181,7 +185,6 @@ export default function VesselPage() {
         </Section>
       </EntityPage>
       {adding && <AddToListDialog vessel={v} onClose={() => setAdding(false)} />}
-      {snapshot && <SnapshotDrawer vessel={v} onClose={() => setSnapshot(false)} />}
-    </>
+    </div>
   );
 }

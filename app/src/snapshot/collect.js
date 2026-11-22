@@ -9,13 +9,13 @@ export const NOW = '2026-11-22';
  * @typedef {'ok'|'unchecked'|'nodata'} SourceState
  */
 export const SOURCES = [
-  { id: 'identity', label: 'זהות ושינויים (מקור ב)', updated: '2026-11-20' },
-  { id: 'ownership', label: 'בעלות וניהול (מקור ב)', updated: '2026-11-18' },
-  { id: 'portsB', label: 'קריאות נמל (מקור ב)', updated: '2026-11-21' },
-  { id: 'portsC', label: 'קריאות נמל (מקור ג)', updated: '2026-11-19' },
-  { id: 'ais', label: 'פעילות ו-AIS (מקור א)', updated: '2026-11-22' },
-  { id: 'lists', label: 'רשימות וסנקציות', updated: '2026-11-22' },
-  { id: 'spec', label: 'מפרט טכני (מקור א)', updated: '2026-11-15' },
+  { id: 'identity', label: 'זהות ושינויים', name: 'זהות ושינויים', updated: '2026-11-20' },
+  { id: 'ownership', label: 'בעלות וניהול', name: 'בעלות וניהול', updated: '2026-11-18' },
+  { id: 'portsB', label: 'קריאות נמל', name: 'קריאות נמל', updated: '2026-11-21' },
+  { id: 'portsC', label: 'קריאות נמל (נוסף)', name: 'קריאות נמל', updated: '2026-11-19' },
+  { id: 'ais', label: 'פעילות ו-AIS', name: 'פעילות ו-AIS', updated: '2026-11-22' },
+  { id: 'lists', label: 'רשימות וסנקציות', name: 'רשימות וסנקציות', updated: '2026-11-22' },
+  { id: 'spec', label: 'מפרט טכני', name: 'מפרט טכני', updated: '2026-11-15' },
 ];
 
 /**
@@ -33,7 +33,7 @@ export function collectFacts(vesselId) {
     ownership: !!fx?.ownership, portsB: !!fx?.ports, portsC: !!fx?.ports, ais: !!fx?.ais,
   };
   const sources = Object.fromEntries(SOURCES.map((s) => [s.id, {
-    label: s.label, asOf: s.updated,
+    label: s.label, name: s.name, asOf: s.updated,
     state: override[s.id] ?? (has[s.id] ? 'ok' : 'nodata'),
   }]));
   return {

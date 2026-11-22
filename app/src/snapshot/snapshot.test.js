@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { collectFacts } from './collect.js';
 import { peerStats } from './peers.js';
 import { RULES } from './rules.js';
-import { buildSnapshot, latest, snapshotToText } from './compose.js';
+import { buildSnapshot, snapshotToText } from './compose.js';
 
 /** עובדות נקיות (v5: כל המקורות נבדקו, אין ממצאים) כבסיס, עם שינוי נקודתי */
 const base = () => structuredClone(collectFacts('v5'));

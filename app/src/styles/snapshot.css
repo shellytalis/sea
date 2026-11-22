@@ -1,28 +1,34 @@
-/* תמונת מצב (שלבים 4–4ג, הצעה): מגירה בצד ה-start, נבנית מכללים. טוקנים בלבד. */
-.ui-drawer.snapshot > header { min-height: 48px; align-items: center; padding-block: var(--space-2); }
+/* תמונת מצב (שלבים 4–4ו, הצעה): כרטיס צף non-modal מעוגן לכפתור, נבנה מכללים. טוקנים בלבד.
+   המיקום והמידות (top, left, width, maxHeight) מחושבים ב-SnapshotCard ביחס לכפתור ולחלון. */
+.snap-card { position: fixed; z-index: var(--z-drawer); display: flex; flex-direction: column; box-sizing: border-box;
+  max-width: calc(100vw - 48px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-pop); }
+.snap-card:focus { outline: none; }
+.snap-card > header { flex: none; min-height: 48px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  padding-block: var(--space-2); padding-inline: var(--space-5) var(--space-2); border-bottom: 1px solid var(--border); }
+.snap-card h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
+/* גלילה פנימית אחת: הגוף בלבד; הכותרת והתחתית קבועות */
+.snap-card-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4) var(--space-5); display: grid; gap: var(--space-5); align-content: start; }
+.snap-card > footer { flex: none; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); }
 .snap-title { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .snap-title .ui-tip { display: inline-flex; }
-
 .snap-glance ul { gap: var(--space-2); }
 .snap-glance li { font-size: var(--fs-md); line-height: var(--lh-md); }
 
 .snap-topics { display: grid; gap: var(--space-5); }
 .snap-topic { display: grid; gap: var(--space-2); padding-block-start: var(--space-4); border-top: 1px solid var(--border-subtle); }
 .snap-topic:first-child { border-top: 0; padding-block-start: 0; }
-/* כותרת הנושא: שם, ספירה, וקישור "לפרטים" יחיד לנושא (בקצה ה-end) */
+/* כותרת הנושא: שם וקישור "לפרטים" יחיד לנושא (בקצה ה-end) */
 .snap-topic h3 { margin: 0; display: flex; align-items: baseline; gap: var(--space-3); font-size: var(--fs-md); }
 .snap-details { margin-inline-start: auto; font-size: var(--fs-sm); font-weight: 400; }
 .snap-topic.no-data h3 > span:first-child, .snap-topic.unchecked h3 > span:first-child { color: var(--text-secondary); }
 
-/* משפטי סיכום: עמודת סמן קבועה, כך שמשפטים מסומנים ולא מסומנים מיושרים */
+/* משפטי סיכום: כולם נראים אחיד (בלי סמן). הדגשת משפט אחרי לחיצה על תווית: רקע עדין ל-2 שניות */
 .snap-sentences { gap: var(--space-2); }
-.snap-sentence { display: grid; grid-template-columns: var(--space-4) minmax(0, 1fr); gap: var(--space-2); font-size: var(--fs-md); line-height: var(--lh-md); }
-.snap-gutter { display: flex; justify-content: center; padding-block-start: var(--space-1); }
-.snap-mark { color: var(--accent-text); }
+.snap-sentence { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--fs-md); line-height: var(--lh-md); border-radius: var(--radius-sm); transition: background-color 0.3s; }
+.snap-hl { background: var(--accent-bg); }
 .snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
 
 /* תחתית קומפקטית: שורת טקסט אחת ושני כפתורים קטנים */
-.ui-drawer.snapshot > footer { padding-block: var(--space-3); }
 .snap-foot { display: grid; gap: var(--space-2); width: 100%; }
 .snap-foot-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
 .snap-cov { all: unset; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -35,16 +41,15 @@
 /* הדגשת המקטע אחרי "לפרטים" */
 .snap-flash { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* ייצוא PDF: הדפסת המגירה בלבד, בצבעי מערכת (בלי ערכים קשיחים) */
+/* ייצוא PDF: הדפסת הכרטיס בלבד, בצבעי מערכת (בלי ערכים קשיחים) */
 @media print {
   body * { visibility: hidden; }
-  .ui-drawer.snapshot, .ui-drawer.snapshot * { visibility: visible; }
-  .ui-drawer.snapshot { position: fixed; inset: 0; width: auto; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
-    --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; }
-  .ui-drawer.snapshot .ui-drawer-body { overflow: visible; }
-  .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-details { display: none; }
+  .snap-card, .snap-card * { visibility: visible; }
+  .snap-card { position: fixed; inset: 0 !important; width: auto !important; max-width: none; max-height: none !important; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
+    --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; --accent-bg: Canvas; }
+  .snap-card-body { overflow: visible; }
+  .snap-card > header button, .snap-card > footer .snap-foot-actions, .snap-details { display: none; }
 }
-
 /* "במבט אחד": שורת תוויות לתשומת לב, כל אחת מגללת למשפט המסומן. בלי צבע חומרה: מסגרת וטקסט ניטרליים */
 .snap-labels { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--text-secondary); }
 .snap-label { all: unset; box-sizing: border-box; cursor: pointer; padding: 0 var(--space-2); min-height: var(--control-h-sm); display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); font-size: var(--fs-sm); }

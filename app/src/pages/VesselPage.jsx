@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ListPlus, Map, ScanSearch, Upload } from 'lucide-react';
 import { getVesselApi } from '../data/api';
@@ -15,7 +15,7 @@ import Tabs from '../ui/Tabs';
 import useAsync from '../ui/useAsync';
 import { VesselFlags } from '../components/VesselFlags';
 import AddToListDialog from '../components/AddToListDialog';
-import SnapshotDrawer from '../components/SnapshotDrawer';
+import SnapshotCard from '../components/SnapshotCard';
 import CompanyRef from '../components/CompanyRef';
 
 const visitCols = [
@@ -57,6 +57,7 @@ export default function VesselPage() {
   const { status, data: v, reload } = useAsync(() => getVesselApi(id), [id]);
   const [adding, setAdding] = useState(false);
   const [snapshot, setSnapshot] = useState(false);
+  const snapshotBtn = useRef(null);
 
   if (status === 'done' && !v) {
     return (
@@ -78,12 +79,8 @@ export default function VesselPage() {
     { id: 'evidence', label: 'ראיות', render: (i) => <span className="wrap">{i.evidence}</span> },
   ];
 
-  /* המגירה דוחפת את תוכן הדף (workspace.with-drawer: עמודת מגירה + עמודת דף) ולא מכסה אותו: ב-RTL כותרת הכלי (שם, MMSI, IMO, כפתורים)
-     נמצאת בצד ה-start, שם נפתחת המגירה, ושכבת-על הייתה חותכת אותה. הדף נשאר mounted באותו מקום בעץ, ולכן הגלילה שלו נשמרת בפתיחה ובסגירה.
-     חלופה שנדחתה: מגירה מעל וכותרת דביקה. */
   return (
-    <div className={`workspace${snapshot ? ' with-drawer' : ''}`}>
-      {snapshot && <SnapshotDrawer vessel={v} onClose={() => setSnapshot(false)} />}
+    <>
       <EntityPage resetKey={v.id} sections={SECTIONS}
         header={
           <EntityHead title={<Ltr>{v.name}</Ltr>}
@@ -92,7 +89,7 @@ export default function VesselPage() {
             compactBadge={<VesselFlags v={v} withLists={false} />}
             actions={
               <>
-                <Button icon={<ScanSearch size={16} aria-hidden="true" />} aria-expanded={snapshot} onClick={() => setSnapshot(true)}>תמונת מצב</Button>
+                <Button ref={snapshotBtn} icon={<ScanSearch size={16} aria-hidden="true" />} aria-expanded={snapshot} aria-haspopup="dialog" onClick={() => setSnapshot(!snapshot)}>תמונת מצב</Button>
                 <Button to={`/?v=${v.id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>
                 <Button variant="primary" icon={<ListPlus size={16} aria-hidden="true" />} onClick={() => setAdding(true)}>הוסף לרשימה</Button>
               </>
@@ -185,6 +182,7 @@ export default function VesselPage() {
         </Section>
       </EntityPage>
       {adding && <AddToListDialog vessel={v} onClose={() => setAdding(false)} />}
-    </div>
+      {snapshot && <SnapshotCard vessel={v} anchorRef={snapshotBtn} onClose={() => setSnapshot(false)} />}
+    </>
   );
 }

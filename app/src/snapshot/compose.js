@@ -19,7 +19,6 @@ export const TOPICS = [
   { id: 'events', label: 'רשימות ואירועים', sources: ['lists'], link: 'risk' },
 ];
 
-const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * מסמן את המשפטים שכלל תצפית הופעל עליהם (בלי רשימה נפרדת, בלי משפט כפול). כמה כללים על אותה עובדה = משפט אחד עם סמן.

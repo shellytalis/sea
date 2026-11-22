@@ -16,7 +16,7 @@ import "./styles/map-tools-set.css";
 import App from "./App";
 import { VesselSetProvider } from "./state/vesselSet";
 createRoot(document.getElementById("root")).render(<StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <VesselSetProvider>
         <App />
       </VesselSetProvider>

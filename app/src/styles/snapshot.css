@@ -1,4 +1,4 @@
-/* תמונת מצב (שלב 4, הצעה): מגירה בצד ה-start, נבנית מכללים. טוקנים בלבד. */
+/* תמונת מצב (שלבים 4–4ג, הצעה): מגירה בצד ה-start, נבנית מכללים. טוקנים בלבד. */
 .ui-drawer.snapshot > header { min-height: 48px; align-items: center; padding-block: var(--space-2); }
 .snap-title { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .snap-title .ui-tip { display: inline-flex; }
@@ -9,27 +9,33 @@
 .snap-topics { display: grid; gap: var(--space-5); }
 .snap-topic { display: grid; gap: var(--space-2); padding-block-start: var(--space-4); border-top: 1px solid var(--border-subtle); }
 .snap-topic:first-child { border-top: 0; padding-block-start: 0; }
+/* כותרת הנושא: שם, ספירה, וקישור "לפרטים" יחיד לנושא (בקצה ה-end) */
 .snap-topic h3 { margin: 0; display: flex; align-items: baseline; gap: var(--space-3); font-size: var(--fs-md); }
 .snap-count { font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); }
-.snap-sentence { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
-.snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
-.snap-topic.no-data h3, .snap-topic.unchecked h3 { color: var(--text-secondary); }
-.snap-src { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); display: block; }
-.snap-src > span { display: block; }
-.snap-details { font-size: var(--fs-sm); display: block; justify-self: start; }
+.snap-details { margin-inline-start: auto; font-size: var(--fs-sm); font-weight: 400; }
+.snap-topic.no-data h3 > span:first-child, .snap-topic.unchecked h3 > span:first-child { color: var(--text-secondary); }
 
-.snap-attn-list { gap: var(--space-3); margin-block-start: var(--space-1); }
-.snap-attn { display: flex; align-items: flex-start; gap: var(--space-2); }
-.snap-attn > .ui-shape, .snap-mark { flex: none; margin-block-start: var(--space-1); color: var(--accent-text); }
-.snap-attn > div { display: grid; gap: var(--space-1); min-width: 0; }
-.snap-attn p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
-.snap-foot { display: grid; gap: var(--space-3); width: 100%; }
-.snap-foot-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-xs); color: var(--text-tertiary); }
-.snap-foot-meta .ui-btn { flex: none; }
+/* משפטי סיכום: עמודת סמן קבועה, כך שמשפטים מסומנים ולא מסומנים מיושרים */
+.snap-sentences { gap: var(--space-2); }
+.snap-sentence { display: grid; grid-template-columns: var(--space-4) minmax(0, 1fr); gap: var(--space-2); font-size: var(--fs-md); line-height: var(--lh-md); }
+.snap-gutter { display: flex; justify-content: center; padding-block-start: var(--space-1); }
+.snap-mark { color: var(--accent-text); }
+.snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+
+/* שורת מקורות אחת לנושא; כל מקור הוא יחידה שלמה שעוברת לשורה חדשה ולא נשברת */
+.snap-src { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
+.snap-src > span { display: inline-block; white-space: nowrap; margin-inline-end: var(--space-2); }
+
+/* תחתית קומפקטית: שורת טקסט אחת ושני כפתורים קטנים */
+.ui-drawer.snapshot > footer { padding-block: var(--space-3); }
+.snap-foot { display: grid; gap: var(--space-2); width: 100%; }
+.snap-foot-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-secondary); }
+.snap-cov { all: unset; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.snap-cov:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .snap-foot-actions { display: flex; gap: var(--space-2); }
+.snap-foot-actions .ui-btn { flex: none; }
 .snap-foot .ui-pop { top: auto; bottom: calc(100% + var(--space-2)); min-width: 280px; display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 .snap-foot .ui-pop p { margin: 0; }
-.snap-foot .ui-pop .ui-btn { flex: none; }
 
 /* הדגשת המקטע אחרי "לפרטים" */
 .snap-flash { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -42,5 +48,4 @@
     --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; }
   .ui-drawer.snapshot .ui-drawer-body { overflow: visible; }
   .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-details { display: none; }
- 
 }

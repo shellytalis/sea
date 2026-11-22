@@ -18,3 +18,9 @@ export function withinDays(date, now, days) {
 
 /** בידוד כיווני לשם לטיני בתוך משפט עברי (FSI...PDI), כדי שלא יתהפך */
 export const iso = (s) => `\u2068${s}\u2069`;
+
+/** תאריך לתצוגה בתוך משפט עברי: d.m.yyyy עטוף בבידוד כיווני */
+export const dt = (s) => iso(fmtDate(s));
+
+/** "א, ב ו-ג" (חיבור ברשימה בעברית) */
+export const joinHe = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} ו${xs[xs.length - 1]}` : xs[0] ?? '');

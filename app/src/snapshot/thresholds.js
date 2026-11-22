@@ -22,5 +22,6 @@ export const THRESHOLDS = {
   portDaysFactor: 1.5,        // כלל 9: ימים בנמל מעל פי X מחציון כלים דומים
   sailDaysFactor: 0.5,        // כלל 9: ימי הפלגה מתחת ל-X מהחציון
   samePortCalls: 5,           // כלל 10: מספר קריאות אחרונות באותו נמל
+  minPeerGroup: 30,           // כלל 9: קבוצת כלים דומים קטנה מזה: אין בסיס השוואה
   oldAgeYears: 20,            // כלל 12: גיל כלי
 };

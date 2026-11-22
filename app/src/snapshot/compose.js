@@ -40,15 +40,8 @@ function markSentences(topicId, sentences, firing, facts, peers) {
   return [...out.filter((x) => x.marked), ...out.filter((x) => !x.marked)].map((x, i) => ({ ...x, id: `snap-${topicId}-${i}` }));
 }
 
-/** מקורות הנושא: כל מקור פעם אחת (לשורת "מקורות" אחת בסוף הנושא) */
-const uniqueEvidence = (sentences) => {
-  const by = new Map();
-  sentences.flatMap((x) => x.evidence).forEach((e) => { if (!by.has(e.source) || by.get(e.source).asOf < e.asOf) by.set(e.source, e); });
-  return [...by.values()];
-};
-/** תאריך העדכון האחרון מבין המקורות */
+/** תאריך העדכון האחרון מבין רשימת {asOf} */
 export const latest = (list) => list.reduce((m, e) => (e.asOf > m ? e.asOf : m), '');
-
 function topicOf(t, firing, facts, peers) {
   const states = t.sources.map((id) => facts.sources[id]);
   const unchecked = states.filter((s) => s.state === 'unchecked');
@@ -57,7 +50,7 @@ function topicOf(t, firing, facts, peers) {
   const summary = state === 'data' ? markSentences(t.id, summarizeTopic(t.id, facts, peers), mine, facts, peers) : [];
   const markedCount = summary.filter((x) => x.marked).length;
   return {
-    ...t, state, summary, markedCount, evidence: uniqueEvidence(summary),
+    ...t, state, summary, markedCount,
     note: state === 'unchecked' ? `לא הוערך: ${unchecked.map((s) => s.label).join(', ')} לא נבדק.`
       : state === 'no-data' ? 'אין נתונים בנושא זה.'
         : unchecked.length ? `${unchecked.map((s) => s.label).join(', ')}: לא נבדק.` : null,
@@ -101,7 +94,13 @@ export function buildSnapshot(facts, peers, generatedAt = facts.now) {
   const firing = RULES.filter((r) => r.when(facts, peers));
   const findings = firing.map((r) => ({ id: r.id, severity: r.severity, topic: r.topic, text: r.text(facts, peers), evidence: r.evidence(facts), link: r.link, mark: r.mark }));
   const missing = SOURCES.filter((s) => facts.sources[s.id].state !== 'ok').map((s) => ({ label: s.label, state: facts.sources[s.id].state }));
-  const coverage = { available: SOURCES.length - missing.length, total: SOURCES.length, missing };
+  // included: כל מקור שנבדק, שם אחד פעם אחת (קריאות נמל משני מקורות מאוחד) עם תאריך העדכון האחרון וקישור לסעיף בדף. ה-Popover בתחתית והייצוא נשענים עליו
+  const inc = new Map();
+  SOURCES.filter((s) => facts.sources[s.id].state === 'ok').forEach((s) => {
+    const cur = inc.get(s.name);
+    inc.set(s.name, { name: s.name, asOf: cur && cur.asOf > facts.sources[s.id].asOf ? cur.asOf : facts.sources[s.id].asOf, link: s.link });
+  });
+  const coverage = { available: SOURCES.length - missing.length, total: SOURCES.length, included: [...inc.values()], missing };
   const topics = TOPICS.map((t) => topicOf(t, firing, facts, peers));
   const attentionCount = topics.reduce((n, t) => n + t.markedCount, 0);
   return {
@@ -115,22 +114,21 @@ export function buildSnapshot(facts, peers, generatedAt = facts.now) {
   };
 }
 
-/** טקסט רגיל להעתקה: אותו מבנה כמו המגירה; משפט מסומן נפתח ב-"▸" (בנוסף "לתשומת לב") */
+/** טקסט רגיל להעתקה: אותו מבנה כמו המגירה; משפט מסומן נפתח ב-"▸" (בנוסף "לתשומת לב"). בלוק "מקורות" אחד בסוף, לא שורה בכל נושא */
 export function snapshotToText(s, vesselName) {
-  const src = (list) => `מקורות: ${list.map((e) => e.source).join(' · ')} · עודכן לאחרונה ${latest(list)}`;
   const sev = (x) => (showSeverity ? findingSeverity(s, x) : '');
   const lines = [`תמונת מצב: ${vesselName} (מבוסס כללים)`, '', 'במבט אחד:', ...s.overview.map((x) => `- ${x}`), ...(s.attentionLabels.length ? [`- לתשומת לב: ${s.attentionLabels.map((a) => a.label).join(' · ')}`] : []), ''];
   s.topics.forEach((t) => {
-    lines.push(`${t.label}${t.markedCount ? ` (${t.markedCount} לתשומת לב)` : ''}:`);
+    lines.push(`${t.label}:`);
     t.summary.forEach((x) => lines.push(x.marked ? `▸ ${sev(x)}${x.text} (לתשומת לב)` : `- ${x.text}`));
     if (t.note) lines.push(`- ${t.note}`);
-    if (t.evidence.length) lines.push(`  ${src(t.evidence)}`);
     lines.push('');
   });
-  lines.push(`כיסוי: נתונים מ-${s.coverage.available} מתוך ${s.coverage.total} מקורות${s.coverage.missing.length ? ` (חסר: ${s.coverage.missing.map((m) => m.label).join(', ')})` : ''}`, `הופק: ${s.generatedAt}`);
+  lines.push('מקורות:', ...s.coverage.included.map((m) => `- ${m.name} · עודכן ${m.asOf}`));
+  s.coverage.missing.forEach((m) => lines.push(`- ${m.label}: ${m.state === 'unchecked' ? 'לא נבדק' : 'אין נתונים במקור'}`));
+  lines.push('', `כיסוי: נתונים מ-${s.coverage.available} מתוך ${s.coverage.total} מקורות`, `הופק: ${s.generatedAt}`);
   return lines.join('\n');
 }
-
 /** מדרגה ב׳ (showSeverity): חומרת הכלל הראשון שסימן את המשפט */
 function findingSeverity(s, sentence) {
   const f = s.findings.find((x) => sentence.rules.includes(x.id));

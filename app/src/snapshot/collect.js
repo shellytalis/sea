@@ -9,13 +9,13 @@ export const NOW = '2026-11-22';
  * @typedef {'ok'|'unchecked'|'nodata'} SourceState
  */
 export const SOURCES = [
-  { id: 'identity', label: 'זהות ושינויים', name: 'זהות ושינויים', updated: '2026-11-20' },
-  { id: 'ownership', label: 'בעלות וניהול', name: 'בעלות וניהול', updated: '2026-11-18' },
-  { id: 'portsB', label: 'קריאות נמל', name: 'קריאות נמל', updated: '2026-11-21' },
-  { id: 'portsC', label: 'קריאות נמל (נוסף)', name: 'קריאות נמל', updated: '2026-11-19' },
-  { id: 'ais', label: 'פעילות ו-AIS', name: 'פעילות ו-AIS', updated: '2026-11-22' },
-  { id: 'lists', label: 'רשימות וסנקציות', name: 'רשימות וסנקציות', updated: '2026-11-22' },
-  { id: 'spec', label: 'מפרט טכני', name: 'מפרט טכני', updated: '2026-11-15' },
+  { id: 'identity', link: 'identity', label: 'זהות ושינויים', name: 'זהות ושינויים', updated: '2026-11-20' },
+  { id: 'ownership', link: 'ownership', label: 'בעלות וניהול', name: 'בעלות וניהול', updated: '2026-11-18' },
+  { id: 'portsB', link: 'activity', label: 'קריאות נמל', name: 'קריאות נמל', updated: '2026-11-21' },
+  { id: 'portsC', link: 'activity', label: 'קריאות נמל (נוסף)', name: 'קריאות נמל', updated: '2026-11-19' },
+  { id: 'ais', link: 'activity', label: 'פעילות ו-AIS', name: 'פעילות ו-AIS', updated: '2026-11-22' },
+  { id: 'lists', link: 'risk', label: 'רשימות וסנקציות', name: 'רשימות וסנקציות', updated: '2026-11-22' },
+  { id: 'spec', link: 'spec', label: 'מפרט טכני', name: 'מפרט טכני', updated: '2026-11-15' },
 ];
 
 /**

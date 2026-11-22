@@ -11,7 +11,6 @@
 .snap-topic:first-child { border-top: 0; padding-block-start: 0; }
 /* כותרת הנושא: שם, ספירה, וקישור "לפרטים" יחיד לנושא (בקצה ה-end) */
 .snap-topic h3 { margin: 0; display: flex; align-items: baseline; gap: var(--space-3); font-size: var(--fs-md); }
-.snap-count { font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); }
 .snap-details { margin-inline-start: auto; font-size: var(--fs-sm); font-weight: 400; }
 .snap-topic.no-data h3 > span:first-child, .snap-topic.unchecked h3 > span:first-child { color: var(--text-secondary); }
 
@@ -21,9 +20,6 @@
 .snap-gutter { display: flex; justify-content: center; padding-block-start: var(--space-1); }
 .snap-mark { color: var(--accent-text); }
 .snap-note { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
-
-/* שורת מקורות אחת לנושא (שם כל מקור פעם אחת + תאריך עדכון אחרון) */
-.snap-src { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
 
 /* תחתית קומפקטית: שורת טקסט אחת ושני כפתורים קטנים */
 .ui-drawer.snapshot > footer { padding-block: var(--space-3); }
@@ -60,3 +56,6 @@
 .snap-skel-block { display: grid; gap: var(--space-2); }
 .snap-skel-head { block-size: var(--space-4); inline-size: 30%; background: var(--border); border-radius: var(--radius-sm); }
 .snap-skel-line { block-size: var(--space-3); background: var(--border-subtle); border-radius: var(--radius-sm); }
+/* Popover המקורות בתחתית: כל מקור עם תאריך העדכון, ואחריו מקורות חסרים */
+.snap-sources { gap: var(--space-1); }
+.snap-sources li { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--text-secondary); }

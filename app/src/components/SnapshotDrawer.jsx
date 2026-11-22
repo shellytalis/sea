@@ -10,7 +10,7 @@ import { Ltr, Num } from '../ui/Ltr';
 import { goSection } from '../ui/Entity';
 import useAsync from '../ui/useAsync';
 import { getSnapshotApi } from '../data/api';
-import { latest, snapshotToText } from '../snapshot/compose';
+import { snapshotToText } from '../snapshot/compose';
 import { showSeverity } from '../snapshot/thresholds';
 
 const STATE_WORD = { unchecked: 'לא נבדק', nodata: 'אין נתונים במקור' };
@@ -33,18 +33,12 @@ function jumpToSentence(id) {
   window.setTimeout(() => el.classList.remove('snap-flash'), 1800);
 }
 
-/** שורת מקורות אחת לנושא: שם כל מקור פעם אחת ותאריך העדכון האחרון. "מקורות: א · ב · עודכן לאחרונה 2026-11-22" */
-function Sources({ list }) {
-  if (!list.length) return null;
-  return <p className="snap-src">מקורות: {list.map((e) => e.source).join(' · ')} · עודכן לאחרונה <Num>{latest(list)}</Num></p>;
-}
-
 /** משפט סיכום. משפט שכלל תצפית הופעל עליו נושא את הסמן הניטרלי (חומרה רק כש-showSeverity, מדרגה ב׳) */
 function Sentence({ x, severity }) {
   return (
     <li className={`snap-sentence${x.marked ? ' marked' : ''}`} id={x.id}>
       <span className="snap-gutter">
-        {x.marked && (showSeverity && severity ? <Shape risk={severity} /> : <Info size={14} aria-label="לתשומת לב" role="img" className="snap-mark" />)}
+        {x.marked && (showSeverity && severity ? <Shape risk={severity} /> : <Tooltip focusable text="לתשומת לב"><Info size={14} aria-label="לתשומת לב" role="img" className="snap-mark" /></Tooltip>)}
       </span>
       <span>{showSeverity && severity && <strong>{SEVERITY_LABEL[severity]}: </strong>}{x.text}</span>
     </li>
@@ -57,7 +51,6 @@ function Topic({ t, findings }) {
     <section className={`snap-topic ${t.state}`} aria-label={t.label}>
       <h3>
         <span>{t.label}</span>
-        {t.markedCount > 0 && <span className="snap-count"><Num>{t.markedCount}</Num> לתשומת לב</span>}
         {t.state === 'data' && (
           <a href={`#${t.link}`} className="link snap-details" onClick={(e) => { e.preventDefault(); jumpTo(t.link); }}>לפרטים</a>
         )}
@@ -68,22 +61,36 @@ function Topic({ t, findings }) {
         </ul>
       )}
       {t.note && <p className="snap-note">{t.note}</p>}
-      <Sources list={t.evidence} />
     </section>
   );
 }
 
-/** כיסוי המקורות, בשורה אחת של טקסט רגיל; כשיש מקורות חסרים אפשר ללחוץ לפירוט */
+/**
+ * כיסוי המקורות, בשורה אחת של טקסט רגיל שנפתחת ל-Popover: כל מקור שנבדק עם תאריך העדכון שלו (שם אחד פעם אחת)
+ * וקישור לסעיף בדף, ואחריו המקורות החסרים. זה המקום היחיד במגירה שמציג מקור וזמן (אין שורת מקורות בנושאים).
+ */
 function Coverage({ cov, generatedAt }) {
   const [open, setOpen] = useState(false);
   const text = `נתונים מ-${cov.available} מתוך ${cov.total} מקורות`;
   return (
     <div className="snap-foot-meta">
-      <Popover open={open} onClose={() => setOpen(false)} anchor={cov.missing.length
-        ? <button type="button" className="snap-cov" aria-expanded={open} onClick={() => setOpen(!open)}>{text}</button>
-        : <span>{text}</span>}>
-        <strong>מקורות שלא נכללו</strong>
-        <ul className="plain-list">{cov.missing.map((m) => <li key={m.label}>{m.label}: {STATE_WORD[m.state]}</li>)}</ul>
+      <Popover open={open} onClose={() => setOpen(false)} anchor={
+        <button type="button" className="snap-cov" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}>{text}</button>}>
+        <strong>מקורות ותאריכי עדכון</strong>
+        <ul className="plain-list snap-sources">
+          {cov.included.map((m) => (
+            <li key={m.name}>
+              <a href={`#${m.link}`} className="link" onClick={(e) => { e.preventDefault(); setOpen(false); jumpTo(m.link); }}>{m.name}</a>
+              <span>עודכן <Num>{m.asOf}</Num></span>
+            </li>
+          ))}
+        </ul>
+        {cov.missing.length > 0 && (
+          <>
+            <strong>מקורות שלא נכללו</strong>
+            <ul className="plain-list snap-sources">{cov.missing.map((m) => <li key={m.label}><span>{m.label}</span><span>{STATE_WORD[m.state]}</span></li>)}</ul>
+          </>
+        )}
       </Popover>
       <span aria-hidden="true">·</span>
       <span>הופק <Num>{generatedAt}</Num></span>

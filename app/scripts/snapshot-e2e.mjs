@@ -1,5 +1,5 @@
 /**
- * בדיקת דפדפן ל"תמונת מצב" (שלב 4ד) + צילומי מסך. דורשת שרת פיתוח רץ ו-Chrome, ו-puppeteer-core (לא תלות של הפרויקט:
+ * בדיקת דפדפן ל"תמונת מצב" (שלבים 4ד, 4ה) + צילומי מסך. דורשת שרת פיתוח רץ ו-Chrome, ו-puppeteer-core (לא תלות של הפרויקט:
  * `npm i --no-save puppeteer-core`). הרצה: node scripts/snapshot-e2e.mjs [outDir] [widths, למשל 1920,1366,2560]
  * משתני סביבה: BASE (ברירת מחדל http://localhost:5173), CHROME (נתיב ל-chrome.exe).
  * בודק: מצב שגיאה מוצג, "נסה שוב" טוען מחדש, המגירה דוחפת את הדף (לא מכסה את כותרת הכלי) והגלילה נשמרת, ושצילומי טעינה ושגיאה שונים.
@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 
 const BASE = process.env.BASE ?? 'http://localhost:5173';
-const OUT = process.argv[2] ?? 'audit-screenshots/stage4d-snapshot-polish';
+const OUT = process.argv[2] ?? 'audit-screenshots/stage4e-snapshot-remove-meta';
 const widths = (process.argv[3] ?? '1920').split(',').map(Number);
 const KEEP = Number(process.argv[4] ?? widths[0]); // רק רוחב אחד נשמר כצילום
 fs.mkdirSync(OUT, { recursive: true });
@@ -68,6 +68,20 @@ for (const w of widths) {
     await open(path); await page.waitForSelector('.snap-glance'); await sleep(300); await shot(name);
   }
 
+  // 3ב. שלב 4ה: אין ספירה ואין שורת מקורות בנושאים; הסמן מסביר את עצמו; ה-Popover מפרט מקורות ותאריכים
+  await open('/vessels/v4'); await page.waitForSelector('.snap-glance');
+  assert.equal(await page.evaluate(() => document.querySelectorAll('.snap-count, .snap-src').length), 0, `[${w}] נשארו ספירה או שורת מקורות בנושא`);
+  assert.ok(await page.evaluate(() => [...document.querySelectorAll('.snap-mark')].length > 0 && [...document.querySelectorAll('.snap-mark')].every((e) => e.getAttribute('aria-label') === 'לתשומת לב')), 'סמן בלי aria-label');
+  await page.evaluate(() => document.querySelector('.snap-cov').click());
+  await page.waitForSelector('.snap-sources');
+  const pop = await page.evaluate(() => document.querySelector('.snapshot .ui-pop').innerText);
+  assert.match(pop, /בעלות וניהול\s+עודכן 2026-11-18/); assert.ok(!/מקור [אבג]/.test(pop));
+  await shot('08-sources-popover');
+  await page.evaluate(() => document.querySelector('.snapshot .ui-pop a.link').click());
+  await sleep(300);
+  assert.equal(await page.evaluate(() => !!document.querySelector('.snapshot .ui-pop')), false, 'ה-Popover לא נסגר אחרי קישור');
+  await open('/vessels/v9'); await page.waitForSelector('.snap-glance');
+  await page.evaluate(() => document.querySelector('.snap-cov').click()); await page.waitForSelector('.snap-sources'); await shot('09-sources-popover-missing-v9');
   // 4. טעינה ושגיאה (ממתינים לרכיב בתוך המגירה, לא לאלמנט כללי בדף)
   await open('/vessels/v4?snapshot=slow'); await page.waitForSelector('.snapshot .snap-skel'); await shot('06-loading');
   await open('/vessels/v4?snapshot=error'); await page.waitForSelector('.snapshot .ui-state[role=alert]'); await sleep(200);

@@ -285,24 +285,33 @@ test('מצבי אין נתונים / לא הוערך', () => {
   assert.equal(topic(v10, 'ports').summary.length, 0);
 });
 
-test('שורת מקורות: שם כל מקור פעם אחת, בלי "(מקור א/ב/ג)", תאריך עדכון אחרון', () => {
+test('אין ספירה ואין שורת מקורות בנושא; המקורות והתאריכים ב-coverage (שם אחד פעם אחת, בלי "(מקור א/ב/ג)")', () => {
   const { s } = snap('v4');
-  assert.deepEqual(topic(s, 'ports').evidence.map((e) => e.source), ['קריאות נמל', 'פעילות ו-AIS'], 'קריאות נמל (שני מקורות) מאוחד');
-  assert.equal(latest(topic(s, 'ports').evidence), '2026-11-22');
-  assert.ok(!JSON.stringify(s).includes('מקור א') && !JSON.stringify(s).includes('מקור ב') && !JSON.stringify(s).includes('מקור ג'));
-  assert.ok(!JSON.stringify(RULES.map((r) => r.evidence(base()))).includes('(מקור'));
-  const t = snapshotToText(s, 'X');
-  assert.match(t, /מקורות: קריאות נמל · פעילות ו-AIS · עודכן לאחרונה 2026-11-22/);
-  assert.ok(!/;\s*$/m.test(t.split('\n').filter((l) => l.includes('מקורות:')).join('\n')), 'בלי נקודה-פסיק תלויה');
-});
-test('כל משפט נושא מקור וזמן; לנושא שורת מקורות אחת בלי כפילות מקורות', () => {
-  const { s } = snap('v4');
-  s.topics.forEach((t) => {
-    t.summary.forEach((x) => assert.ok(x.evidence.length && x.evidence.every((e) => e.source && e.asOf), `${t.id}`));
-    assert.equal(new Set(t.evidence.map((e) => e.source)).size, t.evidence.length);
-  });
+  s.topics.forEach((t) => assert.ok(!('evidence' in t), `${t.id}: אין evidence ברמת הנושא`));
+  assert.deepEqual(s.coverage.included.map((m) => m.name), ['זהות ושינויים', 'בעלות וניהול', 'קריאות נמל', 'פעילות ו-AIS', 'רשימות וסנקציות', 'מפרט טכני']);
+  assert.equal(s.coverage.included.find((m) => m.name === 'קריאות נמל').asOf, '2026-11-21', 'התאריך האחרון משני מקורות הקריאות');
+  s.coverage.included.forEach((m) => assert.ok(m.asOf && m.link));
+  const raw = JSON.stringify(s);
+  assert.ok(!raw.includes('מקור א') && !raw.includes('מקור ב') && !raw.includes('מקור ג'));
+  const v9 = snap('v9').s.coverage;
+  assert.ok(v9.missing.some((m) => m.label === 'קריאות נמל (נוסף)' && m.state === 'unchecked'));
+  assert.ok(!v9.included.some((m) => m.name === 'פעילות ו-AIS'), 'מקור שלא נבדק לא ברשימה הכללית');
 });
 
+test('העתקה/PDF: בלוק מקורות אחד בסוף, בלי שורה לכל נושא ובלי ספירה בכותרות', () => {
+  const { f, s } = snap('v4');
+  const t = snapshotToText(s, f.vessel.name);
+  assert.equal(t.split('\n').filter((l) => l.startsWith('מקורות:')).length, 1);
+  assert.match(t, /\nמקורות:\n- זהות ושינויים · עודכן 2026-11-20\n- בעלות וניהול · עודכן 2026-11-18\n- קריאות נמל · עודכן 2026-11-21/);
+  assert.ok(!/לתשומת לב\)\s*:/.test(t) && !/\(\d+ לתשומת לב\)/.test(t), 'אין ספירה בכותרת נושא');
+  assert.ok(t.indexOf('מקורות:') > t.indexOf('רשימות ואירועים:'), 'הבלוק אחרי הנושאים');
+  const v9 = snapshotToText(snap('v9').s, 'X');
+  assert.match(v9, /- קריאות נמל \(נוסף\): לא נבדק/);
+});
+test('כל משפט נושא evidence (מקור וזמן) במבנה הנתונים, גם בלי שורת מקורות בתצוגה', () => {
+  const { s } = snap('v4');
+  s.topics.forEach((t) => t.summary.forEach((x) => assert.ok(x.evidence.length && x.evidence.every((e) => e.source && e.asOf), `${t.id}`)));
+});
 test('bidi: שמות לועזיים, סוג ו-DWT עטופים בבידוד; בלי חץ בשינוי שם', () => {
   const { s } = snap('v4');
   assert.match(s.overview[0], /^\u2068General Cargo\u2069, .*\u2068\d+K DWT\u2069\.$/);
@@ -318,10 +327,9 @@ test('collectFacts: כלי לא קיים; snapshotToText משקף את המבנ�
   const t = snapshotToText(s, f.vessel.name);
   assert.match(t, /^תמונת מצב: SEA FALCON/);
   assert.match(t, /במבט אחד:/);
-  assert.match(t, /בעלות וניהול \(2 לתשומת לב\):/);
+  assert.match(t, /\nבעלות וניהול:\n/);
   assert.match(t, /▸ .*\(לתשומת לב\)/);
   assert.match(t, /- לתשומת לב: רשימת מעקב · החלפת בעלים רשום/);
-  assert.match(t, /מקורות: בעלות וניהול · עודכן לאחרונה 2026-11-18/);
   assert.doesNotMatch(t, /קריטי|בינוני/, 'חומרה לא מוצגת בטקסט כש-showSeverity כבוי');
   assert.match(t, /כיסוי: נתונים מ-7 מתוך 7 מקורות/);
 });

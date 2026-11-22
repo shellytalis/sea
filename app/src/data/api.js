@@ -2,6 +2,9 @@
 // כמו מול שרת אמיתי. החלפה בקריאות אמיתיות לא תדרוש שינוי בדפים.
 import { COMPANIES, getCompany, relationDataOf, searchCompanies } from './companies';
 import { VESSELS, getVessel, searchVessels } from './vessels';
+import { collectFacts } from '../snapshot/collect';
+import { peerStats } from '../snapshot/peers';
+import { buildSnapshot } from '../snapshot/compose';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -29,6 +32,20 @@ export async function getRelationsApi(id) {
 export async function getVesselApi(id) {
   await wait(250);
   return getVessel(id) ?? null;
+}
+
+/**
+ * תמונת מצב לכלי (נבנית מכללים, בלי מודל). באב-טיפוס: collectFacts + peerStats + buildSnapshot בצד הלקוח.
+ * בשרת: GET /vessels/:id/snapshot. ל-/design ולבדיקות: ‎?snapshot=error מדמה כשל, ‎?snapshot=slow מדמה טעינה ארוכה.
+ * @returns {Promise<{snapshot: ReturnType<typeof buildSnapshot>, vessel: {id: string, name: string}}|null>}
+ */
+export async function getSnapshotApi(id) {
+  const demo = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('snapshot') : null;
+  await wait(demo === 'slow' ? 60000 : 450);
+  if (demo === 'error') throw apiError('failed');
+  const facts = collectFacts(id);
+  if (!facts) return null;
+  return { snapshot: buildSnapshot(facts, peerStats(facts.vessel, facts.now)), vessel: facts.vessel };
 }
 
 /** חיפוש גלובלי (סינכרוני, לשימוש ה-combobox): כלים לפי שם/IMO/MMSI וחברות לפי שם */

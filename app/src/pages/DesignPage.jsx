@@ -20,6 +20,10 @@ import { COMPANIES, COMPANY_TYPES, getCompany } from '../data/companies';
 import { MismatchTag, ModelOutputsDetail, ModelSummary, ProfileTag } from '../components/ModelOutputs';
 import { RelationKind, RelationLegend, StrengthMeter } from '../components/RelationParts';
 import RelationsSection from '../components/RelationsSection';
+import { SnapshotBody } from '../components/SnapshotDrawer';
+import { collectFacts } from '../snapshot/collect';
+import { peerStats } from '../snapshot/peers';
+import { buildSnapshot } from '../snapshot/compose';
 import Panel from '../ui/Panel';
 import Tabs from '../ui/Tabs';
 
@@ -38,6 +42,7 @@ const GROUPED = [
 ];
 
 const c13 = getCompany('c13');
+const snapshotDemo = (() => { const f = collectFacts('v4'); return buildSnapshot(f, peerStats(f.vessel, f.now)); })();
 const c12 = getCompany('c12');
 
 export default function DesignPage() {
@@ -234,6 +239,18 @@ export default function DesignPage() {
             <div className="ds-panel ds-w-lg"><EmptyState title="לא נמצאו כלים. נסה שם, IMO או סיבה אחרת"><span>הסר את החיפוש או את הסינון כדי לראות את כל הכלים.</span></EmptyState></div>
             <div className="ds-panel ds-w-lg"><EmptyState title="למודל אין הרצות עבור הלקוח"><span>עדיין לא בוצעה הרצה.</span></EmptyState></div>
           </div>
+        </section>
+
+        <section>
+          <h2>תמונת מצב בדף כלי שיט<SpecNote tag>הצעה</SpecNote></h2>
+          <p className="entity-note">כפתור "תמונת מצב" בכותרת דף הכלי פותח מגירה בצד ה-start (כמו מגירת התצוגה המהירה, כותרת 48px, Esc סוגר) והדף נשאר גלוי. <strong>התמונה נבנית מכללי תצפית הצהרתיים ולא ממודל</strong>, ולכן בכותרת תג "מבוסס כללים" ולא תג "מודל". כללי התצפית (12 בשלב זה) והספים שלהם (<bdi dir="ltr">snapshot/thresholds.js</bdi>) הם הצעה, לא מהאפיון.</p>
+          <ul className="plain-list bulleted">
+            <li><strong>מבנה מלמעלה למטה:</strong> שורת מסקנה (סמל החומרה הגבוהה ביותר + ספירה, או "אין אינדיקטורים"); ממצאים ממוינים לפי חומרה, כל אחד עם משפט אחד, מקור וזמן וקישור "לפרטים" שגולל לסעיף בדף ומדגיש אותו; סיכום לפי נושא (פתוח לנושאים עם ממצאים); תחתית: כיסוי מקורות (Popover שמפרט מה חסר), זמן הפקה, "העתק טקסט" ו"ייצא PDF" (הדפסת המגירה בלבד).</li>
+            <li><strong>שלושה מצבים נפרדים:</strong> ✓ "נבדק ולא נמצאו ממצאים", ◌ "לא נבדק" (המקור לא הופעל), ו"אין נתונים בנושא זה" (אין נתונים במקור). אין "לא נמצאו" כשהמקור לא נבדק.</li>
+            <li><strong>ניסוח:</strong> משפט אחד לממצא: מה נמצא, מתי, ומול מה (בסיס ההשוואה תמיד מצוין). אין שיפוט ("חשוד", "פלילי").</li>
+            <li><strong>מצבי ממשק:</strong> טעינה (שלד), שגיאה עם "נסה שוב", כלי בלי נתונים. להדגמה: <bdi dir="ltr">?snapshot=slow</bdi> ו-<bdi dir="ltr">?snapshot=error</bdi> בדף הכלי.</li>
+          </ul>
+          <div className="ds-drawer-box"><SnapshotBody s={snapshotDemo} /></div>
         </section>
 
         <section>

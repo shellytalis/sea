@@ -1,0 +1,50 @@
+/* תמונת מצב (שלב 4, הצעה): מגירה בצד ה-start, נבנית מכללים. טוקנים בלבד. */
+.ui-drawer.snapshot > header { min-height: 48px; align-items: center; padding-block: var(--space-2); }
+.snap-title { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.snap-title .ui-tip { display: inline-flex; }
+
+.snap-conclusion { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); }
+.snap-conclusion .ui-shape { margin-top: var(--space-1); flex: none; }
+.snap-conclusion > div { display: grid; gap: var(--space-1); }
+.snap-conclusion strong { font-size: var(--fs-md); }
+.snap-conclusion strong:empty { display: none; }
+.snap-conclusion span { font-size: var(--fs-md); }
+
+.snap-findings { gap: 0; }
+.snap-finding { display: grid; gap: var(--space-1); padding-block: var(--space-3); border-top: 1px solid var(--border-subtle); }
+.snap-finding:first-child { border-top: 0; padding-top: 0; }
+.snap-finding-sev { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); font-weight: 500; }
+.snap-finding p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); }
+.snap-finding-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }
+
+.snap-topics { display: grid; }
+.snap-topic { border-top: 1px solid var(--border-subtle); }
+.snap-topic:first-child { border-top: 0; }
+.snap-topic h3 { margin: 0; font-size: var(--fs-md); }
+.snap-topic h3 button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--control-h); cursor: pointer; color: var(--text-primary); }
+.snap-topic h3 button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.snap-topic.no-data h3 button, .snap-topic.unchecked h3 button { color: var(--text-secondary); }
+.snap-topic-body { display: grid; gap: var(--space-2); padding-block-end: var(--space-3); padding-inline-start: var(--space-5); }
+.snap-topic-body p { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+.snap-topic-body a { font-size: var(--fs-sm); }
+
+.snap-foot { display: grid; gap: var(--space-3); width: 100%; }
+.snap-foot-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-xs); color: var(--text-tertiary); }
+.snap-foot-actions { display: flex; gap: var(--space-2); }
+.snap-foot .ui-pop { top: auto; bottom: calc(100% + var(--space-2)); min-width: 280px; display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+.snap-foot .ui-pop p { margin: 0; }
+.snap-foot .ui-pop .ui-btn { flex: none; }
+
+/* הדגשת המקטע אחרי "לפרטים" */
+.snap-flash { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ייצוא PDF: הדפסת המגירה בלבד, בצבעי מערכת (בלי ערכים קשיחים) */
+@media print {
+  body * { visibility: hidden; }
+  .ui-drawer.snapshot, .ui-drawer.snapshot * { visibility: visible; }
+  .ui-drawer.snapshot { position: absolute; inset: 0; width: auto; box-shadow: none; border: 0; background: Canvas; color: CanvasText;
+    --surface-raised: Canvas; --border: GrayText; --border-subtle: GrayText; --text-primary: CanvasText; --text-secondary: GrayText; --text-tertiary: GrayText; --accent-text: CanvasText; }
+  .ui-drawer.snapshot .ui-drawer-body { overflow: visible; }
+  .ui-drawer.snapshot > header button, .ui-drawer.snapshot > footer .snap-foot-actions, .snap-finding-meta .link, .snap-topic-body a { display: none; }
+  .ui-drawer.snapshot .snap-topic-body { display: grid; }
+}

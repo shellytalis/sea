@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ListPlus, Map, Upload } from 'lucide-react';
+import { ListPlus, Map, ScanSearch, Upload } from 'lucide-react';
 import { getVesselApi } from '../data/api';
 import { VISITS_B, VISITS_C, activityA } from '../data/vessels';
 import { mergeHistory } from '../data/companies';
@@ -15,6 +15,7 @@ import Tabs from '../ui/Tabs';
 import useAsync from '../ui/useAsync';
 import { VesselFlags } from '../components/VesselFlags';
 import AddToListDialog from '../components/AddToListDialog';
+import SnapshotDrawer from '../components/SnapshotDrawer';
 import CompanyRef from '../components/CompanyRef';
 
 const visitCols = [
@@ -55,6 +56,7 @@ export default function VesselPage() {
   const { id } = useParams();
   const { status, data: v, reload } = useAsync(() => getVesselApi(id), [id]);
   const [adding, setAdding] = useState(false);
+  const [snapshot, setSnapshot] = useState(false);
 
   if (status === 'done' && !v) {
     return (
@@ -86,6 +88,7 @@ export default function VesselPage() {
             compactBadge={<VesselFlags v={v} withLists={false} />}
             actions={
               <>
+                <Button icon={<ScanSearch size={16} aria-hidden="true" />} aria-expanded={snapshot} onClick={() => setSnapshot(true)}>תמונת מצב</Button>
                 <Button to={`/?v=${v.id}`} icon={<Map size={16} aria-hidden="true" />}>הצג על המפה</Button>
                 <Button variant="primary" icon={<ListPlus size={16} aria-hidden="true" />} onClick={() => setAdding(true)}>הוסף לרשימה</Button>
               </>
@@ -178,6 +181,7 @@ export default function VesselPage() {
         </Section>
       </EntityPage>
       {adding && <AddToListDialog vessel={v} onClose={() => setAdding(false)} />}
+      {snapshot && <SnapshotDrawer vessel={v} onClose={() => setSnapshot(false)} />}
     </>
   );
 }

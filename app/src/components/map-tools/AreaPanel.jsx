@@ -6,10 +6,10 @@ import { EmptyState, ErrorState, TableSkeleton } from '../../ui/States';
 import { Ltr, Num } from '../../ui/Ltr';
 import { ACTIVITIES, activityById } from '../../area/activities';
 import { buildAreaCsv, downloadCsv } from '../../area/csv';
-import { eventDuration } from '../../area/query';
+import { eventDuration, orderVessels } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
-import { formatArea, formatDistance, formatDuration } from '../../map/units';
+import { UNITS, areaToUnit, formatArea, formatDuration, toUnit } from '../../map/units';
 import ActivityIcon from './ActivityIcon';
 import { RangePopover } from './Toolbars';
 import { Actions, HeaderActions, TerrainControls, TerrainList } from './ToolPanel';
@@ -32,6 +32,39 @@ export function durationText(e, now) {
 }
 
 const sortValue = { start: (e) => e.start, vessel: (e) => e.vessel.name, duration: (e, now) => eventDuration(e, now), source: (e) => e.source };
+
+/** שטח והיקף בכותרת הפאנל: 100 ומעלה = מספר שלם עם מפריד אלפים ("36,725"), מתחת ל-100 שתי ספרות אחרי הנקודה. חל רק על חקירת שטח */
+export const fmtMeasure = (n) => (n >= 100 ? Math.round(n).toLocaleString('en') : n.toFixed(2));
+
+const eventsWord = (n) => (n === 1 ? 'אירוע אחד' : `${n} אירועים`);
+
+/**
+ * כותרת מקטע דביקה מעל הטבלה: איזו פעילות ואיזה טווח הטבלה מציגה, גם כשהמקרא והטווח יצאו מהמסך בגלילה.
+ * לחיצה (או Enter) גוללת לראש גוף הפאנל, למקרא, להחלפת פעילות. נטענת: שלד במקום המספר.
+ */
+function SectionHeader({ analysis: a }) {
+  const act = activityById(a.activity);
+  const count = a.result?.counts[a.activity];
+  const loading = a.status === 'loading';
+  const goTop = (e) => {
+    const body = e.currentTarget.closest('.panel-body');
+    body?.scrollTo({ top: 0, behavior: 'smooth' });
+    body?.querySelector('.area-act[aria-checked=true]')?.focus({ preventScroll: true });
+  };
+  if (!act) return null;
+  return (
+    <button type="button" className="area-section-head" aria-label="החלף פעילות" onClick={goTop}>
+      <ActivityIcon name={act.icon} />
+      <span className="area-section-name">{act.label}</span>
+      {loading || typeof count !== 'number' ? <span className="area-act-skel" aria-hidden="true" /> : (
+        <span className="area-section-meta">
+          {a.shown.limited ? <>מוצגים <Num>{a.shown.shown.length}</Num> מתוך <Num>{a.shown.total}</Num></> : eventsWord(count)}
+          {' · '}<Num>{fmtDay(a.range.from)}–{fmtDay(a.range.to)}</Num>
+        </span>
+      )}
+    </button>
+  );
+}
 
 function Legend({ analysis: a }) {
   const loading = a.status === 'loading';
@@ -78,9 +111,10 @@ function EventsTable({ analysis: a, now, onSelect }) {
   const toggle = (id) => setSort((s) => (s.key === id ? { key: id, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: id, dir: id === 'start' || id === 'duration' ? 'desc' : 'asc' }));
   return (
     <div className="area-results">
+      <SectionHeader analysis={a} />
       {a.shown.limited && (
         <p className="mt-note area-limit" role="status">
-          מוצגים <Num>{a.shown.shown.length}</Num> מתוך <Num>{a.shown.total}</Num> (החדשים ביותר). כדי לראות את השאר, צמצם את השטח או את הטווח. ייצוא CSV כולל את כולם.
+          מוצגים האירועים החדשים ביותר. כדי לראות את השאר, צמצם את השטח או את הטווח. ייצוא CSV כולל את כולם.
         </p>
       )}
       <table className="area-table">
@@ -101,7 +135,7 @@ function EventsTable({ analysis: a, now, onSelect }) {
             <tr key={e.id} data-eid={e.id} tabIndex={0} aria-selected={a.selId === e.id} className={`area-row${a.selId === e.id ? ' sel' : ''}`}
               onClick={() => onSelect(e.id)} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(e.id); } }}>
               <td><Num>{fmtDay(e.start)} {fmtTime(e.start)}</Num></td>
-              <td><Ltr className="cell-name">{e.vessel.name}</Ltr>{e.vessel2 && <span className="mt-note"> + <Ltr>{e.vessel2.name}</Ltr></span>}</td>
+              <td>{orderVessels(e).map((v, i) => <span key={v.id}>{i > 0 && ' ↔ '}<Ltr className="cell-name">{v.name}</Ltr></span>)}</td>
               <td>{durationText(e, now)}</td>
               <td>{e.source}</td>
             </tr>
@@ -121,8 +155,8 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
   const [now] = useState(() => Date.now());
   const tabs = useRef(null);
   const wide = committed && a.tab === 'range';
-  const area = metrics ? formatArea(metrics.area, unit) : null;
-  const perim = metrics ? formatDistance(metrics.perimeter, unit) : null;
+  const area = metrics ? { value: fmtMeasure(areaToUnit(metrics.area, unit)), unit: UNITS[unit].area } : null;
+  const perim = metrics ? { value: fmtMeasure(toUnit(metrics.perimeter, unit)), unit: UNITS[unit].short } : null;
   const meta = committed && metrics ? <>שטח <Num>{area.value} {area.unit}</Num> · היקף <Num>{perim.value} {perim.unit}</Num></> : null;
   const count = a.result?.counts[a.activity];
   const canExport = a.status === 'ready' && typeof count === 'number' && count > 0;
@@ -185,7 +219,7 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
                   <Legend analysis={a} />
                   <div role="status" aria-live="polite" className="area-status">
                     {a.status === 'loading' ? (
-                      <div className="area-loading"><span className="mt-note">טוען את הפעילויות…</span><TableSkeleton rows={5} cols={4} /></div>
+                      <div className="area-loading"><SectionHeader analysis={a} /><TableSkeleton rows={5} cols={4} /></div>
                     ) : a.status === 'ready' && count === 'not-covered' ? (
                       <EmptyState title="לא נבדק">
                         <span>{a.result.coverage[a.activity]?.source ?? 'המקור'} לא מכסה את השטח או את הטווח שנבחרו, ולכן אין תוצאה. זה לא אומר שאין אירועים.</span>
@@ -214,7 +248,7 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
     </>
   ) : (
     <Actions copy={committed ? copyLines : []} clearDisabled={!committed && !hasDraft} onClear={onClear}>
-      {committed && (
+      {(
         <Button size="sm" disabled={!canExport} onClick={() => downloadCsv(buildAreaCsv({ polygon, range: a.range, activity: a.activity, events: a.list }), 'area-activities.csv')}>ייצוא CSV</Button>
       )}
     </Actions>

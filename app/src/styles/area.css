@@ -19,7 +19,7 @@
 
 /* מקרא: radiogroup, שורה = סמל + שם + ספירה */
 .area-legend { display: grid; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
-.area-act { display: flex; align-items: center; gap: var(--space-2); height: var(--control-h); padding: 0 var(--space-3); background: none; border: 0; border-inline-start: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-md); text-align: start; }
+.area-act { display: flex; align-items: center; gap: var(--space-2); height: var(--row-h); padding: 0 var(--space-3); background: none; border: 0; border-inline-start: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-md); text-align: start; }
 .area-act + .area-act { border-top: 1px solid var(--border-subtle); }
 .area-act:hover { background: var(--surface-raised); color: var(--text-primary); }
 .area-act.on { background: var(--surface-raised); color: var(--text-primary); border-inline-start-color: var(--accent); }
@@ -37,6 +37,7 @@
 .area-loading .ui-skeleton { border: 0; padding: 0; }
 .area-results { display: grid; gap: var(--space-2); min-width: 0; }
 .area-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.area-table thead th { position: sticky; top: calc(var(--row-h) - var(--space-4)); z-index: 1; background: var(--surface); box-shadow: 0 1px 0 var(--border); }
 .area-table th { height: var(--space-5); padding: 0 var(--space-1); text-align: start; font-size: var(--fs-xs); font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
 .area-table th button { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0; background: none; border: 0; color: inherit; font: inherit; }
 .area-table th button:hover { color: var(--text-primary); }
@@ -46,7 +47,14 @@
 .area-row:hover, .area-row.sel { background: var(--surface-raised); }
 .area-row.sel td:first-child { border-inline-start-color: var(--accent); }
 .area-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.area-row .cell-name { display: inline-block; max-width: 148px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.area-row .cell-name { font-weight: 600; } /* מפגש STS: שני הכלים באותו משקל וצבע, ב- ↔ ; השורה נשברת אם צריך */
+/* כותרת מקטע דביקה: הפעילות והטווח של הטבלה גלויים גם כשהמקרא יצא מהמסך בגלילה (גוף הפאנל הוא אזור הגלילה היחיד) */
+.area-section-head { position: sticky; top: calc(-1 * var(--space-4)); /* גוף הפאנל מרופד 16px: ההיצמדות היא לקצה העליון שלו */ z-index: 2; display: flex; align-items: center; gap: var(--space-2); width: calc(100% + 2 * var(--space-4)); height: var(--row-h); margin-inline: calc(-1 * var(--space-4)); padding-inline: var(--space-4); background: var(--surface); border: 0; border-bottom: 1px solid var(--border); color: var(--text-primary); font-size: var(--fs-md); text-align: start; cursor: pointer; }
+.area-section-head:hover { background: var(--surface-raised); }
+.area-section-head:focus-visible { outline-offset: -2px; }
+.area-section-head svg { flex: none; color: var(--text-secondary); }
+.area-section-name { font-weight: 600; }
+.area-section-meta { margin-inline-start: auto; color: var(--text-secondary); font-size: var(--fs-sm); white-space: nowrap; }
 
 /* נקודות וקבוצות על המפה: סמנים (MapLibre מציב אותם; בלי transform ובלי position משלנו) */
 .map-event { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--map-event); color: var(--map-halo); box-shadow: 0 0 0 1.5px var(--map-halo); cursor: pointer; }
@@ -68,3 +76,13 @@
 .area-card-row:first-child { border-top: 0; }
 .area-card-row dt { color: var(--text-secondary); }
 .area-card-row dd { margin: 0; min-width: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+
+/* 1366x768: אחרי סגירת פוליגון רואים בלי גלילה את הטווח, את שש שורות המקרא (44px) ואת כותרת הטבלה עם השורה הראשונה.
+   בלשונית הרחבה: שטח והיקף באותה שורה כמו השם (חוסך שורה), מרווחים קטנים יותר, ובלי סט כלי שיט (שאין סרגל תחתון) הפאנל יורד עד 16px מתחתית המפה */
+.area-panel.wide .panel-head { display: flex; align-items: center; gap: var(--space-2); height: var(--space-7); min-height: 0; padding-block: 0; }
+.area-panel.wide .panel-head .panel-sep { display: inline; }
+.area-panel.wide .panel-head .panel-meta { grid-column: auto; grid-row: auto; white-space: nowrap; }
+.area-panel.wide .panel-head .panel-actions { margin-inline-start: auto; }
+.area-panel.wide .area-tabs { margin-bottom: calc(-1 * var(--space-2)); }
+.area-panel.wide .area-tabpanel { gap: var(--space-2); }
+.mt-stack:not(.with-vbar):has(.area-panel.wide) { inset-block-end: var(--space-4); }

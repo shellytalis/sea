@@ -260,10 +260,16 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
     () => Object.fromEntries(setVessels.filter((v) => layers[v.id]?.route).map((v) => [v.id, demoTrack(v, rr.hours)])),
     [setVessels, layers, rr.hours],
   );
+  // מצב חקירת שטח: יש פוליגון סגור. מוצג רק השטח: מסכה מחוץ לפוליגון, בלי מדידות שמורות, בלי שכבות כלי השיט ובלי תווית שטח.
+  // ההסתרה דרך השכבות שלנו (mt-geo, סמנים) ודרך visibility/filter של שכבות הסמלים הקיימות מבחוץ, בלי לגעת ב-MapView; ביציאה הכול חוזר.
+  const isTerrain = drawing && tool.id === 'terrain';
+  const terrainItem = isTerrain ? items.find((i) => i.kind === 'terrain') : undefined;
+  const explore = !!terrainItem;
   const scene = useMemo(
     () => buildScene({
-      items, draft, cursor, edit, unit,
-      vessels: setVessels.map((v) => ({
+      items: explore ? items.filter((i) => i.kind === 'terrain') : items, draft, cursor, edit, unit,
+      mask: explore ? terrainItem.points : null,
+      vessels: (explore ? [] : setVessels).map((v) => ({
         vessel: v,
         vi: colors[v.id] ?? 0,
         active: v.id === activeId,
@@ -273,7 +279,7 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
       })),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, draft, cursor, selId, tool, unit, setVessels, layers, radii, tracks, rr.hours, marks, arr.dest, arrivalTool, activeId, colors],
+    [items, draft, cursor, selId, tool, unit, explore, terrainItem, setVessels, layers, radii, tracks, rr.hours, marks, arr.dest, arrivalTool, activeId, colors],
   );
   featuresRef.current = scene.features;
   useEffect(() => { if (map) setToolData(map, scene.features); }, [map, scene.features]);
@@ -293,8 +299,6 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
   const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
   const m = metrics(live);
   // ===== חקירת שטח (ניתוח אזור) =====
-  const isTerrain = drawing && tool.id === 'terrain';
-  const terrainItem = isTerrain ? items.find((i) => i.kind === 'terrain') : undefined;
   const analysis = useAreaAnalysis({ polygon: terrainItem?.points ?? null, polygonKey: terrainItem?.id ?? null, rev: dragRev });
   // "כלים בשטח כעת": שיוך לפי point-in-polygon (כולל הגבול)
   const hits = useMemo(() => (terrainItem ? vessels.filter((v) => pointInPolygon([v.lon, v.lat], terrainItem.points)).map((v) => ({ v })) : []), [terrainItem, vessels]);
@@ -325,16 +329,34 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
     map.on('zoomend', f);
     return () => { map.off('zoomend', f); };
   }, [map]);
+  // סמלי כלי השיט של המפה (שכבות "vessels" ו-"sel-ring" שנוצרות ב-MapView): מוסתרים במצב חקירת שטח, וב"כלים בשטח כעת" מוצגים רק הכלים שבפוליגון.
+  // visibility ו-filter מבחוץ; ביציאה ובכל style.load הערכים המקוריים חוזרים (ל-vessels אין filter מקורי).
+  const tabNow = analysis.tab === 'now';
+  const hitKey = hits.map((h) => h.v.id).join(',');
+  useEffect(() => {
+    if (!map) return undefined;
+    const apply = () => {
+      const showVessels = !explore || tabNow;
+      if (map.getLayer('vessels')) {
+        map.setLayoutProperty('vessels', 'visibility', showVessels ? 'visible' : 'none');
+        map.setFilter('vessels', explore && tabNow ? ['in', ['get', 'id'], ['literal', hitKey ? hitKey.split(',') : []]] : null);
+      }
+      if (map.getLayer('sel-ring')) map.setLayoutProperty('sel-ring', 'visibility', explore ? 'none' : 'visible');
+    };
+    apply();
+    map.on('style.load', apply);
+    return () => { map.off('style.load', apply); };
+  }, [map, explore, tabNow, hitKey]);
   // יציאה מהכלי (סגירה, כלי אחר, "נקה הכול"): הפוליגון והניתוח מסתיימים יחד
   useEffect(() => {
     if (!isTerrain) setItems((l) => (l.some((i) => i.kind === 'terrain') ? l.filter((i) => i.kind !== 'terrain') : l));
   }, [isTerrain]);
   // כלי פיתוח וצילומי מסך: מופע המפה זמין בחלון (רק ב-dev)
-  useEffect(() => { if (import.meta.env.DEV && map) window.__seaMap = map; }, [map]);
+  useEffect(() => { if (import.meta.env.DEV && map) { window.__seaMap = map; window.__seaFeatures = () => featuresRef.current; } }, [map]);
   useMarkers(map, [
-    ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.vi != null ? ` vi-${c.vi}` : ''}${c.strong ? ' strong' : ''}${c.dim ? ' dim' : ''}` })),
+    ...(explore ? [] : scene.chips).map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.vi != null ? ` vi-${c.vi}` : ''}${c.strong ? ' strong' : ''}${c.dim ? ' dim' : ''}` })),
     ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: `map-arrow vi-${a.vi}${a.dim ? ' dim' : ''}` })),
-    ...setVessels.map((v) => ({ key: `set-${v.id}`, lngLat: [v.lon, v.lat], className: `map-ring set vi-${colors[v.id] ?? 0}${v.id === activeId ? '' : ' dim'}` })),
+    ...(explore ? [] : setVessels).map((v) => ({ key: `set-${v.id}`, lngLat: [v.lon, v.lat], className: `map-ring set vi-${colors[v.id] ?? 0}${v.id === activeId ? '' : ' dim'}` })),
     ...(analysis.tab === 'now' ? hits : []).map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
     ...clusters.map((c) => (c.events.length === 1
       ? { key: `ev-${c.id}`, lngLat: [c.lon, c.lat], className: `map-event${c.id === analysis.selId ? ' sel' : ''}`, html: actIcon, label: `${actLabel}: ${c.events[0].vessel.name}`, onClick: () => selectEvent(c.id) }

@@ -18,6 +18,8 @@ export function addToolLayers(map) {
   const opacity = ['case', ['==', ['get', 'active'], true], 1, 0.7];
   const before = map.getLayer('sel-ring') ? 'sel-ring' : undefined;
   map.addSource(SRC, { type: 'geojson', data: EMPTY });
+  // מצב חקירת שטח: מסכה כהה מחוץ לפוליגון (הבסיס נשאר מתחתיה); מתחת לכל קו וסמן שלנו
+  map.addLayer({ id: 'mt-mask', type: 'fill', source: SRC, filter: ['==', ['get', 't'], 'mask'], paint: { 'fill-color': cssVar('--map-mask') } }, before);
   map.addLayer({ id: 'mt-fill', type: 'fill', source: SRC, filter: ['==', ['get', 'fill'], true], paint: { 'fill-color': draw, 'fill-opacity': 0.12 } }, before);
   const isDraw = ['==', ['get', 't'], 'draw'];
   // הילה כהה 3px סביב קו 2px: רוחב 5 (1.5px מכל צד)

@@ -77,7 +77,7 @@ const dist = (m, unit) => { const f = formatDistance(m, unit); return `${f.value
  * vessels: [{ vessel, vi, active, radii?, route?: { track, hours, marks }, arrival?: { dest, editable } }]
  * מחזיר { features, chips, handles }; handles: { key, lngLat, idx, id } (id = 'draft' או מזהה שמור)
  */
-export function buildScene({ items, draft, cursor, edit, vessels, unit }) {
+export function buildScene({ items, draft, cursor, edit, vessels, unit, mask = null }) {
   const features = [];
   const chips = [];
   const handles = [];
@@ -107,6 +107,10 @@ export function buildScene({ items, draft, cursor, edit, vessels, unit }) {
     }
   };
 
+  // מצב חקירת שטח: מסכה (פוליגון עם חור) על כל העולם, ובתוכה הפוליגון שנבחר. -540..540 כדי לכסות גם עותקי עולם חוזרים
+  if (mask && mask.length >= 3) {
+    features.push(feat({ type: 'Polygon', coordinates: [[[-540, -85], [540, -85], [540, 85], [-540, 85], [-540, -85]], [...mask, mask[0]]] }, { t: 'mask' }));
+  }
   for (const it of items) if (it.visible) addObj(it, it.id);
   const live = draft && withCursor(draft, cursor);
   if (live) addObj(live, 'draft');

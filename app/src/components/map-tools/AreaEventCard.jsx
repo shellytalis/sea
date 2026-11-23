@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import Button from '../../ui/Button';
 import { Ltr, Mono, Num } from '../../ui/Ltr';
 import { activityById } from '../../area/activities';
-import { eventDuration } from '../../area/query';
+import { eventDuration, orderVessels } from '../../area/query';
 import { distance } from '../../map/geodesy';
 import { fmtFull } from '../../map/range';
 import { formatDistance, formatDuration } from '../../map/units';
@@ -90,8 +90,7 @@ export default function AreaEventCard({ map, event: e, unit, now, onClose }) {
         <Button variant="icon" size="sm" aria-label="סגירת הכרטיס" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />
       </header>
       <dl className="area-card-body">
-        <VesselRows v={e.vessel} title="כלי" />
-        {e.vessel2 && <VesselRows v={e.vessel2} title="הכלי השני" />}
+        {orderVessels(e).map((v, i) => <VesselRows key={v.id} v={v} title={i ? 'הכלי השני' : 'כלי'} />)}
         {instant ? <Row label="זמן השינוי"><Num>{fmtFull(e.start)}</Num></Row> : (
           <>
             <Row label="התחלה"><Num>{fmtFull(e.start)}</Num></Row>

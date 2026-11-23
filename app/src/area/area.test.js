@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ACTIVITIES } from './activities.js';
 import { clusterEvents, zoomToSeparate } from './cluster.js';
-import { analyzeArea, defaultActivity, isCovered, limitEvents } from './query.js';
-import { MAX_AREA_KM2 } from './thresholds.js';
+import { analyzeArea, defaultActivity, defaultRange, isCovered, limitEvents, orderVessels } from './query.js';
+import { DEFAULT_RANGE_DAYS, MAX_AREA_KM2, MAX_RANGE_DAYS } from './thresholds.js';
 import { buildAreaCsv } from './csv.js';
 import { AREA_EVENTS, COVERAGE, DEMO_AREAS, NOW as DEMO_NOW } from '../data/areaEvents.js';
 
@@ -144,4 +144,24 @@ test('נתוני דמה: אזור צפוף, דליל ו"לא נבדק", אירו
   assert.equal(run90(DEMO_AREAS.huge.polygon, 30).tooLarge, true);
   assert.ok(AREA_EVENTS.some((e) => e.end == null && e.activity === 'anchorage'));
   assert.ok(AREA_EVENTS.some((e) => e.vessel.flag === null));
+});
+
+test('טווח ברירת המחדל הוא 30 יום שהסתיימו ברגע הסגירה (לא 90)', () => {
+  assert.equal(DEFAULT_RANGE_DAYS, 30);
+  assert.equal(MAX_RANGE_DAYS, 90);
+  const r = defaultRange(NOW, DEFAULT_RANGE_DAYS);
+  assert.equal(r.to, NOW);
+  assert.equal(NOW - r.from, 30 * D);
+});
+
+test('מפגש STS: שני הכלים לפי סדר אלפביתי, בלי תלות בסדר הנתונים', () => {
+  const a = ev('sts', 34.5, 32.5, NOW - D);
+  const swapped = { ...a, vessel: a.vessel2, vessel2: a.vessel };
+  assert.deepEqual(orderVessels(a).map((v) => v.name), ['V1', 'V2']);
+  assert.deepEqual(orderVessels(swapped).map((v) => v.name), ['V1', 'V2']);
+  assert.equal(orderVessels(ev('anchorage', 34.5, 32.5, NOW - D)).length, 1);
+  // ייצוא: עמודות "שם" ו"כלי שני" לפי אותו סדר
+  const row = buildAreaCsv({ polygon: POLY, range: RANGE, activity: 'sts', events: [swapped], now: NOW }).split('\r\n')[3].split(',');
+  assert.equal(row[1], '"V1"');
+  assert.equal(row[5], '"V2"');
 });

@@ -1,6 +1,7 @@
 // ייצוא CSV של אירועי הפעילות הנבחרת (FR-09): כולל את כל האירועים, גם מעל תקרת הנקודות.
 import { fmtFull } from '../map/range.js';
 import { activityById } from './activities.js';
+import { orderVessels } from './query.js';
 
 const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 /** MMSI כטקסט עם אפסים מובילים: ="000123456" (Excel לא מחסיר אפסים) */
@@ -21,8 +22,9 @@ export function buildAreaCsv({ polygon, range, activity, events, now = Date.now(
   ];
   const rows = events.map((e) => {
     const hours = ((e.end ?? now) - e.start) / 3600e3;
+    const [v1, v2] = orderVessels(e); // סדר אלפביתי, כמו בטבלה ובכרטיס
     return [
-      label, e.vessel.name, e.vessel.imo, textCell(e.vessel.mmsi), e.vessel.flag ?? UNKNOWN, e.vessel2?.name ?? '',
+      label, v1.name, v1.imo, textCell(v1.mmsi), v1.flag ?? UNKNOWN, v2?.name ?? '',
       fmtFull(e.start), e.end == null ? 'ממשיך' : fmtFull(e.end), hours.toFixed(1), e.lat, e.lon, e.source, fmtFull(e.asOf),
     ];
   });

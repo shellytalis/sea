@@ -76,6 +76,10 @@ for (const w of widths) {
   await load();
   await openTool();
   assert.equal(await panelW(), 320, `[${w}] רוחב פאנל בשרטוט`);
+  // 5ב: לפני שרטוט, "העתק", "ייצוא CSV" ו"נקה" מושבתים
+  const dis = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.area-panel .panel-foot button')].map((b) => [b.textContent.trim(), b.disabled])));
+  assert.deepEqual([dis['העתק'], dis['ייצוא CSV'], dis['נקה']], [true, true, true], `[${w}] כפתורים לא מושבתים לפני שרטוט: ${JSON.stringify(dis)}`);
+  await shot('05b-empty-disabled');
   assert.match(await page.$eval('.mt-hint', (e) => e.textContent), /פוליגון/);
   await fit(AREAS.dense);
   const dpts = await screenPts(AREAS.dense);
@@ -114,7 +118,21 @@ for (const w of widths) {
   assert.equal(c['שיטוט'], '6');
   assert.equal(c['שינוי זהות'], '3');
   assert.equal(await checked(), 'מפגש ship-to-ship', `[${w}] ברירת מחדל`);
+  // 5ב.7: ברירת מחדל של הטווח היא 30 יום
+  assert.match(await page.$eval('.area-range .mt-datebtn', (e) => e.textContent), /30 ימים/, `[${w}] טווח ברירת מחדל`);
+  // 5ב.2: גובה שורת מקרא = --row-h (44px)
+  assert.equal(await page.$eval('.area-act', (e) => Math.round(e.getBoundingClientRect().height)), 44, `[${w}] גובה שורת מקרא`);
+  // 5ב.4: עיגול שטח והיקף (100 ומעלה: מספר שלם עם מפריד אלפים)
+  assert.match(await page.$eval('.area-panel .panel-meta', (e) => e.textContent), /שטח\s*[\d,]+\s*NM².*היקף\s*[\d,]+\s*NM/, `[${w}] עיגול`);
+  assert.doesNotMatch(await page.$eval('.area-panel .panel-meta', (e) => e.textContent), /\d\.\d/, `[${w}] ספרות אחרי הנקודה ב-100+`);
+  // 5ב.3: מצב חקירת שטח: סמלי כלי השיט מוסתרים, מסכה קיימת, מדידת השטח לא מוצגת על המפה
+  const mapState = () => page.evaluate(() => { const m = window.__seaMap; return { vis: m.getLayoutProperty('vessels', 'visibility'), ring: m.getLayoutProperty('sel-ring', 'visibility'), filter: m.getFilter('vessels') ?? null, mask: window.__seaFeatures().some((f) => f.properties.t === 'mask'), chip: !!document.querySelector('.map-chip') }; });
+  let ms = await mapState();
+  assert.deepEqual([ms.vis, ms.ring, ms.mask, ms.chip], ['none', 'none', true, false], `[${w}] מצב חקירת שטח: ${JSON.stringify(ms)}`);
   assert.equal(await pointSum(), 3, `[${w}] נקודות STS`);
+  // 5ב.6: מפגש STS: שני הכלים באותו משקל, מופרדים ב-" ↔ ", לפי סדר אלפביתי
+  const sts = await page.$$eval('.area-row td:nth-child(2)', (l) => l.map((e) => e.textContent));
+  assert.ok(sts.length === 3 && sts.every((s) => { const [a, b] = s.split(' ↔ '); return b != null && a <= b; }), `[${w}] STS בטבלה: ${sts.join(' | ')}`);
   const hasShapes = await page.evaluate(() => /[●▲◆■◌✓]/.test(document.querySelector('.area-legend').textContent));
   assert.equal(hasShapes, false, `[${w}] צורות סולם חומרה במקרא`);
   await pick('עגינה והמתנה');
@@ -124,6 +142,24 @@ for (const w of widths) {
   const dotColor = await page.evaluate(() => getComputedStyle(document.querySelector('.map-event, .map-cluster')).backgroundColor);
   assert.ok(dotColor.startsWith('rgb(107, 164, 255)'), `[${w}] צבע נקודות ${dotColor}`);
   await shot('03-dense-anchorage');
+  // 5ב.1: כותרת מקטע דביקה בגלילה (גוף הפאנל הוא אזור הגלילה היחיד)
+  await page.evaluate(() => { document.querySelector('.area-panel .panel-body').scrollTop = 420; });
+  await sleep(250);
+  const sticky = await page.evaluate(() => {
+    const body = document.querySelector('.area-panel .panel-body');
+    const b = body.getBoundingClientRect(); const h = document.querySelector('.area-section-head').getBoundingClientRect(); const th = document.querySelector('.area-table thead th').getBoundingClientRect();
+    return { top: Math.round(h.top - b.top), th: Math.round(th.top - h.bottom), text: document.querySelector('.area-section-head').textContent, scrolled: body.scrollTop, legendHidden: document.querySelector('.area-legend').getBoundingClientRect().bottom < b.top + 1, label: document.querySelector('.area-section-head').getAttribute('aria-label'), nested: [...document.querySelectorAll('.area-results, .area-table, .area-tabpanel')].some((e) => getComputedStyle(e).overflowY !== 'visible') };
+  });
+  assert.ok(sticky.scrolled > 0 && sticky.legendHidden, `[${w}] לא גללנו: ${JSON.stringify(sticky)}`);
+  assert.ok(Math.abs(sticky.top) <= 1 && Math.abs(sticky.th) <= 1, `[${w}] כותרות לא דביקות: ${JSON.stringify(sticky)}`);
+  assert.match(sticky.text, /עגינה והמתנה.*31 אירועים/);
+  assert.equal(sticky.label, 'החלף פעילות');
+  assert.equal(sticky.nested, false, `[${w}] גלילה פנימית נוספת`);
+  await shot('02-sticky-header');
+  await page.click('.area-section-head');
+  await sleep(900);
+  assert.equal(await page.$eval('.area-panel .panel-body', (e) => e.scrollTop), 0, `[${w}] לחיצה על הכותרת לא גללה למקרא`);
+  await shot('01-legend-no-scroll');
 
   // מיון לפי כלי
   await page.evaluate(() => [...document.querySelectorAll('.area-table th button')].find((b) => b.textContent.includes('כלי')).click());
@@ -160,6 +196,9 @@ for (const w of widths) {
   const rangeBefore = await page.$eval('.area-range .mt-datebtn', (e) => e.textContent);
   await page.evaluate(() => document.querySelector('#area-tab-now').click());
   await sleep(200);
+  ms = await mapState();
+  assert.deepEqual([ms.vis, ms.ring, ms.mask], ['visible', 'none', true], `[${w}] לשונית כלים בשטח כעת: ${JSON.stringify(ms)}`);
+  assert.ok(Array.isArray(ms.filter) && ms.filter[0] === 'in', `[${w}] אין סינון כלים בשטח`);
   assert.equal(await panelW(), 320, `[${w}] רוחב פאנל בלשונית כלים בשטח`);
   await page.evaluate(() => document.querySelector('#area-tab-range').click());
   await sleep(200);
@@ -213,7 +252,12 @@ for (const w of widths) {
   const nowCsv = await page.evaluate(() => [...document.querySelectorAll('.area-panel .panel-foot button')].map((b) => b.textContent));
   assert.ok(nowCsv.includes('ייצוא CSV') && nowCsv.includes('הוסף לרשימה'), `[${w}] פעולות לשונית כלים בשטח`);
   await shot('08-now-tab');
+  ms = await mapState();
+  assert.ok(JSON.stringify(ms.filter).includes('v1'), `[${w}] NORDIC AURORA לא ברשימת הסינון: ${JSON.stringify(ms.filter)}`);
   await clear();
+  ms = await mapState();
+  assert.deepEqual([ms.vis, ms.ring, ms.filter, ms.mask], ['visible', 'visible', null, false], `[${w}] היציאה ("נקה") לא החזירה את השכבות: ${JSON.stringify(ms)}`);
+  await shot('12-exit-layers-back');
 
   // ===== 4. דליל ו"לא נבדק" ותקרת שטח =====
   await draw(AREAS.sparse);
@@ -242,6 +286,8 @@ for (const w of widths) {
   await clear();
   await page.keyboard.press('Escape'); await sleep(200);
   assert.equal(await page.$('.area-panel'), null, `[${w}] Esc שני לא סגר את הכלי`);
+  ms = await mapState();
+  assert.deepEqual([ms.vis, ms.ring, ms.filter], ['visible', 'visible', null], `[${w}] סגירת הכלי לא החזירה את השכבות`);
 
   // ===== 5. דגלי הדגמה =====
   await load('?area=cap');
@@ -252,7 +298,7 @@ for (const w of widths) {
   await sleep(300);
   c = await counts();
   assert.equal(c['עגינה והמתנה'], '31', `[${w}] במקרא תמיד המספר המלא`);
-  assert.match(await page.$eval('.area-limit', (e) => e.textContent), /מוצגים 20 מתוך 31/);
+  assert.match(await page.$eval('.area-section-meta', (e) => e.textContent), /מוצגים 20 מתוך 31/);
   assert.equal(await page.evaluate(() => document.querySelectorAll('.area-row').length), 20);
   assert.equal(await pointSum(), 20, `[${w}] נקודות מעל תקרה`);
   await shot('09-cap');
@@ -272,6 +318,24 @@ for (const w of widths) {
   assert.ok(await page.$('.map-handle'), `[${w}] הפוליגון לא נשמר בשגיאה`);
   assert.ok(await page.evaluate(() => [...document.querySelectorAll('.area-panel button')].some((b) => b.textContent.includes('נסה שוב'))));
   await shot('11-error');
+
+  // ===== 5ב: מדידות שמורות מוסתרות במצב חקירת שטח וחוזרות ביציאה =====
+  await load();
+  const pickTool = (name) => page.evaluate((n) => [...document.querySelectorAll('.mt-tool')].find((b) => b.textContent.includes(n)).click(), name);
+  await pickTool('שטח'); await sleep(200);
+  await draw(AREAS.sparse, { close: false }); await page.keyboard.press('Enter'); await sleep(200);
+  await draw(AREAS.dense, { close: false }); await page.keyboard.press('Enter'); await sleep(200);
+  const drawn = () => page.evaluate(() => window.__seaFeatures().filter((f) => f.properties.t === 'draw').length);
+  assert.equal(await drawn(), 2, `[${w}] שתי מדידות שמורות`);
+  await openTool();
+  await draw(AREAS.uncovered);
+  await ready();
+  assert.equal(await drawn(), 1, `[${w}] מדידות שמורות לא הוסתרו במצב חקירת שטח`);
+  await pickTool('מרחק'); await sleep(300); // מעבר לכלי אחר מסיים את המצב
+  assert.equal(await page.$('.area-panel'), null);
+  ms = await mapState();
+  assert.deepEqual([ms.vis, ms.ring, ms.mask], ['visible', 'visible', false], `[${w}] מעבר לכלי אחר לא החזיר שכבות`);
+  assert.equal(await drawn(), 2, `[${w}] המדידות השמורות לא חזרו`);
 
   // ===== 6. רגרסיה: כלי אחר נשאר 320px ובלי פאנל ניתוח =====
   await load();

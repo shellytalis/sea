@@ -84,5 +84,11 @@ export function defaultActivity(counts) {
 /** טווח ברירת מחדל: N ימים שהסתיימו ברגע נתון */
 export const defaultRange = (now, days) => ({ from: now - days * 86400e3, to: now });
 
+/** כלי האירוע לפי סדר אלפביתי של השם (דטרמיניסטי): מפגש STS הוא שני כלים שווים, ואין "ראשי" ו"שני" לפי סדר הנתונים */
+export function orderVessels(e) {
+  const list = e.vessel2 ? [e.vessel, e.vessel2] : [e.vessel];
+  return list.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
 /** משך האירוע במילישניות; בלי סיום = עד "עכשיו" */
 export const eventDuration = (e, now) => (e.end != null ? e.end : now) - e.start;

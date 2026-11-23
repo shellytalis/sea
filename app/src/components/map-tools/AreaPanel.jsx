@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Calendar } from 'lucide-react';
+import { ArrowDown, ArrowUp, Calendar, X } from 'lucide-react';
 import Panel from '../../ui/Panel';
 import Button from '../../ui/Button';
 import { EmptyState, ErrorState, TableSkeleton } from '../../ui/States';
@@ -9,10 +9,10 @@ import { buildAreaCsv, downloadCsv } from '../../area/csv';
 import { eventDuration, orderVessels, summarizeResult } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
-import { UNITS, areaToUnit, formatArea, formatDuration, toUnit } from '../../map/units';
+import { UNITS, areaToUnit, formatArea, formatDuration } from '../../map/units';
 import ActivityIcon from './ActivityIcon';
 import { RangePopover } from './Toolbars';
-import { Actions, HeaderActions, TerrainControls, TerrainList } from './ToolPanel';
+import { Actions, TerrainControls, TerrainList } from './ToolPanel';
 
 /** קיצורי הטווח של ניתוח אזור (7 / 30 / 90 יום), באותו רכיב בורר כמו בסרגל כלי השיט */
 const AREA_PRESETS = [{ hours: 168, label: '7 י׳' }, { hours: 720, label: '30 י׳' }, { hours: 2160, label: '90 י׳' }];
@@ -103,7 +103,6 @@ function Totals({ analysis: a }) {
   return (
     <p className="area-totals">
       סה״כ <Num>{s.activities.toLocaleString('en')}</Num> {s.activities === 1 ? 'פעילות' : 'פעילויות'} · <Num>{s.vessels.toLocaleString('en')}</Num> כלי שיט ייחודיים
-      {s.skipped > 0 && <span className="area-totals-note"> (בלי {s.skipped === 1 ? 'פעילות שלא נבדקה' : `${s.skipped} פעילויות שלא נבדקו`})</span>}
     </p>
   );
 }
@@ -168,8 +167,6 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
   const tabs = useRef(null);
   const wide = committed && a.tab === 'range';
   const area = metrics ? { value: fmtMeasure(areaToUnit(metrics.area, unit)), unit: UNITS[unit].area } : null;
-  const perim = metrics ? { value: fmtMeasure(toUnit(metrics.perimeter, unit)), unit: UNITS[unit].short } : null;
-  const meta = committed && metrics ? <>שטח <Num>{area.value} {area.unit}</Num> · היקף <Num>{perim.value} {perim.unit}</Num></> : null;
   const count = a.result?.counts[a.activity];
   const canExport = a.status === 'ready' && typeof count === 'number' && count > 0;
 
@@ -268,7 +265,7 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
   );
 
   return (
-    <Panel id="mt-panel" title="חקירת שטח" meta={meta} className={`mt-panel area-panel${wide ? ' wide' : ''}`} actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />} footer={footer}>
+    <Panel id="mt-panel" title="חקירת שטח" className={`mt-panel area-panel${wide ? ' wide' : ''}`} actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />} footer={footer}>
       {body}
     </Panel>
   );

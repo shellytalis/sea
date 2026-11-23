@@ -109,7 +109,6 @@ for (const w of widths) {
   await draw(AREAS.dense);
   await ready();
   assert.equal(await panelW(), 480, `[${w}] רוחב פאנל בלשונית פעילויות`);
-  assert.match(await page.$eval('.area-panel .panel-meta', (e) => e.textContent), /שטח.*היקף/, `[${w}] אין שטח והיקף בכותרת`);
   let c = await counts();
   assert.equal(c['מפגש ship-to-ship'], '3');
   assert.equal(c['עגינה והמתנה'], '31');
@@ -119,13 +118,13 @@ for (const w of widths) {
   assert.equal(c['שינוי זהות'], '3');
   assert.equal(await checked(), 'מפגש ship-to-ship', `[${w}] ברירת מחדל`);
   assert.match(await page.$eval('.area-totals', (e) => e.textContent), /סה״כ\s*70\s*פעילויות · \d+\s*כלי שיט ייחודיים/, `[${w}] שורת סיכום`);
+  // הוסרו: בקרת יחידות ושטח/היקף בכותרת, והערה על פעילויות שלא נבדקו בשורת הסיכום
+  assert.equal(await page.$('.area-panel .mt-unit, .area-panel .panel-meta'), null, `[${w}] יחידות או שטח והיקף עדיין בכותרת`);
+  assert.equal(await page.$('.area-totals-note'), null);
   // 5ב.7: ברירת מחדל של הטווח היא 30 יום
   assert.match(await page.$eval('.area-range .mt-datebtn', (e) => e.textContent), /30 ימים/, `[${w}] טווח ברירת מחדל`);
   // 5ב.2: גובה שורת מקרא = --row-h (44px)
   assert.equal(await page.$eval('.area-act', (e) => Math.round(e.getBoundingClientRect().height)), 44, `[${w}] גובה שורת מקרא`);
-  // 5ב.4: עיגול שטח והיקף (100 ומעלה: מספר שלם עם מפריד אלפים)
-  assert.match(await page.$eval('.area-panel .panel-meta', (e) => e.textContent), /שטח\s*[\d,]+\s*NM².*היקף\s*[\d,]+\s*NM/, `[${w}] עיגול`);
-  assert.doesNotMatch(await page.$eval('.area-panel .panel-meta', (e) => e.textContent), /\d\.\d/, `[${w}] ספרות אחרי הנקודה ב-100+`);
   // 5ב.3: מצב חקירת שטח: סמלי כלי השיט מוסתרים, מסכה קיימת, מדידת השטח לא מוצגת על המפה
   const mapState = () => page.evaluate(() => { const m = window.__seaMap; return { vis: m.getLayoutProperty('vessels', 'visibility'), ring: m.getLayoutProperty('sel-ring', 'visibility'), filter: m.getFilter('vessels') ?? null, mask: window.__seaFeatures().some((f) => f.properties.t === 'mask'), chip: !!document.querySelector('.map-chip') }; });
   let ms = await mapState();

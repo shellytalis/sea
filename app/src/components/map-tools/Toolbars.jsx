@@ -5,7 +5,7 @@ import { Shape } from '../../ui/Badges';
 import { Ltr, Mono, Num } from '../../ui/Ltr';
 import { PRESETS, combine, fmtDayYear, fmtTime, monthCells, rangeLabel, startOfDay, validateRange } from '../../map/range';
 
-/** הכלים הכלליים: זמינים תמיד */
+/** הכלים הכלליים: זמינים תמיד. "חקירת שטח" = ניתוח אזור (פוליגון, טווח תאריכים, פעילויות) */
 export const GENERAL_TOOLS = [
   { id: 'distance', label: 'מרחק', icon: Ruler },
   { id: 'radius', label: 'רדיוס חופשי', icon: Radius },
@@ -111,13 +111,17 @@ const WEEKDAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
 /** בורר טווח תאריכים: קיצורים, from/to עם תאריך ושעה, לוח שנה (שבוע מתחיל באחד). "החל" מימין, "ביטול" משמאל */
-function RangePopover({ range, onApply, onCancel }) {
+/**
+ * presets/maxDays/title ניתנים להתאמה: סרגל כלי השיט משתמש בברירות המחדל (עד 30 יום), וניתוח אזור ב-7/30/90 ועד 90 יום.
+ * className מוסיף מחלקה לעטיפה (ניתוח אזור: מוצג בתוך הפאנל ולא כ-popover צף).
+ */
+export function RangePopover({ range, onApply, onCancel, presets = PRESETS, maxDays = 30, title = 'טווח תאריכים למסלול', className = '' }) {
   const now = Date.now();
   const [draft, setDraft] = useState({ from: range.from, to: range.to, preset: range.preset ?? null });
   const [field, setField] = useState('from');
   const [view, setView] = useState(() => { const d = new Date(range.from); return { y: d.getFullYear(), m: d.getMonth() }; });
   const box = useRef(null);
-  const err = validateRange(draft.from, draft.to, now);
+  const err = validateRange(draft.from, draft.to, now, maxDays);
   useEffect(() => {
     const down = (e) => { if (!box.current?.contains(e.target)) onCancel(); };
     const esc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); } };
@@ -136,10 +140,10 @@ function RangePopover({ range, onApply, onCancel }) {
   const lo = startOfDay(draft.from);
   const hi = startOfDay(draft.to);
   return (
-    <div className="mt-vpop mt-rangepop" ref={box} role="dialog" aria-label="טווח תאריכים למסלול"
+    <div className={`mt-vpop mt-rangepop ${className}`.trim()} ref={box} role="dialog" aria-label={title}
       onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); } }}>
       <div className="mt-presets" role="group" aria-label="קיצורים">
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <button key={p.hours} type="button" aria-pressed={draft.preset === p.hours} className={draft.preset === p.hours ? 'active' : ''}
             onClick={() => { setDraft({ from: now - p.hours * 3600e3, to: now, preset: p.hours }); const d = new Date(now - p.hours * 3600e3); setView({ y: d.getFullYear(), m: d.getMonth() }); }}>
             {p.label}

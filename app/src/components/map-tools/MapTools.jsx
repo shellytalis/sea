@@ -4,15 +4,24 @@ import { demoTrack, trackStats } from '../../map/route';
 import { resolveRange } from '../../map/range';
 import { PORTS } from '../../data/ports';
 import { addToolLayers, setToolData } from '../../map/layers';
-import { DEFAULT_KNOTS, buildScene, isCircle, metrics, withCursor, within } from '../../map/scene';
+import { DEFAULT_KNOTS, buildScene, isCircle, isPolygon, metrics, withCursor } from '../../map/scene';
 import { travelHours, useUnit } from '../../map/units';
 import useMarkers from '../../map/useMarkers';
 import { DEFAULT_RADII, useVesselSet } from '../../state/vesselSet';
+import { clusterEvents, zoomToSeparate } from '../../area/cluster';
+import { activityById } from '../../area/activities';
+import { isSelfIntersecting, pointInPolygon } from '../../area/geo';
+import { useAreaAnalysis } from '../../area/useAreaAnalysis';
+import { renderToStaticMarkup } from 'react-dom/server';
+import ActivityIcon from './ActivityIcon';
+import AreaEventCard from './AreaEventCard';
+import AreaPanel from './AreaPanel';
 import { GeneralToolbar, VesselBar } from './Toolbars';
 import { ArrivalPanel, GeneralPanel, ProximityPanel, RoutePanel } from './ToolPanel';
 
 const MAX_SAVED = 5;
 const MAX_CIRCLES = 3;
+const NO_EVENTS = [];
 const DRAW = ['distance', 'radius', 'area', 'time', 'height', 'terrain'];
 const LAYER_KEYS = ['prox', 'route', 'arrival'];
 let seq = 0;
@@ -22,9 +31,13 @@ const uid = () => `m${++seq}`;
 function hintFor(tool, draft, items) {
   if (tool?.family === 'vessel' && tool.id === 'arrival') return ['לחיצה על המפה: בחירת יעד (או חיפוש נמל בפאנל) · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: יעד · Esc: סגירה'];
   if (!tool || tool.family !== 'general' || !DRAW.includes(tool.id)) return null;
+  if (tool.id === 'terrain') {
+    if (draft) return ['לחיצה: הוספת קודקוד · סגירה: לחיצה על הקודקוד הראשון, לחיצה כפולה או Enter · Backspace: מחיקת קודקוד · Esc: ביטול', 'לחיצה: קודקוד · Enter: סגירה · Esc: ביטול'];
+    if (items.some((i) => i.kind === 'terrain')) return ['גרירת קודקוד: עריכת הפוליגון והרצה מחדש · לחיצה על נקודה: פרטי האירוע · Esc: סגירת הכלי', 'גרירה: עריכה · Esc: סגירה'];
+    return ['לחיצה על המפה: תחילת פוליגון לחקירת שטח · גרירת קודקוד: עריכה · Esc: סגירת הכלי', 'לחיצה: פוליגון · Esc: סגירה'];
+  }
   if (isCircle(tool.id)) {
     if (draft) return ['לחיצה נוספת: קביעת הרדיוס (או הקלדה בלוח) · Esc: ביטול', 'לחיצה: רדיוס · Esc: ביטול'];
-    if (tool.id === 'terrain') return ['לחיצה על המפה: מרכז אזור החקירה, ואז לחיצה לרדיוס · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מרכז · Esc: סגירה'];
     if (items.filter((i) => i.kind === 'radius').length >= MAX_CIRCLES) return ['עד 3 מעגלים: מחק מעגל כדי להוסיף · Esc: סגירת הכלי', 'עד 3 מעגלים · Esc: סגירה'];
     return ['לחיצה על המפה: בחירת מרכז · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: מרכז · Esc: סגירה'];
   }
@@ -53,6 +66,9 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
   const [watch, setWatch] = useState({});
   const [hoverLL, setHoverLL] = useState(null);
   const [unit, setUnit] = useUnit();
+  const [areaNotice, setAreaNotice] = useState(''); // הודעה קצרה בחקירת שטח (פוליגון חוצה את עצמו, פחות מ-3 קודקודים)
+  const [dragRev, setDragRev] = useState(0); // עולה בסיום גרירת קודקוד: מפעיל ניתוח מחדש
+  const [zoom, setZoom] = useState(5);
 
   const setVessels = useMemo(() => ids.map((id) => vessels.find((v) => v.id === id)).filter(Boolean), [ids, vessels]);
   const active = setVessels.find((v) => v.id === activeId) ?? null;
@@ -70,15 +86,24 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
 
   const commit = useCallback((g) => {
     const id = uid();
-    setItems((l) => [...l, { ...g, id, visible: true }]);
+    // חקירת שטח מחזיקה פוליגון אחד בכל רגע: שרטוט חדש מחליף את הקודם
+    setItems((l) => [...(g.kind === 'terrain' ? l.filter((x) => x.kind !== 'terrain') : l), { ...g, id, visible: true }]);
     setDraft(null);
     setCursor(null);
     setSelId(id);
+    setAreaNotice('');
   }, []);
   const finish = useCallback(() => {
     const d = st.current.draft;
     if (!d || isCircle(d.kind)) return;
-    if (d.points.length < (d.kind === 'area' ? 3 : 2)) return;
+    if (d.points.length < (isPolygon(d.kind) ? 3 : 2)) {
+      if (d.kind === 'terrain') setAreaNotice('נדרשים לפחות 3 קודקודים כדי לסגור פוליגון.');
+      return;
+    }
+    if (d.kind === 'terrain' && isSelfIntersecting(d.points)) {
+      setAreaNotice('צלעות הפוליגון חוצות זו את זו, ולכן הוא לא נסגר. מחק את הקודקוד האחרון (Backspace) או המשך לשרטט.');
+      return;
+    }
     commit({ kind: d.kind, points: d.points, ...(d.kind === 'time' ? { speed: st.current.timeSpeed } : {}) });
   }, [commit]);
 
@@ -156,14 +181,18 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
         if (r >= 1) commit({ kind: d.kind, center: d.center, radius: r });
         return;
       }
+      // חקירת שטח עם פוליגון סגור: לחיצה על המפה אינה מתחילה שרטוט חדש (היא סוגרת את כרטיס האירוע); "נקה" מתחיל מחדש
+      if (!d && t.id === 'terrain' && list.some((i) => i.kind === 'terrain')) return;
       if (!d) {
-        if (list.length >= MAX_SAVED) return;
+        if (list.length >= MAX_SAVED && t.id !== 'terrain') return;
         setSelId(null);
+        setAreaNotice('');
         setDraft({ kind: t.id, points: [ll] });
         return;
       }
       const a = map.project(d.points[d.points.length - 1]);
       if (Math.hypot(a.x - e.point.x, a.y - e.point.y) < 4) return; // הלחיצה השנייה של לחיצה כפולה
+      setAreaNotice('');
       setDraft({ ...d, points: [...d.points, ll] });
     };
     const onDbl = () => { if (isDrawing() && !isCircle(st.current.tool.id)) finish(); };
@@ -210,7 +239,9 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
         if (document.querySelector('[role=listbox], [role=dialog].mt-vpop')) return;
         e.preventDefault();
         e.stopImmediatePropagation();
-        if (d) { setDraft(null); setCursor(null); } else { setTool(null); setSelId(null); }
+        // כרטיס אירוע פתוח נסגר ראשון, והכלי נשאר פעיל
+        if (st.current.closeCard) { st.current.closeCard(); return; }
+        if (d) { setDraft(null); setCursor(null); setAreaNotice(''); } else { setTool(null); setSelId(null); setAreaNotice(''); }
       } else if (e.key === 'Enter' && d && tag !== 'BUTTON' && tag !== 'A') {
         e.preventDefault();
         finish();
@@ -261,28 +292,82 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
   const rawLive = draft ? withCursor(draft, cursor) : selected;
   const live = rawLive && rawLive.kind === 'time' && rawLive.speed == null ? { ...rawLive, speed: timeSpeed } : rawLive;
   const m = metrics(live);
-  const hits = live?.kind === 'terrain' && live.radius > 0 ? within(live.center, live.radius, vessels) : [];
+  // ===== חקירת שטח (ניתוח אזור) =====
+  const isTerrain = drawing && tool.id === 'terrain';
+  const terrainItem = isTerrain ? items.find((i) => i.kind === 'terrain') : undefined;
+  const analysis = useAreaAnalysis({ polygon: terrainItem?.points ?? null, polygonKey: terrainItem?.id ?? null, rev: dragRev });
+  // "כלים בשטח כעת": שיוך לפי point-in-polygon (כולל הגבול)
+  const hits = useMemo(() => (terrainItem ? vessels.filter((v) => pointInPolygon([v.lon, v.lat], terrainItem.points)).map((v) => ({ v })) : []), [terrainItem, vessels]);
+  const showEvents = !!terrainItem && analysis.tab === 'range' && analysis.status === 'ready';
+  const eventList = showEvents ? analysis.shown.shown : NO_EVENTS;
+  const clusters = useMemo(() => clusterEvents(eventList, zoom), [eventList, zoom]);
+  const selEvent = showEvents ? eventList.find((e) => e.id === analysis.selId) : undefined;
+  st.current.closeCard = selEvent ? () => analysis.setSelId(null) : null;
+  const actLabel = activityById(analysis.activity)?.label ?? '';
+  // סמל הפעילות בתוך נקודת האירוע (FR-06): אייקון lucide, כל הנקודות בצבע אחד
+  const actIcon = useMemo(() => renderToStaticMarkup(<ActivityIcon name={activityById(analysis.activity)?.icon} size={12} />), [analysis.activity]);
+  const selectEvent = (id, { center } = {}) => {
+    analysis.setSelId(id);
+    const e = eventList.find((x) => x.id === id);
+    if (center && e && map) map.easeTo({ center: [e.lon, e.lat], zoom: Math.max(map.getZoom(), zoomToSeparate(e, eventList, map.getZoom())), duration: 600 });
+  };
+  const zoomInto = (c) => {
+    const lons = c.events.map((e) => e.lon);
+    const lats = c.events.map((e) => e.lat);
+    map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 100, maxZoom: 13, duration: 600 });
+  };
+  const closableFirst = tool?.id === 'terrain' && draft?.points?.length >= 3;
+  // זום המפה (לקיבוץ נקודות): מתעדכן בסיום זום
+  useEffect(() => {
+    if (!map) return undefined;
+    const f = () => setZoom(map.getZoom());
+    f();
+    map.on('zoomend', f);
+    return () => { map.off('zoomend', f); };
+  }, [map]);
+  // יציאה מהכלי (סגירה, כלי אחר, "נקה הכול"): הפוליגון והניתוח מסתיימים יחד
+  useEffect(() => {
+    if (!isTerrain) setItems((l) => (l.some((i) => i.kind === 'terrain') ? l.filter((i) => i.kind !== 'terrain') : l));
+  }, [isTerrain]);
+  // כלי פיתוח וצילומי מסך: מופע המפה זמין בחלון (רק ב-dev)
+  useEffect(() => { if (import.meta.env.DEV && map) window.__seaMap = map; }, [map]);
   useMarkers(map, [
     ...scene.chips.map((c) => ({ key: `c-${c.key}`, lngLat: c.lngLat, text: c.text, anchor: c.anchor, offset: c.offset, className: `map-chip ${c.color}${c.vi != null ? ` vi-${c.vi}` : ''}${c.strong ? ' strong' : ''}${c.dim ? ' dim' : ''}` })),
     ...scene.arrows.map((a) => ({ key: `a-${a.key}`, lngLat: a.lngLat, rotation: a.rotation, className: `map-arrow vi-${a.vi}${a.dim ? ' dim' : ''}` })),
     ...setVessels.map((v) => ({ key: `set-${v.id}`, lngLat: [v.lon, v.lat], className: `map-ring set vi-${colors[v.id] ?? 0}${v.id === activeId ? '' : ' dim'}` })),
-    ...hits.map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
+    ...(analysis.tab === 'now' ? hits : []).map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
+    ...clusters.map((c) => (c.events.length === 1
+      ? { key: `ev-${c.id}`, lngLat: [c.lon, c.lat], className: `map-event${c.id === analysis.selId ? ' sel' : ''}`, html: actIcon, label: `${actLabel}: ${c.events[0].vessel.name}`, onClick: () => selectEvent(c.id) }
+      : { key: c.id, lngLat: [c.lon, c.lat], className: `map-cluster${c.events.some((e) => e.id === analysis.selId) ? ' sel' : ''}`, text: String(c.events.length), label: `קבוצה של ${c.events.length} אירועים, התקרב לפירוק`, onClick: () => zoomInto(c) })),
     ...(hoverLL ? [{ key: 'hover', lngLat: hoverLL, className: 'map-ring small' }] : []),
-    ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: 'map-handle', draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined })),
+    ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: `map-handle${closableFirst && h.id === 'draft' && h.idx === 0 ? ' closable' : ''}`, draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined,
+      onClick: closableFirst && h.id === 'draft' && h.idx === 0 ? finish : undefined, // סגירת פוליגון בלחיצה על הקודקוד הראשון
+      onDragEnd: h.id !== 'draft' && h.id !== 'arrival' && selected?.kind === 'terrain' ? () => setDragRev((r) => r + 1) : undefined })),
   ]);
 
   // ===== פאנל =====
   const patchSel = (fn) => setItems((l) => l.map((x) => (x.id === selId ? fn(x) : x)));
-  const closeTool = () => { setHoverLL(null); setTool(null); setDraft(null); setCursor(null); setSelId(null); };
+  const closeTool = () => { setHoverLL(null); setTool(null); setDraft(null); setCursor(null); setSelId(null); setAreaNotice(''); };
   const hint = hintFor(tool, draft, items);
   const meta = mode === 'all' ? <>כל הסט (<span className="num">{setVessels.length}</span>)</> : active ? <bdi dir="ltr">{active.name}</bdi> : null;
   const anyOn = (key) => targets.some((v) => layers[v.id]?.[key]);
 
   let panel = null;
-  if (drawing) {
+  if (isTerrain) {
     panel = (
-      <GeneralPanel tool={tool.id} hits={hits} onPickVessel={onSelectVessel} onHover={setHoverLL} watch={watch}
-        onAddToList={(list, vids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...vids])] }))} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
+      <AreaPanel analysis={analysis} polygon={terrainItem?.points} committed={!!terrainItem} hasDraft={!!draft} notice={areaNotice}
+        metrics={terrainItem ? metrics(terrainItem) : null} unit={unit} setUnit={setUnit} onClose={closeTool}
+        onClear={() => {
+          if (draft) { setDraft(null); setCursor(null); } else { setItems((l) => l.filter((x) => x.kind !== 'terrain')); setSelId(null); }
+          setAreaNotice('');
+        }}
+        hits={hits} watch={watch} onPickVessel={onSelectVessel}
+        onAddToList={(list, vids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...vids])] }))}
+        onSelectEvent={(id) => selectEvent(id, { center: true })} />
+    );
+  } else if (drawing) {
+    panel = (
+      <GeneralPanel tool={tool.id} onHover={setHoverLL} onSpeed={(k) => { if (selected) patchSel((x) => ({ ...x, speed: k })); else setTimeSpeed(k); }} live={!!live} m={m} unit={unit} setUnit={setUnit} items={items} selId={selId} max={MAX_SAVED}
         onSelect={(id) => {
           const it = items.find((x) => x.id === id);
           setDraft(null); setCursor(null); setSelId(id);
@@ -351,8 +436,9 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
       <div className={`mt-stack${hasSet ? ' with-vbar' : ''}`}>
         {panel}
         <GeneralToolbar active={tool?.family === 'general' ? tool.id : null} onPick={pickGeneral}
-          canClear={items.length > 0 || !!draft} onClear={() => { setItems([]); setDraft(null); setCursor(null); setSelId(null); }} />
+          canClear={items.length > 0 || !!draft} onClear={() => { setItems([]); setDraft(null); setCursor(null); setSelId(null); setAreaNotice(''); }} />
       </div>
+      {selEvent && <AreaEventCard map={map} event={selEvent} unit={unit} now={Date.now()} onClose={() => analysis.setSelId(null)} />}
       {hasSet && (
         <VesselBar vessels={setVessels} activeId={activeId} colors={colors} mode={mode} onMode={vs.setMode}
           onActivate={onActivate} onRemove={vs.remove} onClear={vs.clear}

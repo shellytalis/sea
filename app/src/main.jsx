@@ -14,6 +14,7 @@ import "./styles/ai-models.css";
 import "./styles/snapshot.css";
 import "./styles/map-tools.css";
 import "./styles/map-tools-set.css";
+import "./styles/area.css";
 import App from "./App";
 import { VesselSetProvider } from "./state/vesselSet";
 createRoot(document.getElementById("root")).render(<StrictMode>

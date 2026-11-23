@@ -22,12 +22,12 @@ export function resolveRange(range, now = Date.now()) {
   return { from, to, hours: (to - from) / HOUR };
 }
 
-/** מחזיר הודעת שגיאה, או null אם התקין: from<to, לא בעתיד, עד 30 יום */
-export function validateRange(from, to, now = Date.now()) {
+/** מחזיר הודעת שגיאה, או null אם התקין: from<to, לא בעתיד, עד maxDays ימים (ברירת מחדל 30; ניתוח אזור: 90) */
+export function validateRange(from, to, now = Date.now(), maxDays = 30) {
   if (!Number.isFinite(from) || !Number.isFinite(to)) return 'יש לבחור תאריך ושעה בשני הקצוות';
   if (from >= to) return 'תאריך ההתחלה חייב להיות לפני תאריך הסיום';
   if (to > now) return 'לא ניתן לבחור זמן עתידי';
-  if (to - from > MAX_RANGE) return 'הטווח המרבי הוא 30 יום';
+  if (to - from > maxDays * DAY) return `הטווח המרבי הוא ${maxDays} יום`;
   return null;
 }
 

@@ -27,7 +27,7 @@
 .mt-clear { border-top: 1px solid var(--border-strong) !important; }
 
 /* פאנל משותף */
-.mt-panel { pointer-events: auto; width: 320px; flex: none; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-pop); }
+.mt-panel { pointer-events: auto; width: var(--mt-panel-w); flex: none; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-pop); }
 .mt-panel .panel-head { flex: none; }
 .mt-panel .panel-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: var(--space-4); }
 .mt-seg { display: grid; grid-template-columns: repeat(4, 1fr); height: var(--control-h-sm); border: 1px solid var(--border-strong); border-radius: var(--radius-md); overflow: hidden; }

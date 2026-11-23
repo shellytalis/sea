@@ -5,8 +5,10 @@ import { markLabel, markStep, trackStep } from './route';
 import { profileSamples, profileStats } from './elevation';
 
 export const KIND_LABEL = { distance: 'מרחק', radius: 'רדיוס חופשי', area: 'שטח', time: 'חישוב זמנים', height: 'גובה', terrain: 'חקירת שטח' };
-/** כלים שמוגדרים במרכז ורדיוס (רדיוס חופשי וחקירת שטח) */
-export const isCircle = (kind) => kind === 'radius' || kind === 'terrain';
+/** כלים שמוגדרים במרכז ורדיוס (רדיוס חופשי בלבד; "חקירת שטח" משרטטת פוליגון, כמו "שטח") */
+export const isCircle = (kind) => kind === 'radius';
+/** כלים שמוגדרים בפוליגון: שטח וחקירת שטח */
+export const isPolygon = (kind) => kind === 'area' || kind === 'terrain';
 export const DEFAULT_KNOTS = 10;
 export const COMPARE_KNOTS = [8, 10, 12, 14];
 export const DEFAULT_RADII_NM = [5, 10, 20];
@@ -43,7 +45,7 @@ export function metrics(g) {
     const samples = profileSamples(g.points, 64);
     return { total: pathLength(g.points), points: g.points.length, samples, stats: profileStats(samples) };
   }
-  if (g.kind === 'area') {
+  if (isPolygon(g.kind)) {
     const n = g.points.length;
     return { area: n >= 3 ? polygonArea(g.points) : 0, perimeter: n >= 2 ? polygonPerimeter(g.points) : 0, points: n };
   }
@@ -92,7 +94,7 @@ export function buildScene({ items, draft, cursor, edit, vessels, unit }) {
         chips.push({ key: `${key}-o`, lngLat: pts[0], text: 'מוצא', color: 'draw', strong: true, anchor: 'top', offset: [0, 12] });
         if (pts.length >= 2) chips.push({ key: `${key}-d`, lngLat: pts[pts.length - 1], text: 'יעד', color: 'draw', strong: true, anchor: 'top', offset: [0, 12] });
       } else if (pts.length >= 3) chips.push({ key: `${key}-t`, lngLat: pts[pts.length - 1], text: dist(pathLength(pts), unit), color: 'draw', strong: true, anchor: 'top', offset: [0, 14] });
-    } else if (g.kind === 'area') {
+    } else if (isPolygon(g.kind)) {
       const pts = g.points;
       if (pts.length >= 3) {
         features.push(feat({ type: 'Polygon', coordinates: [[...pts, pts[0]]] }, { fill: true }));

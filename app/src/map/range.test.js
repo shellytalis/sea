@@ -57,3 +57,9 @@ test('combine: תאריך ושעה', () => {
   assert.equal(new Date(d).getHours(), 13);
   assert.equal(new Date(d).getMinutes(), 45);
 });
+
+test('validateRange: תקרה ניתנת להתאמה (ניתוח אזור: 90 יום)', () => {
+  assert.equal(validateRange(NOW - 90 * DAY, NOW, NOW, 90), null);
+  assert.match(validateRange(NOW - 91 * DAY, NOW, NOW, 90), /90 יום/);
+  assert.match(validateRange(NOW - 31 * DAY, NOW, NOW), /30 יום/); // ברירת המחדל לא השתנתה
+});

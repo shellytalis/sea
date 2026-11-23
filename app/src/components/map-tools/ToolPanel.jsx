@@ -6,7 +6,6 @@ import Panel from '../../ui/Panel';
 import Button from '../../ui/Button';
 import { Ltr, Mono, Num } from '../../ui/Ltr';
 import { COMPARE_KNOTS, KIND_LABEL, inRange, metrics } from '../../map/scene';
-import { elevationAt } from '../../map/elevation';
 import { LISTS } from '../../data/vessels';
 import { UNITS, formatArea, formatBearing, formatDistance, formatDuration, formatEta, formatEtaShort, fromUnit, toUnit, travelHours } from '../../map/units';
 import { fmtFull, rangeLabel, spanLabel } from '../../map/range';
@@ -40,7 +39,7 @@ function UnitDropdown({ unit, onChange }) {
   );
 }
 
-function HeaderActions({ unit, setUnit, onClose }) {
+export function HeaderActions({ unit, setUnit, onClose }) {
   return (
     <>
       <UnitDropdown unit={unit} onChange={setUnit} />
@@ -77,7 +76,7 @@ function CopyButton({ lines }) {
 }
 
 /** שורת פעולות דביקה בתחתית הפאנל: "העתק", פעולות נוספות, ו"נקה" כקישור טקסטואלי בקצה */
-function Actions({ copy, onClear, clearDisabled, children }) {
+export function Actions({ copy, onClear, clearDisabled, children }) {
   return (
     <div className="mt-actions">
       <CopyButton lines={copy.filter(Boolean)} />
@@ -88,7 +87,7 @@ function Actions({ copy, onClear, clearDisabled, children }) {
 }
 
 const fd = (m, unit) => formatDistance(m, unit);
-const coord = (c) => `${Math.abs(c[1]).toFixed(4)}°${c[1] >= 0 ? 'N' : 'S'} ${Math.abs(c[0]).toFixed(4)}°${c[0] >= 0 ? 'E' : 'W'}`;
+export const coord = (c) => `${Math.abs(c[1]).toFixed(4)}°${c[1] >= 0 ? 'N' : 'S'} ${Math.abs(c[0]).toFixed(4)}°${c[0] >= 0 ? 'E' : 'W'}`;
 const DemoTag = () => <span className="ui-chip tag">נתוני דמה</span>;
 
 function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
@@ -97,9 +96,9 @@ function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
     const mm = metrics(it);
     let val = '';
     if (it.kind === 'distance' || it.kind === 'height') val = Object.values(fd(mm.total, unit)).join(' ');
-    if (it.kind === 'radius' || it.kind === 'terrain') val = Object.values(fd(it.radius, unit)).join(' ');
+    if (it.kind === 'radius') val = Object.values(fd(it.radius, unit)).join(' ');
     if (it.kind === 'time') val = formatDuration(mm.hours);
-    if (it.kind === 'area') { const a = formatArea(mm.area, unit); val = `${a.value} ${a.unit}`; }
+    if (it.kind === 'area' || it.kind === 'terrain') { const a = formatArea(mm.area, unit); val = `${a.value} ${a.unit}`; }
     return { text: `${KIND_LABEL[it.kind]} ${n}`, val };
   };
   return (
@@ -129,8 +128,8 @@ function SavedList({ items, selId, unit, max, onSelect, onToggle, onDelete }) {
 
 const circleAreaOf = (r) => Math.PI * r * r;
 
-/** פאנל יחיד (320px) לכלים הכלליים */
-export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch, onAddToList, live, m, unit, setUnit, items, selId, max, onSelect, onToggle, onDelete, onClose, onClearCurrent, onRadius }) {
+/** פאנל יחיד (320px) לכלים הכלליים. "חקירת שטח" יש לה פאנל משלה: AreaPanel */
+export function GeneralPanel({ tool, onSpeed, onHover, live, m, unit, setUnit, items, selId, max, onSelect, onToggle, onDelete, onClose, onClearCurrent, onRadius }) {
   const rows = [];
   const copy = [];
   if (m) {
@@ -154,10 +153,6 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
         rows.push(['מרחק קו', t.value, t.unit], ['נקודה גבוהה', conv(m.stats.max.h), hu], ['נקודה נמוכה', conv(m.stats.min.h), hu], ['עלייה מצטברת', conv(m.stats.ascent), hu]);
         copy.push(`מרחק קו: ${t.value} ${t.unit}`, `נקודה גבוהה: ${conv(m.stats.max.h)} ${hu}`, `נקודה נמוכה: ${conv(m.stats.min.h)} ${hu}`, `עלייה מצטברת: ${conv(m.stats.ascent)} ${hu}`);
       }
-    } else if (tool === 'terrain') {
-      const el = elevationAt(m.center[0], m.center[1]);
-      rows.push(['גובה/עומק במרכז', String(unit === 'ft' ? Math.round(el / 0.3048) : el), unit === 'ft' ? 'ft' : 'm'], ['כלים באזור', String(hits.length)]);
-      copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `כלים באזור: ${hits.length}`, ...hits.map((h) => `${h.v.name} (${fd(h.d, unit).value} ${fd(h.d, unit).unit})`));
     } else if (tool === 'area') {
       const a = formatArea(m.area, unit);
       const p = fd(m.perimeter, unit);
@@ -170,15 +165,10 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
       copy.push(`מרכז: ${coord(m.center)}`, `רדיוס: ${fd(m.radius, unit).value} ${fd(m.radius, unit).unit}`, `היקף: ${c.value} ${c.unit}`, `שטח: ${a.value} ${a.unit}`);
     }
   }
-  const circleTool = tool === 'radius' || tool === 'terrain';
+  const circleTool = tool === 'radius';
   return (
     <Panel id="mt-panel" title={NAMES[tool]} className="mt-panel" actions={<HeaderActions unit={unit} setUnit={setUnit} onClose={onClose} />}
-      footer={(
-        <>
-          {tool === 'terrain' && m && m.radius > 0 && <TerrainControls hits={hits} unit={unit} watch={watch} onAddToList={onAddToList} />}
-          <Actions copy={copy} clearDisabled={!live} onClear={onClearCurrent} />
-        </>
-      )}>
+      footer={<Actions copy={copy} clearDisabled={!live} onClear={onClearCurrent} />}>
       {tool === 'time' && (
         <label className="mt-knots">
           <span className="mt-readout-label">מהירות (קשר)</span>
@@ -204,7 +194,6 @@ export function GeneralPanel({ tool, onSpeed, hits, onPickVessel, onHover, watch
       )}
       {tool === 'time' && m && <CompareTable total={m.total} />}
       {tool === 'height' && m && m.points >= 2 && <ProfileChart samples={m.samples} stats={m.stats} unit={unit} onHover={onHover} />}
-      {tool === 'terrain' && m && m.radius > 0 && <TerrainList hits={hits} unit={unit} onPickVessel={onPickVessel} />}
       <SavedList items={items} selId={selId} unit={unit} max={max} onSelect={onSelect} onToggle={onToggle} onDelete={onDelete} />
     </Panel>
   );
@@ -498,18 +487,18 @@ function ProfileChart({ samples, stats, unit, onHover }) {
   );
 }
 
-/** רשימת הכלים באזור (גוף הפאנל): max-height וגלילה פנימית */
-function TerrainList({ hits, unit, onPickVessel }) {
+/** רשימת הכלים בשטח כעת (לשונית "כלים בשטח כעת"): שיוך לפי point-in-polygon, max-height וגלילה פנימית */
+export function TerrainList({ hits, onPickVessel }) {
   return (
     <div className="mt-terrain">
-      <h3>כלים באזור <Num>{hits.length}</Num></h3>
-      {hits.length === 0 ? <p className="mt-empty">אין כלי שיט באזור. הגדל את הרדיוס או הזז את המרכז.</p> : (
+      <h3>כלים בשטח כעת <Num>{hits.length}</Num></h3>
+      {hits.length === 0 ? <p className="mt-empty">אין כלי שיט בשטח כרגע. הזז את קודקודי הפוליגון או שרטט אזור אחר.</p> : (
         <ul className="mt-range-list mt-terrain-list">
-          {hits.map(({ v, d }) => (
+          {hits.map(({ v }) => (
             <li key={v.id}>
               <button type="button" onClick={() => onPickVessel(v.id)}>
                 <span className="mt-hit"><Ltr className="cell-name">{v.name}</Ltr><span className="mt-note">{v.type}</span></span>
-                <Num className="mt-saved-val">{fd(d, unit).value} {fd(d, unit).unit}</Num>
+                <span className="mt-saved-val">{v.flag}</span>
               </button>
             </li>
           ))}
@@ -520,7 +509,7 @@ function TerrainList({ hits, unit, onPickVessel }) {
 }
 
 /** פעולות חקירת שטח, דביקות בתחתית הפאנל: הוספה לרשימת מעקב וייצוא CSV */
-function TerrainControls({ hits, unit, watch, onAddToList }) {
+export function TerrainControls({ hits, watch, onAddToList }) {
   const [list, setList] = useState(LISTS[0]);
   const [note, setNote] = useState('');
   useEffect(() => setNote(''), [hits.length]);
@@ -533,8 +522,8 @@ function TerrainControls({ hits, unit, watch, onAddToList }) {
   };
   const exportCsv = () => {
     const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const head = ['שם', 'IMO', 'MMSI', 'סוג', 'דגל', 'קו רוחב', 'קו אורך', `מרחק מהמרכז (${UNITS[unit].short})`];
-    const rows = hits.map(({ v, d }) => [v.name, v.imo, v.mmsi, v.type, v.flag, v.lat, v.lon, toUnit(d, unit).toFixed(UNITS[unit].decimals + 1)]);
+    const head = ['שם', 'IMO', 'MMSI', 'סוג', 'דגל', 'קו רוחב', 'קו אורך'];
+    const rows = hits.map(({ v }) => [v.name, v.imo, v.mmsi, v.type, v.flag, v.lat, v.lon]);
     const csv = '﻿' + [head, ...rows].map((r) => r.map(q).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');

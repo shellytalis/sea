@@ -10,7 +10,7 @@ import { eventDuration, orderVessels, summarizeResult } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
 import { UNITS, areaToUnit, formatArea, formatDuration } from '../../map/units';
-import ActivityIcon from './ActivityIcon';
+import ActivityDot from './ActivityDot';
 import { RangePopover } from './Toolbars';
 import { Actions, TerrainControls, TerrainList } from './ToolPanel';
 
@@ -54,7 +54,7 @@ function SectionHeader({ analysis: a }) {
   if (!act) return null;
   return (
     <button type="button" className="area-section-head" aria-label="החלף פעילות" onClick={goTop}>
-      <ActivityIcon name={act.icon} />
+      <ActivityDot id={act.id} />
       <span className="area-section-name">{act.label}</span>
       {loading || typeof count !== 'number' ? <span className="area-act-skel" aria-hidden="true" /> : (
         <span className="area-section-meta">
@@ -84,7 +84,7 @@ function Legend({ analysis: a }) {
         const on = a.activity === act.id;
         return (
           <button key={act.id} type="button" role="radio" aria-checked={on} tabIndex={(a.activity ?? ACTIVITIES[0].id) === act.id ? 0 : -1} className={`area-act${on ? ' on' : ''}`} onClick={() => a.pickActivity(act.id)}>
-            <ActivityIcon name={act.icon} />
+            <ActivityDot id={act.id} />
             <span className="area-act-name">{act.label}</span>
             {loading || c == null ? <span className="area-act-skel" aria-hidden="true" />
               : c === 'not-covered' ? <span className="area-act-count unchecked">לא נבדק</span>

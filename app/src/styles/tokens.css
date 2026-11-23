@@ -88,7 +88,13 @@
   --map-halo: #0b1220;
   --map-handle: #ffffff;
   /* ניתוח אזור: כל נקודות האירועים בצבע אחד, המבטא הכחול (BR-06). אסור צבעי חומרה */
-  --map-event: var(--accent-text);
+  /* ניתוח אזור: צבע לכל פעילות (הצעה). בלי ירוק, ענבר, כתום ואדום של סולם החומרה, ובלי הציאן של --map-draw */
+  --area-sts: #6ba4ff;
+  --area-anchorage: #b67cec;
+  --area-port-visit: #f75ea4;
+  --area-ais-gap: #38d4e8;
+  --area-loitering: #dadf31;
+  --area-identity: #e6ecf5;
   /* מצב חקירת שטח: מסכה כהה מחוץ לפוליגון (הבסיס נשאר מתחתיה) */
   --map-mask: rgba(5, 10, 20, 0.72);
 

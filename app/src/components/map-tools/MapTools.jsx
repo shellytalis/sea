@@ -12,8 +12,6 @@ import { clusterEvents, zoomToSeparate } from '../../area/cluster';
 import { activityById } from '../../area/activities';
 import { isSelfIntersecting, pointInPolygon } from '../../area/geo';
 import { useAreaAnalysis } from '../../area/useAreaAnalysis';
-import { renderToStaticMarkup } from 'react-dom/server';
-import ActivityIcon from './ActivityIcon';
 import AreaEventCard from './AreaEventCard';
 import AreaPanel from './AreaPanel';
 import { GeneralToolbar, VesselBar } from './Toolbars';
@@ -308,8 +306,6 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
   const selEvent = showEvents ? eventList.find((e) => e.id === analysis.selId) : undefined;
   st.current.closeCard = selEvent ? () => analysis.setSelId(null) : null;
   const actLabel = activityById(analysis.activity)?.label ?? '';
-  // סמל הפעילות בתוך נקודת האירוע (FR-06): אייקון lucide, כל הנקודות בצבע אחד
-  const actIcon = useMemo(() => renderToStaticMarkup(<ActivityIcon name={activityById(analysis.activity)?.icon} size={12} />), [analysis.activity]);
   const selectEvent = (id, { center } = {}) => {
     analysis.setSelId(id);
     const e = eventList.find((x) => x.id === id);
@@ -359,8 +355,8 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
     ...(explore ? [] : setVessels).map((v) => ({ key: `set-${v.id}`, lngLat: [v.lon, v.lat], className: `map-ring set vi-${colors[v.id] ?? 0}${v.id === activeId ? '' : ' dim'}` })),
     ...(analysis.tab === 'now' ? hits : []).map(({ v }) => ({ key: `ring-${v.id}`, lngLat: [v.lon, v.lat], className: 'map-ring' })),
     ...clusters.map((c) => (c.events.length === 1
-      ? { key: `ev-${c.id}`, lngLat: [c.lon, c.lat], className: `map-event${c.id === analysis.selId ? ' sel' : ''}`, html: actIcon, label: `${actLabel}: ${c.events[0].vessel.name}`, onClick: () => selectEvent(c.id) }
-      : { key: c.id, lngLat: [c.lon, c.lat], className: `map-cluster${c.events.some((e) => e.id === analysis.selId) ? ' sel' : ''}`, text: String(c.events.length), label: `קבוצה של ${c.events.length} אירועים, התקרב לפירוק`, onClick: () => zoomInto(c) })),
+      ? { key: `ev-${c.id}`, lngLat: [c.lon, c.lat], className: `map-event act-${analysis.activity}${c.id === analysis.selId ? ' sel' : ''}`, label: `${actLabel}: ${c.events[0].vessel.name}`, onClick: () => selectEvent(c.id) }
+      : { key: c.id, lngLat: [c.lon, c.lat], className: `map-cluster act-${analysis.activity}${c.events.some((e) => e.id === analysis.selId) ? ' sel' : ''}`, text: String(c.events.length), label: `קבוצה של ${c.events.length} אירועים, התקרב לפירוק`, onClick: () => zoomInto(c) })),
     ...(hoverLL ? [{ key: 'hover', lngLat: hoverLL, className: 'map-ring small' }] : []),
     ...scene.handles.map((h) => ({ key: `h-${h.key}`, lngLat: h.lngLat, className: `map-handle${closableFirst && h.id === 'draft' && h.idx === 0 ? ' closable' : ''}`, draggable: true, onDrag: (ll) => moveHandle(h, ll), onDouble: h.id === 'draft' ? finish : undefined,
       onClick: closableFirst && h.id === 'draft' && h.idx === 0 ? finish : undefined, // סגירת פוליגון בלחיצה על הקודקוד הראשון

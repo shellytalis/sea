@@ -8,7 +8,7 @@ import { eventDuration, orderVessels } from '../../area/query';
 import { distance } from '../../map/geodesy';
 import { fmtFull } from '../../map/range';
 import { formatDistance, formatDuration } from '../../map/units';
-import ActivityIcon from './ActivityIcon';
+import ActivityDot from './ActivityDot';
 import { coord } from './ToolPanel';
 
 const UNKNOWN = 'לא ידוע';
@@ -86,7 +86,7 @@ export default function AreaEventCard({ map, event: e, unit, now, onClose }) {
   return (
     <div ref={box} className="area-card" role="dialog" aria-label={`אירוע: ${act?.label}, ${e.vessel.name}`} style={pos ? { left: pos.left, top: pos.top } : { visibility: 'hidden' }}>
       <header className="area-card-head">
-        <h3><ActivityIcon name={act?.icon} />{act?.label}</h3>
+        <h3><ActivityDot id={e.activity} />{act?.label}</h3>
         <Button variant="icon" size="sm" aria-label="סגירת הכרטיס" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />
       </header>
       <dl className="area-card-body">

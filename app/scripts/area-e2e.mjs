@@ -140,7 +140,8 @@ for (const w of widths) {
   assert.equal(await pointSum(), 31, `[${w}] סכום נקודות וקבוצות שונה מהספירה`);
   assert.equal(await page.evaluate(() => document.querySelectorAll('.area-row').length), 31);
   const dotColor = await page.evaluate(() => getComputedStyle(document.querySelector('.map-event, .map-cluster')).backgroundColor);
-  assert.ok(dotColor.startsWith('rgb(107, 164, 255)'), `[${w}] צבע נקודות ${dotColor}`);
+  assert.ok(dotColor.startsWith('rgb(182, 124, 236)'), `[${w}] צבע נקודות עגינה (סגול) ${dotColor}`);
+  assert.ok(await page.evaluate(() => !/[●▲◆■◌✓]/.test(document.querySelector('.area-legend').textContent) && !document.querySelector('.area-legend svg')), `[${w}] אייקונים או צורות חומרה במקרא`);
   await shot('03-dense-anchorage');
   // 5ב.1: כותרת מקטע דביקה בגלילה (גוף הפאנל הוא אזור הגלילה היחיד)
   await page.evaluate(() => { document.querySelector('.area-panel .panel-body').scrollTop = 420; });

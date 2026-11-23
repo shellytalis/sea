@@ -21,7 +21,7 @@ import { MismatchTag, ModelOutputsDetail, ModelSummary, ProfileTag } from '../co
 import { RelationKind, RelationLegend, StrengthMeter } from '../components/RelationParts';
 import RelationsSection from '../components/RelationsSection';
 import { SnapshotBody } from '../components/SnapshotCard';
-import ActivityIcon from '../components/map-tools/ActivityIcon';
+import ActivityDot from '../components/map-tools/ActivityDot';
 import { collectFacts } from '../snapshot/collect';
 import { peerStats } from '../snapshot/peers';
 import { buildSnapshot } from '../snapshot/compose';
@@ -268,29 +268,29 @@ export default function DesignPage() {
             <li><strong>טווח תאריכים:</strong> אותו רכיב בורר כמו בסרגל כלי השיט (קיצורים 7 / 30 / 90 יום, תאריך ושעה), מוצג בתוך הפאנל. ברירת מחדל: 30 הימים שהסתיימו בסגירת הפוליגון; מקסימום 90. טווח מעל 90 יום, סוף לפני התחלה או תאריך עתידי לא מתקבל, עם הודעה. אין קשר לטווח המסלול של סט כלי השיט.</li>
             <li><strong>הרצה:</strong> אוטומטית בסגירת פוליגון, בסיום גרירת קודקוד ובאישור טווח; ריצה חדשה מבטלת קודמת. ריצה אחת מחזירה את שש הפעילויות, והחלפת פעילות במקרא לא מריצה שוב. להדגמה: <bdi dir="ltr">?area=slow</bdi> (3 שניות), <bdi dir="ltr">?area=error</bdi> ו-<bdi dir="ltr">?area=cap</bdi> (תקרת הנקודות יורדת ל-20).</li>
             <li><strong>מקרא (radiogroup):</strong> שש פעילויות בסדר קבוע, שורה = סמל + שם + ספירה, בחירה יחידה, חיצים ו-Enter. ברירת מחדל: הראשונה שיש בה אירוע. שלושה מצבי ספירה: מספר; 0 (עם "אין אירועים בשטח ובטווח" כשנבחרת); <strong>"לא נבדק"</strong> כשהמקור לא מכסה את השטח או הטווח (זה לא 0). בטעינה: שלד.</li>
-            <li><strong>סמלים (BR-06):</strong><SpecNote tag>הצעה</SpecNote> אייקוני lucide בלבד: מפגש <bdi dir="ltr">ArrowLeftRight</bdi>, עגינה <bdi dir="ltr">Anchor</bdi>, ביקור בנמל <bdi dir="ltr">Warehouse</bdi>, הפסקת AIS <bdi dir="ltr">WifiOff</bdi>, שיטוט <bdi dir="ltr">Orbit</bdi>, שינוי זהות <bdi dir="ltr">IdCard</bdi>. אסור להשתמש בצורות סולם החומרה או בצבעיו. הנקודות במפה בצבע אחד: <bdi dir="ltr">--map-event</bdi> (המבטא הכחול).</li>
+            <li><strong>צבע לכל פעילות (במקום אייקונים; מחליף את BR-06 בחלקו):</strong><SpecNote tag>הצעה</SpecNote> לכל פעילות צבע משלה, והוא מופיע במקרא, בכותרת המקטע, בכרטיס האירוע ובנקודות הפעילות הנבחרת במפה: מפגש <bdi dir="ltr">--area-sts</bdi> (כחול), עגינה <bdi dir="ltr">--area-anchorage</bdi> (סגול), ביקור בנמל <bdi dir="ltr">--area-port-visit</bdi> (ורוד), הפסקת AIS <bdi dir="ltr">--area-ais-gap</bdi> (תכלת), שיטוט <bdi dir="ltr">--area-loitering</bdi> (צהוב-ליים), שינוי זהות <bdi dir="ltr">--area-identity</bdi> (לבן-כחלחל). עדיין אסור: צורות סולם החומרה (● ▲ ◆ ■ ◌ ✓) וצבעיו (ירוק, ענבר, כתום, אדום), והציאן של <bdi dir="ltr">--map-draw</bdi>. הצבע אינו הנושא היחיד: תמיד מתלווה אליו שם הפעילות.</li>
             <li><strong>נקודות וקבוצות:</strong> רק הפעילות הנבחרת, רק אירועים שנקודת העיגון שלהם בתוך הפוליגון או על הגבול (BR-01) ושזמן ההתחלה שלהם בטווח (BR-02). קיבוץ נקודות קרובות לסמל עם מספר (<bdi dir="ltr">CLUSTER_CELL_PX</bdi> 36px, בלי קיבוץ מזום 13) ופירוק בהתקרבות; סכום הנקודות והקבוצות שווה לספירה במקרא. מפגש STS הוא אירוע אחד עם שני כלים (נקודה ושורה אחת). הפוליגון נשאר מתחת לנקודות.</li>
             <li><strong>כרטיס אירוע:</strong> צף ליד הנקודה (או השורה): פעילות, כלי (קישור לדף הכלי, IMO ו-MMSI כטקסט, דגל), התחלה, סיום ("ממשיך" ומשך עד עכשיו), משך, קואורדינטות, מקור וזמן עדכון, ושדות ייחודיים (הכלי השני, נמל ומדינה, מיקום חזרה ומרחק, השדה שהשתנה לפני ואחרי). שדה חסר: "לא ידוע". נסגר ב-Esc (קודם לסגירת הכלי), בלחיצה מחוץ לכרטיס ובכפתור X.</li>
             <li><strong>טבלה:</strong> התחלה, כלי, משך, מקור; מהחדש לישן וניתנת למיון בכל עמודה. לחיצה על שורה מדגישה את הנקודה, ממרכזת את המפה (ומתקרבת אם היא בקבוצה) ופותחת כרטיס; לחיצה על נקודה מדגישה וגוללת לשורה. <SpecNote tag>הצעה</SpecNote> תקרת <bdi dir="ltr">MAX_POINTS</bdi> 500 נקודות: המפה והטבלה מציגות את החדשים עד התקרה עם "מוצגים X מתוך N", והמקרא והייצוא תמיד מלאים.</li>
             <li><strong>מצבים:</strong> טעינה (שלד במקרא ובטבלה, המפה פעילה), שגיאה ("לא הצלחנו לטעון את הפעילויות" ו"נסה שוב", הפוליגון נשמר), אין אירועים, לא נבדק, מעל תקרת נקודות, מעל תקרת שטח (<SpecNote tag>הצעה</SpecNote> <bdi dir="ltr">MAX_AREA_KM2</bdi> 250,000 קמ״ר: הניתוח לא רץ ומוצג השטח המרבי). "נקה" מסיר יחד פוליגון, נקודות, מקרא וטבלה. Esc בשרטוט מוחק את הטיוטה, וב-Esc נוסף נסגר הכלי.</li>
-            <li><strong>כותרת מקטע דביקה (שלב 5ב):</strong> מעל הטבלה שורה עם אייקון הפעילות, שמה, מספר האירועים וטווח מקוצר ("מפגש ship-to-ship · 3 אירועים · 24.10–23.11"; מעל התקרה "מוצגים 500 מתוך 812"). היא ושורת כותרות העמודות דביקות בראש גוף הפאנל (גלילה אחת בלבד), עם רקע אטום וקו תחתון. לחיצה או Enter גוללת למקרא להחלפת פעילות. שורות המקרא בגובה <bdi dir="ltr">--row-h</bdi> (44px); ב-1366×768 אחרי סגירת פוליגון רואים בלי גלילה את הטווח, את שש השורות ואת השורה הראשונה בטבלה.</li>
+            <li><strong>כותרת מקטע דביקה (שלב 5ב):</strong> מעל הטבלה שורה עם צבע הפעילות, שמה, מספר האירועים וטווח מקוצר ("מפגש ship-to-ship · 3 אירועים · 24.10–23.11"; מעל התקרה "מוצגים 500 מתוך 812"). היא ושורת כותרות העמודות דביקות בראש גוף הפאנל (גלילה אחת בלבד), עם רקע אטום וקו תחתון. לחיצה או Enter גוללת למקרא להחלפת פעילות. שורות המקרא בגובה <bdi dir="ltr">--row-h</bdi> (44px); ב-1366×768 אחרי סגירת פוליגון רואים בלי גלילה את הטווח, את שש השורות ואת השורה הראשונה בטבלה.</li>
             <li><strong>שורת סיכום:</strong> מתחת למקרא: "סה״כ N פעילויות · M כלי שיט ייחודיים". כלי שמופיע בכמה אירועים נספר פעם אחת, במפגש STS נספרים שני הכלים, ופעילות "לא נבדק" לא נכללת (מצוין בסוגריים).</li>
             <li><strong>מצב חקירת שטח (שלב 5ב):</strong> כשיש פוליגון סגור מוצג רק השטח: מסכה כהה (<bdi dir="ltr">--map-mask</bdi>) מחוץ לפוליגון והבסיס נשאר מתחתיה; סמלי כלי השיט, מדידות שמורות ושכבות הסט מוסתרים (וחוזרים ביציאה בלי לאבד מצב). בלשונית "פעילויות בטווח" רק נקודות הפעילות הנבחרת; ב"כלים בשטח כעת" רק הכלים שבפוליגון. תווית השטח במרכז לא מוצגת; השטח בכותרת הפאנל בלבד. יציאה: "נקה", Esc או ×, או מעבר לכלי אחר. "העתק" ו"ייצוא CSV" מושבתים לפני שרטוט או כשהפוליגון לא סגור. מפגש STS בטבלה, בכרטיס ובייצוא: שני כלים שווים ב-" ↔ " לפי סדר אלפביתי.</li>
             <li><strong>ייצוא CSV:</strong> כל אירועי הפעילות הנבחרת (גם מעל התקרה), UTF-8 עם BOM; שתי שורות בראש (קודקודי הפוליגון והטווח), MMSI עם אפסים מובילים; לא פעיל כשהספירה 0 או "לא נבדק".</li>
           </ul>
           <div className="ds-drawer-box">
             <div className="area-legend" aria-label="דוגמה למקרא פעילויות" style={{ maxWidth: 'var(--mt-panel-w-wide)' }}>
-              {[['ArrowLeftRight', 'מפגש ship-to-ship', '3', true], ['Anchor', 'עגינה והמתנה', '31'], ['Warehouse', 'ביקור בנמל', '0'], ['WifiOff', 'הפסקת שידור AIS', '9'], ['Orbit', 'שיטוט', 'לא נבדק'], ['IdCard', 'שינוי זהות', '3']].map(([icon, label, n, on]) => (
+              {[['sts', 'מפגש ship-to-ship', '3', true], ['anchorage', 'עגינה והמתנה', '31'], ['port-visit', 'ביקור בנמל', '0'], ['ais-gap', 'הפסקת שידור AIS', '9'], ['loitering', 'שיטוט', 'לא נבדק'], ['identity', 'שינוי זהות', '3']].map(([id, label, n, on]) => (
                 <div key={label} className={`area-act${on ? ' on' : ''}`}>
-                  <ActivityIcon name={icon} />
+                  <ActivityDot id={id} />
                   <span className="area-act-name">{label}</span>
                   <span className={`area-act-count${n === 'לא נבדק' ? ' unchecked' : ''}`}>{n}</span>
                 </div>
               ))}
             </div>
             <p className="entity-note" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              נקודה, קבוצה ונקודה נבחרת (כולן <bdi dir="ltr">--map-event</bdi>):
-              <span className="map-event" style={{ position: 'relative' }} /><span className="map-cluster" style={{ position: 'relative' }}>12</span><span className="map-event sel" style={{ position: 'relative' }} />
+              נקודה, קבוצה ונקודה נבחרת (בצבע הפעילות, כאן עגינה):
+              <span className="map-event act-anchorage" style={{ position: 'relative' }} /><span className="map-cluster act-anchorage" style={{ position: 'relative' }}>12</span><span className="map-event act-anchorage sel" style={{ position: 'relative' }} />
             </p>
           </div>
         </section>

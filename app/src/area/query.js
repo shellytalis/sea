@@ -71,6 +71,25 @@ export function analyzeArea(polygon, range, { events, coverage = {}, maxAreaKm2 
   return out;
 }
 
+/**
+ * סיכום כללי של תוצאת ניתוח: סך הפעילויות (אירועים בכל הפעילויות שנבדקו) וכלי שיט ייחודיים (כלי שמופיע בכמה אירועים נספר פעם אחת,
+ * ובמפגש STS נספרים שני הכלים). פעילות "לא נבדק" לא נכללת, ו-skipped מונה אותן.
+ */
+export function summarizeResult(result) {
+  const ids = new Set();
+  let activities = 0;
+  let skipped = 0;
+  for (const a of ACTIVITIES) {
+    if (result.counts[a.id] === 'not-covered') { skipped++; continue; }
+    for (const e of result.events[a.id] ?? []) {
+      activities++;
+      ids.add(e.vessel.id);
+      if (e.vessel2) ids.add(e.vessel2.id);
+    }
+  }
+  return { activities, vessels: ids.size, skipped };
+}
+
 /** תקרת נקודות (BR-08): החדשים ביותר עד התקרה. list ממוין מהחדש לישן */
 export function limitEvents(list, max = MAX_POINTS) {
   return { shown: list.slice(0, max), total: list.length, limited: list.length > max };

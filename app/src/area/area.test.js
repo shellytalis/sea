@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ACTIVITIES } from './activities.js';
 import { clusterEvents, zoomToSeparate } from './cluster.js';
-import { analyzeArea, defaultActivity, defaultRange, isCovered, limitEvents, orderVessels } from './query.js';
+import { analyzeArea, defaultActivity, defaultRange, isCovered, limitEvents, orderVessels, summarizeResult } from './query.js';
 import { DEFAULT_RANGE_DAYS, MAX_AREA_KM2, MAX_RANGE_DAYS } from './thresholds.js';
 import { buildAreaCsv } from './csv.js';
 import { AREA_EVENTS, COVERAGE, DEMO_AREAS, NOW as DEMO_NOW } from '../data/areaEvents.js';
@@ -164,4 +164,14 @@ test('מפגש STS: שני הכלים לפי סדר אלפביתי, בלי תל�
   const row = buildAreaCsv({ polygon: POLY, range: RANGE, activity: 'sts', events: [swapped], now: NOW }).split('\r\n')[3].split(',');
   assert.equal(row[1], '"V1"');
   assert.equal(row[5], '"V2"');
+});
+
+test('סיכום: סך פעילויות וכלי שיט ייחודיים (כלי שחוזר נספר פעם אחת, STS נספרים שני הכלים, "לא נבדק" לא נכלל)', () => {
+  const a = ev('anchorage', 34.5, 32.5, NOW - D);
+  const b = ev('anchorage', 34.6, 32.5, NOW - 2 * D); // אותו כלי v1
+  const s = ev('sts', 34.5, 32.6, NOW - D); // v1 + v2
+  const coverage = { loitering: { source: 'מקור ג', bbox: [0, 0, 1, 1] } };
+  const sum = summarizeResult(run([a, b, s, ev('loitering', 34.5, 32.5, NOW - D)], { coverage }));
+  assert.deepEqual(sum, { activities: 3, vessels: 2, skipped: 1 });
+  assert.deepEqual(summarizeResult(run([])), { activities: 0, vessels: 0, skipped: 0 });
 });

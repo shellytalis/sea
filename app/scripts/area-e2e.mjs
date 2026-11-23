@@ -118,6 +118,7 @@ for (const w of widths) {
   assert.equal(c['שיטוט'], '6');
   assert.equal(c['שינוי זהות'], '3');
   assert.equal(await checked(), 'מפגש ship-to-ship', `[${w}] ברירת מחדל`);
+  assert.match(await page.$eval('.area-totals', (e) => e.textContent), /סה״כ\s*70\s*פעילויות · \d+\s*כלי שיט ייחודיים/, `[${w}] שורת סיכום`);
   // 5ב.7: ברירת מחדל של הטווח היא 30 יום
   assert.match(await page.$eval('.area-range .mt-datebtn', (e) => e.textContent), /30 ימים/, `[${w}] טווח ברירת מחדל`);
   // 5ב.2: גובה שורת מקרא = --row-h (44px)

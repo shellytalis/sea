@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '../../ui/States';
 import { Ltr, Num } from '../../ui/Ltr';
 import { ACTIVITIES, activityById } from '../../area/activities';
 import { buildAreaCsv, downloadCsv } from '../../area/csv';
-import { eventDuration, orderVessels } from '../../area/query';
+import { eventDuration, orderVessels, summarizeResult } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
 import { UNITS, areaToUnit, formatArea, formatDuration, toUnit } from '../../map/units';
@@ -93,6 +93,18 @@ function Legend({ analysis: a }) {
         );
       })}
     </div>
+  );
+}
+
+/** שורת סיכום מתחת למקרא: סך הפעילויות וכלי שיט ייחודיים בשטח ובטווח (פעילות "לא נבדק" לא נכללת) */
+function Totals({ analysis: a }) {
+  const s = useMemo(() => (a.result ? summarizeResult(a.result) : null), [a.result]);
+  if (a.status === 'loading' || !s) return <p className="area-totals" aria-hidden="true"><span className="area-act-skel" /></p>;
+  return (
+    <p className="area-totals">
+      סה״כ <Num>{s.activities.toLocaleString('en')}</Num> {s.activities === 1 ? 'פעילות' : 'פעילויות'} · <Num>{s.vessels.toLocaleString('en')}</Num> כלי שיט ייחודיים
+      {s.skipped > 0 && <span className="area-totals-note"> (בלי {s.skipped === 1 ? 'פעילות שלא נבדקה' : `${s.skipped} פעילויות שלא נבדקו`})</span>}
+    </p>
   );
 }
 
@@ -217,6 +229,7 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
               ) : (
                 <>
                   <Legend analysis={a} />
+                  <Totals analysis={a} />
                   <div role="status" aria-live="polite" className="area-status">
                     {a.status === 'loading' ? (
                       <div className="area-loading"><SectionHeader analysis={a} /><TableSkeleton rows={5} cols={4} /></div>

@@ -113,6 +113,11 @@ export function terrainReducer(state, a) {
     case 'update': // "עדכון" אחרי סגירה, וסיום גרירת קודקוד: הניתוח רץ מחדש מהנקודות הנוכחיות
       if (!state.closed || !canShow(state).ok) return state;
       return { ...state, applied: { id: state.applied.id, points: pointsOf(state) }, rev: state.rev + 1 };
+    case 'revert': { // "חזרה לתוצאות" ממסך עריכת נקודות: עריכות שלא אושרו ב-"עדכון" נזרקות, והרשימה חוזרת לפוליגון שעליו רצה הניתוח
+      if (!state.closed || !state.applied) return state;
+      const rows = state.applied.points.map(([lon, lat], i) => ({ id: `r${state.seq + i}`, lat: formatCoordinate(lat, 'lat'), lon: formatCoordinate(lon, 'lon'), exact: { lat, lon }, touched: { lat: true, lon: true } }));
+      return { ...state, rows: withTrailingBlank(rows, `r${state.seq + rows.length}`), seq: state.seq + rows.length + 1 };
+    }
     case 'reset':
       return initialTerrainState();
     default:

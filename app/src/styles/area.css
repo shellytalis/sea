@@ -57,8 +57,8 @@
 .area-section-meta { margin-inline-start: auto; color: var(--text-secondary); font-size: var(--fs-sm); white-space: nowrap; }
 
 /* נקודות וקבוצות על המפה: סמנים (MapLibre מציב אותם; בלי transform ובלי position משלנו) */
-.map-event { width: 14px; height: 14px; border-radius: 50%; background: var(--act); box-shadow: 0 0 0 1.5px var(--map-halo); cursor: pointer; }
-.map-event.sel { width: 20px; height: 20px; box-shadow: 0 0 0 2px var(--map-halo), 0 0 0 4px var(--map-handle); }
+.map-event { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--act); color: var(--map-halo); box-shadow: 0 0 0 1.5px var(--map-halo); cursor: pointer; }
+.map-event.sel { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--map-halo), 0 0 0 4px var(--map-handle); }
 .map-cluster { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--act); color: var(--map-halo); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--map-halo); cursor: pointer; }
 .map-cluster.sel { box-shadow: 0 0 0 2px var(--map-halo), 0 0 0 4px var(--map-handle); }
 .map-event::after, .map-cluster::after { content: ''; position: absolute; inset: calc(-1 * var(--space-2)); } /* שטח לחיצה נדיב */
@@ -93,12 +93,12 @@
 .area-totals-note { color: var(--text-tertiary); }
 
 /* צבע לכל פעילות: --act נקבע לפי מחלקה, ומשמש נקודות, קבוצות וסמן הצבע במקרא ובכותרות */
-.act-sts { --act: var(--area-sts); }
-.act-anchorage { --act: var(--area-anchorage); }
-.act-port-visit { --act: var(--area-port-visit); }
-.act-ais-gap { --act: var(--area-ais-gap); }
-.act-loitering { --act: var(--area-loitering); }
-.act-identity { --act: var(--area-identity); }
+.act-sts { --act: var(--map-activity-1); }
+.act-anchorage { --act: var(--map-activity-2); }
+.act-port-visit { --act: var(--map-activity-3); }
+.act-ais-gap { --act: var(--map-activity-4); }
+.act-loitering { --act: var(--map-activity-5); }
+.act-identity { --act: var(--map-activity-6); }
 .area-dot { flex: none; width: var(--space-3); height: var(--space-3); border-radius: 50%; background: var(--act); box-shadow: 0 0 0 1.5px var(--map-halo); }
 
 /* ===== שלב 5ג: אופני קלט (דקירה במפה, הזנה ידנית) ===== */
@@ -123,3 +123,8 @@
 .area-paste-errors .mt-field-error { margin: 0; }
 .area-points-status { margin: 0; }
 .area-show { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+/* ===== שלב 5ד: מצב שרטוט מינימלי, וקישור/מסך "עריכת נקודות" אחרי סגירה ===== */
+.area-edit-link { justify-self: start; }
+.area-edit-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.area-edit-head h3 { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 600; }

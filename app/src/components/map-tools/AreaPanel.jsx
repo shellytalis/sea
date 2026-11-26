@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Calendar, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Calendar, Pencil, X } from 'lucide-react';
 import Panel from '../../ui/Panel';
 import Button from '../../ui/Button';
 import { EmptyState, ErrorState, TableSkeleton } from '../../ui/States';
@@ -10,8 +10,7 @@ import { eventDuration, orderVessels, summarizeResult } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
 import { formatArea, formatDuration } from '../../map/units';
-import { filledCount } from '../../area/terrainRows';
-import { ClickGuide, ManualList, ModeSwitch } from './AreaInput';
+import { ManualList, ModeSwitch } from './AreaInput';
 import ActivityDot from './ActivityDot';
 import { RangePopover } from './Toolbars';
 import { TerrainControls, TerrainList } from './ToolPanel';
@@ -161,11 +160,14 @@ function EventsTable({ analysis: a, now, onSelect }) {
  * פאנל "חקירת שטח" (ניתוח אזור, מדרגה א'): שתי לשוניות. הרחב ל-480px בלשונית "פעילויות בטווח" (טוקן --mt-panel-w-wide).
  * כל המצב (טווח, פעילות נבחרת, לשונית) חי ב-useAreaAnalysis, ולכן מעבר בין לשוניות שומר אותו.
  */
-export default function AreaPanel({ analysis: a, polygon, committed, notice, unit, onClose, onClear, ts, dispatch, inputMode, setInputMode, listOpen, setListOpen, onShow, hits, watch, onAddToList, onPickVessel, onSelectEvent }) {
+export default function AreaPanel({ analysis: a, polygon, committed, notice, unit, onClose, onClear, ts, dispatch, inputMode, setInputMode, onShow, onRevert, hits, watch, onAddToList, onPickVessel, onSelectEvent }) {
   const [pop, setPop] = useState(false);
   const [now] = useState(() => Date.now());
   const tabs = useRef(null);
-  const wide = committed && a.tab === 'range';
+  const [editing, setEditing] = useState(false); // מסך "עריכת נקודות" (רק בפוליגון סגור)
+  useEffect(() => { if (!committed) setEditing(false); }, [committed]);
+  const edit = editing && committed;
+  const wide = committed && !edit && a.tab === 'range';
 
   const count = a.result?.counts[a.activity];
   const canExport = a.status === 'ready' && typeof count === 'number' && count > 0;
@@ -180,23 +182,32 @@ export default function AreaPanel({ analysis: a, polygon, committed, notice, uni
     tabs.current?.querySelector(`#area-tab-${t.id}`)?.focus();
   };
 
-  // שלב 5ג: בורר אופן קלט בראש הפאנל. הרשימה משותפת לשני האופנים, ובדקירה יש הנחיה לפי מספר הנקודות
-  const inputBlock = (
-    <>
-      <ModeSwitch mode={inputMode} onChange={setInputMode} />
-      {inputMode === 'click'
-        ? (!committed && <ClickGuide count={filledCount(ts)} onUndo={() => dispatch({ type: 'undoLast' })} />)
-        : <ManualList ts={ts} dispatch={dispatch} closed={committed} listOpen={listOpen} setListOpen={setListOpen} onShow={onShow} />}
-      {!committed && notice && <p className="mt-field-error" role="alert">{notice}</p>}
-    </>
-  );
+  // שלב 5ד: בזמן שרטוט (פוליגון לא סגור) הפאנל מינימלי: כותרת ובורר אופן הקלט (ברשימה בהזנה ידנית). ההנחיה רק בשורה הצפה שבמפה,
+  // ובלי ספירת נקודות, בלי "בטל נקודה אחרונה" (Backspace/Ctrl+Z) ובלי שורת פעולות. אחרי סגירה אין בורר: קישור "עריכת נקודות" פותח את הרשימה.
   let body;
   if (!committed) {
-    body = inputBlock;
+    body = (
+      <>
+        <ModeSwitch mode={inputMode} onChange={setInputMode} />
+        {inputMode === 'manual' && <ManualList ts={ts} dispatch={dispatch} closed={false} onShow={onShow} />}
+        {notice && <p className="mt-field-error" role="alert">{notice}</p>}
+      </>
+    );
+  } else if (edit) {
+    body = (
+      <>
+        <div className="area-edit-head">
+          <Button variant="text" size="sm" icon={<ArrowRight size={16} aria-hidden="true" />} onClick={() => { onRevert(); setEditing(false); }}>חזרה לתוצאות</Button>
+          <h3>עריכת נקודות</h3>
+        </div>
+        <ManualList ts={ts} dispatch={dispatch} closed onShow={() => { if (onShow() !== false) setEditing(false); }} />
+        {notice && <p className="mt-field-error" role="alert">{notice}</p>}
+      </>
+    );
   } else {
     body = (
       <>
-        {inputBlock}
+        <Button variant="text" size="sm" className="area-edit-link" icon={<Pencil size={16} aria-hidden="true" />} onClick={() => setEditing(true)}>עריכת נקודות</Button>
         <div className="ui-tablist area-tabs" role="tablist" aria-label="תצוגות חקירת שטח" ref={tabs} onKeyDown={tabKey}>
           {TABS.map((t) => (
             <button key={t.id} id={`area-tab-${t.id}`} role="tab" type="button" aria-selected={a.tab === t.id} aria-controls="area-tabpanel" tabIndex={a.tab === t.id ? 0 : -1} onClick={() => a.setTab(t.id)}>{t.label}</button>
@@ -254,17 +265,17 @@ export default function AreaPanel({ analysis: a, polygon, committed, notice, uni
 
   // שלב 5ג: בלי "העתק". מצב ריק (אין נקודות): בלי שורת פעולות בכלל. אחרי שיש שרטוט: "ייצוא CSV" (מושבת כשהספירה 0 או "לא נבדק") ו"נקה"
   const clearLink = <Button variant="text" size="sm" className="mt-clear-link" onClick={onClear}>נקה</Button>;
-  const footer = a.tab === 'now' && committed ? (
+  const footer = !committed ? null : a.tab === 'now' && !edit ? (
     <>
       <TerrainControls hits={hits} watch={watch} onAddToList={onAddToList} />
       <div className="mt-actions">{clearLink}</div>
     </>
-  ) : (committed || filledCount(ts) > 0) ? (
+  ) : (
     <div className="mt-actions">
       <Button size="sm" disabled={!canExport} onClick={() => downloadCsv(buildAreaCsv({ polygon, range: a.range, activity: a.activity, events: a.list }), 'area-activities.csv')}>ייצוא CSV</Button>
       {clearLink}
     </div>
-  ) : null;
+  );
 
   return (
     <Panel id="mt-panel" title="חקירת שטח" className={`mt-panel area-panel${wide ? ' wide' : ''}`} actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />} footer={footer}>

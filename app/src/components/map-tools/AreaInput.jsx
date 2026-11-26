@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Keyboard, MousePointerClick, Trash2 } from 'lucide-react';
+import { Keyboard, MousePointerClick, Trash2 } from 'lucide-react';
 import Button from '../../ui/Button';
 import { Num } from '../../ui/Ltr';
 import { parseCoordinateList } from '../../area/coords';
@@ -37,26 +37,11 @@ export function ModeSwitch({ mode, onChange }) {
   );
 }
 
-/** הנחיה בדקירה: משתנה לפי מספר הנקודות (מה לעשות עכשיו ומה יקרה אחר כך), ושורה קבועה "נקודות: N" ו"בטל נקודה אחרונה" */
-export function ClickGuide({ count, onUndo }) {
-  const text = count === 0 ? 'לחץ על המפה בפינה הראשונה של האזור.'
-    : count < 3 ? 'המשך ללחוץ על פינות האזור לפי הסדר. נדרשות לפחות 3 נקודות.'
-      : 'כדי לסיים, לחץ שוב על הנקודה הראשונה או לחץ פעמיים על הנקודה האחרונה.';
-  return (
-    <div className="area-guide">
-      <p className="mt-empty" role="status">{text}</p>
-      <div className="area-guide-row">
-        <span className="mt-readout-label">נקודות: <Num>{count}</Num></span>
-        <Button variant="text" size="sm" disabled={count === 0} onClick={onUndo}>בטל נקודה אחרונה</Button>
-      </div>
-    </div>
-  );
-}
 
 const fieldError = (res) => (res?.ok === false ? (res.empty ? 'חסר ערך.' : res.error) : null);
 
 /** הזנה ידנית: רשימת נקודות (קו רוחב, קו אורך), הדבקת רשימה, "הצגה על המפה" עם הסיבה שהיא מושבתת */
-export function ManualList({ ts, dispatch, closed, listOpen, setListOpen, onShow }) {
+export function ManualList({ ts, dispatch, closed, onShow }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [pasteInfo, setPasteInfo] = useState(null); // { errors, note }
@@ -77,17 +62,8 @@ export function ManualList({ ts, dispatch, closed, listOpen, setListOpen, onShow
     if (r.errors.length) setPasteOpen(true);
   };
 
-  const toggle = closed && (
-    <button type="button" className="area-list-toggle" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>
-      <span>רשימת נקודות (<Num>{n}</Num>)</span>
-      <ChevronDown size={16} aria-hidden="true" className={listOpen ? 'flip' : ''} />
-    </button>
-  );
-  if (closed && !listOpen) return <div className="area-manual">{toggle}</div>;
-
   return (
     <div className="area-manual">
-      {toggle}
       <div className="area-points" role="group" aria-label="רשימת נקודות">
         <span />
         <span className="mt-readout-label">קו רוחב</span>

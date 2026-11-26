@@ -76,11 +76,11 @@ for (const w of widths) {
   await load();
   await openTool();
   assert.equal(await panelW(), 320, `[${w}] רוחב פאנל בשרטוט`);
-  // 5ב: לפני שרטוט, "העתק", "ייצוא CSV" ו"נקה" מושבתים
-  const dis = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.area-panel .panel-foot button')].map((b) => [b.textContent.trim(), b.disabled])));
-  assert.deepEqual([dis['העתק'], dis['ייצוא CSV'], dis['נקה']], [true, true, true], `[${w}] כפתורים לא מושבתים לפני שרטוט: ${JSON.stringify(dis)}`);
-  await shot('05b-empty-disabled');
-  assert.match(await page.$eval('.mt-hint', (e) => e.textContent), /פוליגון/);
+  // 5ג: מצב ריק: בלי שורת פעולות בכלל (לא כפתורים מושבתים), ובלי "העתק"
+  assert.equal(await page.$('.area-panel .panel-foot'), null, `[${w}] יש שורת פעולות במצב ריק`);
+  assert.ok(!(await page.$eval('.area-panel', (e) => e.textContent)).includes('העתק'), `[${w}] נשאר כפתור העתק`);
+  await shot('05b-empty-no-actions');
+  assert.match(await page.$eval('.mt-hint', (e) => e.textContent), /דקירה: הוספת פינה/);
   await fit(AREAS.dense);
   const dpts = await screenPts(AREAS.dense);
   for (const [x, y] of dpts.slice(0, 3)) { await page.mouse.click(x, y); await sleep(120); }
@@ -144,7 +144,7 @@ for (const w of widths) {
   assert.ok(await page.evaluate(() => !/[●▲◆■◌✓]/.test(document.querySelector('.area-legend').textContent) && !document.querySelector('.area-legend svg')), `[${w}] אייקונים או צורות חומרה במקרא`);
   await shot('03-dense-anchorage');
   // 5ב.1: כותרת מקטע דביקה בגלילה (גוף הפאנל הוא אזור הגלילה היחיד)
-  await page.evaluate(() => { document.querySelector('.area-panel .panel-body').scrollTop = 420; });
+  await page.evaluate(() => { document.querySelector('.area-panel .panel-body').scrollTop = 900; });
   await sleep(250);
   const sticky = await page.evaluate(() => {
     const body = document.querySelector('.area-panel .panel-body');

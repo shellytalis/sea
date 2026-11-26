@@ -4,7 +4,7 @@
 
 /* רוחב: 320px רגיל, 480px בלשונית "פעילויות בטווח" (הצעה). לא יותר ממה שהמפה מאפשרת */
 .area-panel.wide { width: min(var(--mt-panel-w-wide), calc(100cqw - 56px - var(--space-5) - var(--space-4))); }
-.area-panel .area-tabs { flex: none; margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0; }
+.area-panel .area-tabs { flex: none; margin: 0 calc(-1 * var(--space-4)); }
 .area-tabpanel { display: grid; gap: var(--space-3); min-width: 0; }
 /* כותרת: שם וכפתורים בשורה אחת, ושטח והיקף בשורה משלהם (ב-320px אין להם מקום ליד בקרת היחידות) */
 .area-panel .panel-head { height: auto; min-height: var(--space-7); padding-block: var(--space-2); }
@@ -100,3 +100,26 @@
 .act-loitering { --act: var(--area-loitering); }
 .act-identity { --act: var(--area-identity); }
 .area-dot { flex: none; width: var(--space-3); height: var(--space-3); border-radius: 50%; background: var(--act); box-shadow: 0 0 0 1.5px var(--map-halo); }
+
+/* ===== שלב 5ג: אופני קלט (דקירה במפה, הזנה ידנית) ===== */
+.area-panel .panel-body { gap: var(--space-3); }
+.mt-seg.area-modeseg { grid-template-columns: repeat(2, 1fr); flex: none; }
+.area-modeseg button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--fs-sm); }
+.area-guide { display: grid; gap: var(--space-2); }
+.area-guide-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.area-manual { display: grid; gap: var(--space-2); min-width: 0; }
+.area-list-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; height: var(--control-h-sm); padding: 0 var(--space-2); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--fs-sm); text-align: start; }
+.area-list-toggle svg { color: var(--text-secondary); transition: transform 120ms; }
+.area-list-toggle svg.flip { transform: rotate(180deg); }
+.area-points { display: grid; grid-template-columns: var(--space-5) 1fr 1fr var(--control-h-sm); gap: var(--space-1) var(--space-2); align-items: center; max-height: 232px; overflow-y: auto; scrollbar-width: thin; padding-inline-end: var(--space-1); }
+.area-point-row { display: contents; }
+.area-point-n { text-align: center; color: var(--text-secondary); font-size: var(--fs-xs); }
+.area-coord { width: 100%; min-width: 0; text-align: start; font-family: var(--mono); font-size: var(--fs-sm); }
+.area-point-err { grid-column: 2 / -1; margin: 0; }
+.area-manual-links { display: flex; align-items: center; gap: var(--space-3); }
+.area-paste { display: grid; gap: var(--space-2); }
+.area-paste-text { width: 100%; height: auto; padding: var(--space-2); font-family: var(--mono); font-size: var(--fs-sm); line-height: var(--lh-sm); resize: vertical; }
+.area-paste-errors { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); max-height: 96px; overflow-y: auto; }
+.area-paste-errors .mt-field-error { margin: 0; }
+.area-points-status { margin: 0; }
+.area-show { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }

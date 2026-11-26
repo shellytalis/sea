@@ -16,3 +16,7 @@ export const CLUSTER_CELL_PX = 40;
 export const CLUSTER_MAX_ZOOM = 13;
 /** רוחב הפאנל בלשונית "פעילויות בטווח" (px). הצעה, שאלה פתוחה 4 ב-PRD. מוגדר גם כטוקן --mt-panel-w-wide */
 export const PANEL_WIDE_PX = 480;
+/** מקסימום נקודות בהזנה ידנית (שלב 5ג). הצעה */
+export const MAX_INPUT_POINTS = 50;
+/** תצוגת קואורדינטות אחרי עזיבת שדה בהזנה ידנית: 'decimal' (35.512° N, ברירת מחדל) או 'degmin' (35°30.720' N). ערך תצורה אחד. הצעה */
+export const COORD_DISPLAY = 'decimal';

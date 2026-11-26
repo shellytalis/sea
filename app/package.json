@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test src/map/geodesy.test.js src/map/route.test.js src/map/elevation.test.js src/map/range.test.js src/snapshot/snapshot.test.js src/area/geo.test.js src/area/area.test.js",
+    "test": "node --test src/map/geodesy.test.js src/map/route.test.js src/map/elevation.test.js src/map/range.test.js src/snapshot/snapshot.test.js src/area/geo.test.js src/area/area.test.js src/area/input.test.js",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",

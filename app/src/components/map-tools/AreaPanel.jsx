@@ -9,10 +9,12 @@ import { buildAreaCsv, downloadCsv } from '../../area/csv';
 import { eventDuration, orderVessels, summarizeResult } from '../../area/query';
 import { MAX_RANGE_DAYS } from '../../area/thresholds';
 import { fmtDay, fmtFull, fmtTime, spanLabel } from '../../map/range';
-import { UNITS, areaToUnit, formatArea, formatDuration } from '../../map/units';
+import { formatArea, formatDuration } from '../../map/units';
+import { filledCount } from '../../area/terrainRows';
+import { ClickGuide, ManualList, ModeSwitch } from './AreaInput';
 import ActivityDot from './ActivityDot';
 import { RangePopover } from './Toolbars';
-import { Actions, TerrainControls, TerrainList } from './ToolPanel';
+import { TerrainControls, TerrainList } from './ToolPanel';
 
 /** קיצורי הטווח של ניתוח אזור (7 / 30 / 90 יום), באותו רכיב בורר כמו בסרגל כלי השיט */
 const AREA_PRESETS = [{ hours: 168, label: '7 י׳' }, { hours: 720, label: '30 י׳' }, { hours: 2160, label: '90 י׳' }];
@@ -33,8 +35,6 @@ export function durationText(e, now) {
 
 const sortValue = { start: (e) => e.start, vessel: (e) => e.vessel.name, duration: (e, now) => eventDuration(e, now), source: (e) => e.source };
 
-/** שטח והיקף בכותרת הפאנל: 100 ומעלה = מספר שלם עם מפריד אלפים ("36,725"), מתחת ל-100 שתי ספרות אחרי הנקודה. חל רק על חקירת שטח */
-export const fmtMeasure = (n) => (n >= 100 ? Math.round(n).toLocaleString('en') : n.toFixed(2));
 
 const eventsWord = (n) => (n === 1 ? 'אירוע אחד' : `${n} אירועים`);
 
@@ -161,12 +161,12 @@ function EventsTable({ analysis: a, now, onSelect }) {
  * פאנל "חקירת שטח" (ניתוח אזור, מדרגה א'): שתי לשוניות. הרחב ל-480px בלשונית "פעילויות בטווח" (טוקן --mt-panel-w-wide).
  * כל המצב (טווח, פעילות נבחרת, לשונית) חי ב-useAreaAnalysis, ולכן מעבר בין לשוניות שומר אותו.
  */
-export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, notice, metrics, unit, setUnit, onClose, onClear, hits, watch, onAddToList, onPickVessel, onSelectEvent }) {
+export default function AreaPanel({ analysis: a, polygon, committed, notice, unit, onClose, onClear, ts, dispatch, inputMode, setInputMode, listOpen, setListOpen, onShow, hits, watch, onAddToList, onPickVessel, onSelectEvent }) {
   const [pop, setPop] = useState(false);
   const [now] = useState(() => Date.now());
   const tabs = useRef(null);
   const wide = committed && a.tab === 'range';
-  const area = metrics ? { value: fmtMeasure(areaToUnit(metrics.area, unit)), unit: UNITS[unit].area } : null;
+
   const count = a.result?.counts[a.activity];
   const canExport = a.status === 'ready' && typeof count === 'number' && count > 0;
 
@@ -180,22 +180,23 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
     tabs.current?.querySelector(`#area-tab-${t.id}`)?.focus();
   };
 
-  const copyLines = a.tab === 'now'
-    ? [`כלים בשטח כעת: ${hits.length}`, ...hits.map((h) => h.v.name)]
-    : [`חקירת שטח: ${area ? `${area.value} ${area.unit}` : ''}`, `טווח: ${fmtFull(a.range.from)} עד ${fmtFull(a.range.to)}`,
-      ...(a.result && a.status === 'ready' ? ACTIVITIES.map((x) => `${x.label}: ${a.result.counts[x.id] === 'not-covered' ? 'לא נבדק' : a.result.counts[x.id]}`) : [])];
-
+  // שלב 5ג: בורר אופן קלט בראש הפאנל. הרשימה משותפת לשני האופנים, ובדקירה יש הנחיה לפי מספר הנקודות
+  const inputBlock = (
+    <>
+      <ModeSwitch mode={inputMode} onChange={setInputMode} />
+      {inputMode === 'click'
+        ? (!committed && <ClickGuide count={filledCount(ts)} onUndo={() => dispatch({ type: 'undoLast' })} />)
+        : <ManualList ts={ts} dispatch={dispatch} closed={committed} listOpen={listOpen} setListOpen={setListOpen} onShow={onShow} />}
+      {!committed && notice && <p className="mt-field-error" role="alert">{notice}</p>}
+    </>
+  );
   let body;
   if (!committed) {
-    body = (
-      <>
-        <p className="mt-empty">{hasDraft ? 'המשך ללחוץ להוספת קודקודים. סגירה: לחיצה על הקודקוד הראשון, לחיצה כפולה או Enter.' : 'לחץ על המפה כדי לשרטט פוליגון ולנתח את הפעילויות בשטח.'}</p>
-        {notice && <p className="mt-field-error" role="alert">{notice}</p>}
-      </>
-    );
+    body = inputBlock;
   } else {
     body = (
       <>
+        {inputBlock}
         <div className="ui-tablist area-tabs" role="tablist" aria-label="תצוגות חקירת שטח" ref={tabs} onKeyDown={tabKey}>
           {TABS.map((t) => (
             <button key={t.id} id={`area-tab-${t.id}`} role="tab" type="button" aria-selected={a.tab === t.id} aria-controls="area-tabpanel" tabIndex={a.tab === t.id ? 0 : -1} onClick={() => a.setTab(t.id)}>{t.label}</button>
@@ -251,18 +252,19 @@ export default function AreaPanel({ analysis: a, polygon, committed, hasDraft, n
     );
   }
 
+  // שלב 5ג: בלי "העתק". מצב ריק (אין נקודות): בלי שורת פעולות בכלל. אחרי שיש שרטוט: "ייצוא CSV" (מושבת כשהספירה 0 או "לא נבדק") ו"נקה"
+  const clearLink = <Button variant="text" size="sm" className="mt-clear-link" onClick={onClear}>נקה</Button>;
   const footer = a.tab === 'now' && committed ? (
     <>
       <TerrainControls hits={hits} watch={watch} onAddToList={onAddToList} />
-      <Actions copy={copyLines} onClear={onClear} />
+      <div className="mt-actions">{clearLink}</div>
     </>
-  ) : (
-    <Actions copy={committed ? copyLines : []} clearDisabled={!committed && !hasDraft} onClear={onClear}>
-      {(
-        <Button size="sm" disabled={!canExport} onClick={() => downloadCsv(buildAreaCsv({ polygon, range: a.range, activity: a.activity, events: a.list }), 'area-activities.csv')}>ייצוא CSV</Button>
-      )}
-    </Actions>
-  );
+  ) : (committed || filledCount(ts) > 0) ? (
+    <div className="mt-actions">
+      <Button size="sm" disabled={!canExport} onClick={() => downloadCsv(buildAreaCsv({ polygon, range: a.range, activity: a.activity, events: a.list }), 'area-activities.csv')}>ייצוא CSV</Button>
+      {clearLink}
+    </div>
+  ) : null;
 
   return (
     <Panel id="mt-panel" title="חקירת שטח" className={`mt-panel area-panel${wide ? ' wide' : ''}`} actions={<Button variant="icon" size="sm" aria-label="סגירת הכלי" onClick={onClose} icon={<X size={16} aria-hidden="true" />} />} footer={footer}>

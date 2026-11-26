@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatCoordinate, parseCoordinate, parseCoordinateList } from './coords.js';
-import { terrainHint } from './hints.js';
+import { terrainHint, terrainKeyHint } from './hints.js';
 import { analysisInput, canShow, filledCount, initialTerrainState, parseRow, pointsOf, terrainReducer } from './terrainRows.js';
 
 const ok = (text, axis, value) => {
@@ -212,29 +212,21 @@ test('בטל נקודה אחרונה ומחיקת שורה', () => {
   assert.equal(R(R(s, { type: 'undoLast' }), { type: 'undoLast' }).rows.length, 1); // נשארת שורה ריקה אחת
 });
 
-test('חזרה לתוצאות: עריכות שלא אושרו נזרקות והרשימה חוזרת לפוליגון שעליו רצה הניתוח', () => {
+test('הנחיה בפאנל: לפי מספר הנקודות; רמז המקלדת מנקודה אחת ומעלה, בשורה נפרדת', () => {
+  assert.equal(terrainHint(0), 'לחץ על המפה בפינה הראשונה של האזור');
+  for (const n of [1, 2]) assert.equal(terrainHint(n), 'המשך ללחוץ על פינות האזור לפי הסדר. נדרשות לפחות 3 נקודות');
+  for (const n of [3, 4, 10]) assert.equal(terrainHint(n), 'כדי לסיים, לחץ שוב על הנקודה הראשונה או לחץ פעמיים על הנקודה האחרונה');
+  assert.doesNotMatch(terrainHint(5), /Backspace/); // הרמז לא בתוך ההנחיה
+  assert.equal(terrainKeyHint(0), '');
+  for (const n of [1, 2, 3, 9]) assert.equal(terrainKeyHint(n), 'Backspace: ביטול נקודה אחרונה');
+});
+
+test('אין עריכת נקודות אחרי סגירה: אין פעולת revert, ו-update (גרירת קודקוד) נשארת', () => {
   let s = initialTerrainState();
   for (const [lon, lat] of [[34, 32], [35, 32], [35, 33]]) s = click(s, lon, lat);
   s = R(s, { type: 'close' });
-  s = type(s, s.rows[0].id, 'lat', '10');
-  s = R(s, { type: 'removeRow', id: s.rows[1].id });
-  assert.equal(pointsOf(s).length, 2);
-  s = R(s, { type: 'revert' });
-  assert.equal(new Set(s.rows.map((r) => r.id)).size, s.rows.length, 'מזהי שורות ייחודיים אחרי חזרה');
-  const after = type(s, s.rows[0].id, 'lat', '10');
-  assert.deepEqual(pointsOf(after).slice(1), [[35, 32], [35, 33]], 'הקלדה בשורה אחת לא משנה אחרות');
-  assert.deepEqual(pointsOf(s), [[34, 32], [35, 32], [35, 33]]);
-  assert.equal(s.closed, true);
-  assert.deepEqual(analysisInput(s).points[0], [34, 32]);
-  assert.equal(R(initialTerrainState(), { type: 'revert' }).closed, false); // בלי סגירה אין מה להחזיר
-});
-
-test('הנחיה בשורה הצפה: לפי מספר הנקודות, עם Backspace מ-1 ומעלה; בפוליגון סגור "גרירת פינה"', () => {
-  assert.equal(terrainHint(0, false)[0], 'לחץ על המפה בפינה הראשונה של האזור');
-  assert.doesNotMatch(terrainHint(0, false)[0], /Backspace/);
-  for (const n of [1, 2]) assert.match(terrainHint(n, false)[0], /^המשך ללחוץ על פינות האזור לפי הסדר\. נדרשות לפחות 3 נקודות · Backspace: ביטול נקודה$/);
-  for (const n of [3, 4, 10]) assert.match(terrainHint(n, false)[0], /^כדי לסיים, לחץ שוב על הנקודה הראשונה או לחץ פעמיים על הנקודה האחרונה · Backspace: ביטול נקודה$/);
-  assert.equal(terrainHint(5, true)[0], 'גרירת פינה: עריכה · Esc: סגירת הכלי');
-  // המשפט הארוך ביותר קצר מספיק לשורה אחת (פחות מ-100 תווים)
-  assert.ok(Math.max(...[0, 1, 3].map((n) => terrainHint(n, false)[0].length)) < 100);
+  assert.equal(R(s, { type: 'revert' }), s); // פעולה לא מוכרת: אין שינוי
+  s = R(s, { type: 'movePoint', index: 0, ll: [34.5, 32.5] });
+  s = R(s, { type: 'update' });
+  assert.deepEqual(analysisInput(s).points[0], [34.5, 32.5]);
 });

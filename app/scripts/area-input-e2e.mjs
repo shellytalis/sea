@@ -39,7 +39,9 @@ for (const w of widths) {
   };
   const pts = () => page.evaluate((poly) => poly.map((p) => { const m = window.__seaMap; const q = m.project(p); const r = m.getContainer().getBoundingClientRect(); return [r.left + q.x, r.top + q.y]; }), DENSE);
   const click = async (i, P) => { await page.mouse.click(P[i][0], P[i][1]); await sleep(150); };
-  const guide = () => page.$eval('.mt-hint-long', (e) => e.textContent);
+  const guide = () => page.$eval('.area-hint-text', (e) => e.textContent);
+  const keyHint = () => page.$eval('.area-hint-key', (e) => e.textContent);
+  const hintH = () => page.$eval('.area-hint', (e) => Math.round(e.getBoundingClientRect().height));
   const rows = () => page.$$eval('.area-point-row', (l) => l.map((r) => [...r.querySelectorAll('input')].map((i) => i.value)));
   const handles = () => page.$$eval('.map-handle', (l) => l.length);
   const mode = (id) => page.evaluate((i) => document.querySelector(`[data-mode=${i}]`).click(), id);
@@ -52,24 +54,29 @@ for (const w of widths) {
   assert.ok(!(await page.$eval('.area-panel', (e) => e.textContent)).includes('העתק'), `[${w}] כפתור העתק`);
   assert.equal(await page.$eval('[data-mode=click]', (e) => e.getAttribute('aria-checked')), 'true', `[${w}] ברירת מחדל דקירה`);
   assert.equal(await page.$eval('.area-modeseg', (e) => e.getAttribute('role')), 'radiogroup');
-  assert.equal(await guide(), 'לחץ על המפה בפינה הראשונה של האזור', `[${w}] הנחיה 0 נקודות (שורה צפה)`);
+  assert.equal(await guide(), 'לחץ על המפה בפינה הראשונה של האזור', `[${w}] הנחיה 0 נקודות (בפאנל)`);
+  assert.equal(await page.$('.mt-hint'), null, `[${w}] נשארה שורה צפה מעל המפה`);
+  assert.equal(await page.$eval('.area-hint', (e) => e.getAttribute('aria-live')), 'polite');
+  assert.equal(await keyHint(), '', `[${w}] רמז מקלדת ב-0 נקודות`);
+  const H0 = await hintH();
   const minimal = async (label) => {
     const txt = await page.$eval('.area-panel', (e) => e.textContent);
-    assert.ok(!/לחץ על המפה|המשך ללחוץ|כדי לסיים/.test(txt), `[${w}] ${label}: הנחיה בפאנל`);
-    assert.ok(!/נקודות:|בטל נקודה אחרונה/.test(txt), `[${w}] ${label}: ספירה או "בטל נקודה אחרונה" בפאנל`);
+    assert.ok(!/נקודות:|בטל נקודה אחרונה/.test(txt), `[${w}] ${label}: ספירה או כפתור "בטל נקודה אחרונה" בפאנל`);
     assert.equal(await page.$('.area-panel .panel-foot'), null, `[${w}] ${label}: שורת פעולות בזמן שרטוט`);
-    assert.equal(await page.$('.area-guide'), null);
-  };
-  await minimal('0 נקודות');  await shot('01-empty-no-actions');
+    assert.equal(await page.$('.mt-hint'), null, `[${w}] ${label}: שורה צפה`);
+    assert.equal(await hintH(), H0, `[${w}] ${label}: גובה אזור ההנחיה השתנה`);
+  };  await minimal('0 נקודות');  await shot('01-empty-no-actions');
 
   // ===== 2. הנחיות בדקירה: 0 / 2 / 3 נקודות =====
   const P = await pts();
   await click(0, P); await click(1, P);
-  assert.equal(await guide(), 'המשך ללחוץ על פינות האזור לפי הסדר. נדרשות לפחות 3 נקודות · Backspace: ביטול נקודה', `[${w}] הנחיה 1-2`);
+  assert.equal(await guide(), 'המשך ללחוץ על פינות האזור לפי הסדר. נדרשות לפחות 3 נקודות', `[${w}] הנחיה 1-2`);
+  assert.equal(await keyHint(), 'Backspace: ביטול נקודה אחרונה');
   await minimal('2 נקודות');
   await shot('02-click-2-points');
   await click(2, P);
-  assert.equal(await guide(), 'כדי לסיים, לחץ שוב על הנקודה הראשונה או לחץ פעמיים על הנקודה האחרונה · Backspace: ביטול נקודה', `[${w}] הנחיה 3+`);
+  assert.equal(await guide(), 'כדי לסיים, לחץ שוב על הנקודה הראשונה או לחץ פעמיים על הנקודה האחרונה', `[${w}] הנחיה 3+`);
+  assert.equal(await keyHint(), 'Backspace: ביטול נקודה אחרונה');
   assert.ok(await page.$('.map-handle.closable'), `[${w}] הנקודה הראשונה לא מודגשת`);
   await minimal('3 נקודות');
   await shot('03-click-3-points');
@@ -89,6 +96,7 @@ for (const w of widths) {
   assert.match(r[0][0], /° N$/);
   assert.match(r[0][1], /° E$/);
   assert.equal(await page.$eval('.area-modeseg [aria-checked=true]', (e) => e.dataset.mode), 'manual');
+  assert.equal(await page.$('.area-hint'), null, `[${w}] הנחיית דקירה בהזנה ידנית`);
   assert.equal(await handles(), 3, `[${w}] נקודות במפה`);
   // נקודה שהוקלדה מופיעה במפה (4 נקודות)
   await typeCell('קו רוחב, נקודה 4', "33°06' N"); await typeCell('קו אורך, נקודה 4', '34,4'); await page.keyboard.press('Tab'); await sleep(250);
@@ -155,36 +163,19 @@ for (const w of widths) {
   await page.evaluate(() => [...document.querySelectorAll('.area-show button')][0].click());
   await page.waitForFunction(() => document.querySelectorAll('.area-act-count').length === 6 && !document.querySelector('.area-act-skel'), { timeout: 8000 });
   assert.ok(await page.$('.area-panel.wide'), `[${w}] הפאנל לא הורחב`);
-  // 5ד: אחרי סגירה אין בורר אופן קלט; יש קישור "עריכת נקודות", ושורת הפעולות נשארת
+  // 5ה: אחרי סגירה אין בורר אופן קלט ואין "עריכת נקודות"; שורת הפעולות נשארת
   assert.equal(await page.$('.area-modeseg'), null, `[${w}] הבורר נשאר אחרי סגירה`);
-  assert.match(await page.$eval('.area-edit-link', (e) => e.textContent), /עריכת נקודות/);
+  assert.equal(await page.$('.area-edit-link'), null, `[${w}] "עריכת נקודות" עדיין קיים`);
   assert.equal(await page.$('.area-points'), null);
+  assert.equal(await page.$('.area-hint'), null);
+  assert.ok(!(await page.$eval('.area-panel', (e) => e.textContent)).includes('עריכת נקודות'));
   const foot = await page.$eval('.area-panel .panel-foot', (e) => [...e.querySelectorAll('button')].map((b) => b.textContent.trim()));
   assert.deepEqual(foot, ['ייצוא CSV', 'נקה'], `[${w}] שורת פעולות אחרי סגירה`);
   await shot('07-closed-no-selector');
-  // מסך "עריכת נקודות": במקום הלשוניות והמקרא, עם "חזרה לתוצאות" ו"עדכון"; הניתוח לא רץ מחדש עד הלחיצה
-  await page.click('.area-edit-link');
-  await page.waitForSelector('.area-points');
-  assert.equal(await page.$('.area-legend'), null, `[${w}] המקרא נשאר במסך העריכה`);
-  assert.equal(await page.$('.area-tabs'), null, `[${w}] הלשוניות נשארו במסך העריכה`);
-  assert.equal(await page.$('.area-panel.wide'), null, `[${w}] הפאנל נשאר רחב במסך העריכה`);
-  assert.match(await page.$eval('.area-edit-head', (e) => e.textContent), /חזרה לתוצאות.*עריכת נקודות|עריכת נקודות.*חזרה לתוצאות/);
-  assert.equal((await showBtn()).text, 'עדכון');
-  await shot('08-edit-points');
-  const before = (await rows())[0].join('|');
-  await typeCell('קו רוחב, נקודה 1', '32.552'); await page.keyboard.press('Tab');
-  assert.equal(await page.$('.area-act-skel'), null, `[${w}] ניתוח רץ לפני "עדכון"`);
-  // חזרה לתוצאות בלי עדכון: העריכה נזרקת
-  await page.evaluate(() => [...document.querySelectorAll('.area-edit-head button')][0].click());
-  await page.waitForSelector('.area-legend');
-  await page.click('.area-edit-link'); await page.waitForSelector('.area-points');
-  assert.equal((await rows())[0].join('|'), before, `[${w}] עריכה שלא אושרה לא נזרקה`);
-  // עריכה ו"עדכון": חוזרים לתוצאות והניתוח רץ מחדש
-  await typeCell('קו רוחב, נקודה 1', '32.552'); await page.keyboard.press('Tab');
-  await page.evaluate(() => [...document.querySelectorAll('.area-show button')][0].click());
-  await page.waitForFunction(() => document.querySelectorAll('.area-act-count').length === 6 && !document.querySelector('.area-act-skel'), { timeout: 8000 });
-  assert.ok(await page.$('.area-edit-link'), `[${w}] לא חזרנו לתוצאות אחרי עדכון`);
-  assert.equal(await page.$('.area-points'), null);
+  // תיקון נעשה ב"נקה" והזנה מחדש: הרשימה מתרוקנת ואפשר לשרטט שוב
+  await page.evaluate(() => [...document.querySelectorAll('.area-panel .mt-clear-link')][0].click()); await sleep(300);
+  assert.ok(await page.$('.area-modeseg'), `[${w}] הבורר לא חזר אחרי נקה`);
+  assert.equal((await rows()).filter((x) => x[0]).length, 0, `[${w}] הרשימה לא התרוקנה`);
   // ===== 7. פוליגון חוצה, מעל 50 נקודות =====
   await load();
   await mode('manual');

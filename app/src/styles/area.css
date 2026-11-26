@@ -105,8 +105,6 @@
 .area-panel .panel-body { gap: var(--space-3); }
 .mt-seg.area-modeseg { grid-template-columns: repeat(2, 1fr); flex: none; }
 .area-modeseg button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--fs-sm); }
-.area-guide { display: grid; gap: var(--space-2); }
-.area-guide-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .area-manual { display: grid; gap: var(--space-2); min-width: 0; }
 .area-list-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; height: var(--control-h-sm); padding: 0 var(--space-2); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--fs-sm); text-align: start; }
 .area-list-toggle svg { color: var(--text-secondary); transition: transform 120ms; }
@@ -124,7 +122,8 @@
 .area-points-status { margin: 0; }
 .area-show { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 
-/* ===== שלב 5ד: מצב שרטוט מינימלי, וקישור/מסך "עריכת נקודות" אחרי סגירה ===== */
-.area-edit-link { justify-self: start; }
-.area-edit-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.area-edit-head h3 { margin: 0; font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 600; }
+/* ===== שלב 5ה: הנחיית שרטוט בתוך החלון (דקירה בלבד): טקסט משני קטן, בלי מסגרת וכרטיס, בגובה קבוע (עד שתי שורות) כדי שהפאנל לא יקפוץ ===== */
+.area-hint { display: grid; gap: var(--space-1); }
+.area-hint p { margin: 0; }
+.area-hint-text { min-height: calc(2 * var(--lh-sm)); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-secondary); }
+.area-hint-key { min-height: var(--lh-xs); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-tertiary); }

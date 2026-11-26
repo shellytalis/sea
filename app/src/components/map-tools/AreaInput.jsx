@@ -41,7 +41,7 @@ export function ModeSwitch({ mode, onChange }) {
 const fieldError = (res) => (res?.ok === false ? (res.empty ? 'חסר ערך.' : res.error) : null);
 
 /** הזנה ידנית: רשימת נקודות (קו רוחב, קו אורך), הדבקת רשימה, "הצגה על המפה" עם הסיבה שהיא מושבתת */
-export function ManualList({ ts, dispatch, closed, onShow }) {
+export function ManualList({ ts, dispatch, onShow }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [pasteInfo, setPasteInfo] = useState(null); // { errors, note }
@@ -117,7 +117,7 @@ export function ManualList({ ts, dispatch, closed, onShow }) {
       )}
       <p className="mt-note area-points-status">{n >= 3 ? <><Num>{n}</Num> נקודות</> : <><Num>{n}</Num> נקודות · נדרשות לפחות 3</>}</p>
       <div className="area-show">
-        <Button variant="primary" size="sm" disabled={!gate.ok} onClick={onShow}>{closed ? 'עדכון' : 'הצגה על המפה'}</Button>
+        <Button variant="primary" size="sm" disabled={!gate.ok} onClick={onShow}>הצגה על המפה</Button>
         {!gate.ok && <span className="mt-note" role="status">{gate.reason}</span>}
       </div>
     </div>

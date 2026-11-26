@@ -14,7 +14,7 @@ import { isSelfIntersecting, pointInPolygon } from '../../area/geo';
 import { useAreaAnalysis } from '../../area/useAreaAnalysis';
 import { filledCount, initialTerrainState, pointsOf, terrainReducer } from '../../area/terrainRows';
 import { MAX_INPUT_POINTS } from '../../area/thresholds';
-import { terrainHint } from '../../area/hints';
+
 import { renderToStaticMarkup } from 'react-dom/server';
 import ActivityIcon from './ActivityIcon';
 import AreaEventCard from './AreaEventCard';
@@ -31,11 +31,11 @@ let seq = 0;
 const uid = () => `m${++seq}`;
 
 /** נוסח הנחיה: [ארוך, קצר]; הקצר מוצג כשרוחב המפה קטן (container query) */
-function hintFor(tool, draft, items, terrainClosed, terrainCount) {
+function hintFor(tool, draft, items) {
   if (tool?.family === 'vessel' && tool.id === 'arrival') return ['לחיצה על המפה: בחירת יעד (או חיפוש נמל בפאנל) · גרירת ידית: עריכה · Esc: סגירת הכלי', 'לחיצה: יעד · Esc: סגירה'];
   if (!tool || tool.family !== 'general' || !DRAW.includes(tool.id)) return null;
   if (tool.id === 'terrain') {
-    return terrainHint(terrainCount, terrainClosed); // שלב 5ד: ההנחיה רק כאן, לא בפאנל
+    return null; // שלב 5ה: ההנחיה בפאנל (AreaPanel), לא בשורה צפה על המפה
   }
   if (isCircle(tool.id)) {
     if (draft) return ['לחיצה נוספת: קביעת הרדיוס (או הקלדה בלוח) · Esc: ביטול', 'לחיצה: רדיוס · Esc: ביטול'];
@@ -390,7 +390,7 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
   // ===== פאנל =====
   const patchSel = (fn) => setItems((l) => l.map((x) => (x.id === selId ? fn(x) : x)));
   const closeTool = () => { setHoverLL(null); setTool(null); setDraft(null); setCursor(null); setSelId(null); setAreaNotice(''); };
-  const hint = hintFor(tool, draft, items, ts.closed, tpoints.length);
+  const hint = hintFor(tool, draft, items);
   const meta = mode === 'all' ? <>כל הסט (<span className="num">{setVessels.length}</span>)</> : active ? <bdi dir="ltr">{active.name}</bdi> : null;
   const anyOn = (key) => targets.some((v) => layers[v.id]?.[key]);
 
@@ -400,7 +400,7 @@ export default function MapTools({ map, vessels, onActivate, onSelectVessel, blo
       <AreaPanel analysis={analysis} polygon={terrainItem?.points} committed={!!terrainItem} notice={areaNotice} unit={unit} onClose={closeTool}
         ts={ts} dispatch={tdispatch} inputMode={inputMode} setInputMode={setInputMode}
         onShow={() => applyTerrain(ts.closed ? 'update' : 'close')}
-        onRevert={() => { tdispatch({ type: 'revert' }); setAreaNotice(''); }}
+
         onClear={() => { tdispatch({ type: 'reset' }); setCursor(null); setAreaNotice(''); }}
         hits={hits} watch={watch} onPickVessel={onSelectVessel}
         onAddToList={(list, vids) => setWatch((w) => ({ ...w, [list]: [...new Set([...(w[list] ?? []), ...vids])] }))}

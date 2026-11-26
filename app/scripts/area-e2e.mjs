@@ -80,7 +80,8 @@ for (const w of widths) {
   assert.equal(await page.$('.area-panel .panel-foot'), null, `[${w}] יש שורת פעולות במצב ריק`);
   assert.ok(!(await page.$eval('.area-panel', (e) => e.textContent)).includes('העתק'), `[${w}] נשאר כפתור העתק`);
   await shot('05b-empty-no-actions');
-  assert.match(await page.$eval('.mt-hint-long', (e) => e.textContent), /לחץ על המפה בפינה הראשונה/);
+  assert.match(await page.$eval('.area-hint-text', (e) => e.textContent), /לחץ על המפה בפינה הראשונה/);
+  assert.equal(await page.$('.mt-hint'), null, `[${w}] שורה צפה מעל המפה`);
   await fit(AREAS.dense);
   const dpts = await screenPts(AREAS.dense);
   for (const [x, y] of dpts.slice(0, 3)) { await page.mouse.click(x, y); await sleep(120); }
